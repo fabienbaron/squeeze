@@ -1,0 +1,19 @@
+SQUEEZE 2.0 - readme by Fabien Baron
+
+
+SQUEEZE help can be invoked by typing 'squeeze -h'.
+
+
+------------------------------------------
+
+GDL/IDL utilities (squeeze_gdl.pro, squeeze_threads, plot_res.pro)
+--------------
+
+squeeze_gdl: displays the ongoing reconstruction (chi2 and regularizers,
+current image, previous final image)
+
+squeeze_threads: displays the ongoing reconstruction when using multiple
+threads, e.g. when using parallel tempering
+
+plot_res.pro: displays the final reconstructed FITS image, as well as how well
+it fits the data. To be used after reconstruction.

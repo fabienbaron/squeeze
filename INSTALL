@@ -1,0 +1,4 @@
+As of Spring 2014, OSX Mavericks still does not support OpenMP by default.
+To compile a multicore version of squeeze, please install gcc-4.8 or later
+using your favorite package manager (fink, macports, homebrew...). 
+Then type "xcode-select --install" and select gcc as a compiler.
