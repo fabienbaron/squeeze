@@ -404,6 +404,16 @@ int main(int argc, char** argv)
   }
   
   
+  // If we want to use parallel tempering but no threads are defined,
+  if((minimization_engine == ENGINE_PARALLEL_TEMPERING) && (nthreads == 1))
+  {
+    printf("Command line -- Parallel tempering requested but requested number of threads is %d\n", nthreads);
+    printf("Command line -- Please restart SQUEEZE and set the number of threads N using \"-threads N\"\n");
+    return 0;
+  }
+  
+  
+  
   // If no wavelength info was given, then we are in monochromatic mode
   if((wavmin == NULL) || (wavmax == NULL))
   {
@@ -414,13 +424,6 @@ int main(int argc, char** argv)
   }
   
   
-  // If we want to use parallel tempering but no threads are defined,
-  if((minimization_engine == ENGINE_PARALLEL_TEMPERING) && (nthreads == 1))
-  {
-    printf("Command line -- Parallel tempering requested but requested number of threads is %d\n", nthreads);
-    printf("Command line -- Please restart SQUEEZE and set the number of threads N using \"-threads N\"\n");
-    return 0;
-  }
   
   fflush(stdout);
   
@@ -1304,8 +1307,8 @@ int main(int argc, char** argv)
 							     reg_param[REG_CENTERING]  * reg_value[w * NREGULS + REG_CENTERING], cent_xoffset[w] / nelements, cent_yoffset[w] / nelements);
 				
 				
-				diagnostics_used += snprintf(diagnostics + diagnostics_used , 250 - diagnostics_used , "MPr: %4.2f T: %5.2f Iter: %4ld of %4ld",
-							     prob_movement, temperature[iThread], i / (nchanr * nelements) + 1, niter);
+				diagnostics_used += snprintf(diagnostics + diagnostics_used , 250 - diagnostics_used , "E: %5ld MPr: %4.2f T: %5.2f Iter: %4ld of %4ld",
+							     nelements, prob_movement, temperature[iThread], i / (nchanr * nelements) + 1, niter);
 				
 				
 				puts(diagnostics);
@@ -1811,6 +1814,7 @@ int main(int argc, char** argv)
     free(saved_y);
     free(saved_params);
     free(lLikelihood_expectation);
+    free(lLikelihood_deviation);
     free(saved_lLikelihood);
     free(saved_lPrior);
     free(saved_lPosterior);
