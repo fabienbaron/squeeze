@@ -14,8 +14,10 @@
 
 ; This is a GDL viewer for SQUEEZE based on John Monnier's code for MACIM
 ;
-pro squeeze_gdl, dir = dir
+pro squeeze_gdl, dir
+dir = dir +'/'
 if not(keyword_set(dir)) then dir ='./'
+print, 'Monitoring thread00.fits in '+dir
 device,retain=2, decompose=0
 nreguls = 9
 reg_names = ['PARAM', 'CENT', 'IMPRIOR', 'ENT', 'DEN', 'TV', 'SPOT', 'LAP', 'L0', 'TRANSPEC']
