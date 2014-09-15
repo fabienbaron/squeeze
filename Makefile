@@ -2,7 +2,7 @@ LIB_DIR = ./lib
 CFITSIO_DIR = cfitsio
 RNG_DIR = rngstreams-1.0.1
 
-CC = gcc -march=native -mfpmath=sse -ftree-vectorize -pedantic -Wall -Wabi -Wold-style-definition  -Wredundant-decls -Wmissing-declarations -Wvla -Wmissing-format-attribute -Wpacked  -Wcast-qual -Winline -Wformat=2 -O2 -std=c99 -fopenmp -ggdb -fno-omit-frame-pointer
+CC = gcc -Ofast -march=native -mfpmath=sse -flto -ftree-vectorize -pedantic -Wall -Wabi -Wold-style-definition  -Wredundant-decls -Wmissing-declarations -Wvla -Wmissing-format-attribute -Wpacked  -Wcast-qual -Winline -Wformat=2 -std=c99 -fopenmp -ggdb -fno-omit-frame-pointer
 
 
 ## Desctription of targets
