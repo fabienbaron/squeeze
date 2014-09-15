@@ -2,16 +2,15 @@ LIB_DIR = ./lib
 CFITSIO_DIR = cfitsio
 RNG_DIR = rngstreams-1.0.1
 
-#CC = clang -O1 -g -fsanitize=address  -fno-omit-frame-pointer -fno-optimize-sibling-calls -fsanitize-memory-track-origins 
-#CC = gcc -O1 -ggdb -fopenmp -fno-omit-frame-pointer
-CC = gcc -march=native -mfpmath=sse -ftree-vectorize -pedantic -Wall -Wabi -Wold-style-definition  -Wredundant-decls -Wmissing-declarations -Wvla -Wmissing-format-attribute -Wpacked  -Wcast-qual -Winline -Wformat=2 -O2 -std=gnu99 -fopenmp
+CC = gcc -march=native -mfpmath=sse -ftree-vectorize -pedantic -Wall -Wabi -Wold-style-definition  -Wredundant-decls -Wmissing-declarations -Wvla -Wmissing-format-attribute -Wpacked  -Wcast-qual -Winline -Wformat=2 -O2 -std=c99 -fopenmp -ggdb -fno-omit-frame-pointer
+
 
 ## Desctription of targets
 
 all:  ./bin/squeeze
 
 ./bin/squeeze:  ./src/read_fits.c ./src/free_fits.c ./src/squeeze.c ./src/squeeze.h ./src/regularizations.c ./src/models/modelcode.c ./src/extract_oifits.c $(LIB_DIR)/$(CFITSIO_DIR)/libcfitsio.a $(LIB_DIR)/$(RNG_DIR)/src/.libs/librngstreams.la
-        
+
 	@echo 'Building SQUEEZE...' &&  ${CC} ./src/squeeze.c ./src/read_fits.c ./src/free_fits.c -I$(LIB_DIR)/$(CFITSIO_DIR) -I$(LIB_DIR)/$(RNG_DIR)/src -o ./bin/squeeze -lm -L$(LIB_DIR)/$(RNG_DIR)/src/.libs/ -lrngstreams -L$(LIB_DIR)/${CFITSIO_DIR} -lcfitsio && echo 'done !' 
 
 $(LIB_DIR)/$(RNG_DIR)/Makefile:

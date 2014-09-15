@@ -30,6 +30,7 @@
 #include <math.h>
 #include "../lib/rngstreams-1.0.1/src/RngStream.h"
 #include <signal.h>
+#include <time.h>
 #include <string.h>
 #include "squeeze.h"
 #include "exchange.h" // includes cfitio
@@ -94,7 +95,7 @@ int main(int argc, char** argv)
   double f_copycat = FRAC_COPYCAT, f_anywhere = FRAC_ANYWHERE;
   
   bool dumpchain = FALSE;
-  
+  bool benchmark = FALSE;  
   //  const char *reg_names[NREGULS] = {"PARAM", "CENT", "IMPRIOR", "ENT", "DEN", "TV", "SPOT", "LAP", "L0", "TS"};
   long i, j, k, w, depth = DEFAULT_DEPTH, offset = 0;
   
@@ -169,6 +170,10 @@ int main(int argc, char** argv)
     if(strcmp(argv[i], "-h") == 0)
     {
       printhelp();
+    }
+    else if(strcmp(argv[i], "-benchmark") == 0)
+    {
+      benchmark = TRUE; // disable the t3amp
     }
     else if(strcmp(argv[i], "-nov2") == 0)
     {
@@ -785,7 +790,7 @@ int main(int argc, char** argv)
     
     printf("Reconst setup -- Degrees of freedom:\t%ld\n", (long)round(ndf));
     
-    flat_chi2 = get_flat_chi2();
+    flat_chi2 = get_flat_chi2(benchmark);
     printf("Reconst setup -- Chi2r random image:\t%lf\n", flat_chi2 / ndf);
     
     /* Print out important parameters */
@@ -2090,36 +2095,36 @@ double dewrap(double diff)
 /**********************************************************/
 /* Calculate chi^2 for a flat image (for reference)       */
 /**********************************************************/
-double get_flat_chi2(void)
+double get_flat_chi2(bool benchmark)
 {
-  long i, rlong; //, nbench;
-  double dummy1, dummy2, dummy3, dummy4, dummy5; //  double startTime, endTime;
+  long i, rlong, nbench;
+  double dummy1, dummy2, dummy3, dummy4, dummy5, startTime, endTime;
   double complex  *mod_vis = malloc(nuv * sizeof(double complex));
   double *res = malloc((nv2 + nt3amp + nt3phi + nvisamp + nvisphi) * sizeof(double));         // current residuals
   double *mod_obs = malloc((nv2 + nt3amp + nt3phi + nvisamp + nvisphi) * sizeof(double));         // current observables
   RngStream rngflat = RngStream_CreateStream("flatchi2");
-  
   for(i = 0; i < nuv; i++)
   {
     rlong = RngStream_RandInt(rngflat, 0, 2147483647);
     mod_vis[i] = cexp(-10.0 + I * (rlong % 1000) * 0.006283);
   }
   
-  //  printf("Benchmarking the chi2...\n");
-  //  nbench = 500000;
-  //  startTime = (double)clock()/CLOCKS_PER_SEC;
-  //  for (i=0; i<nbench; i++)
+  printf("Benchmarking the chi2...\n");
+  if(benchmark == TRUE) nbench = 1000000; else nbench = 1;
+  double flat_chi2 = 0;  
+  startTime = (double)clock()/CLOCKS_PER_SEC;
+  for (i=0; i<nbench; i++)   
+    flat_chi2 = get_chi2(mod_vis, res, mod_obs, &dummy1, &dummy2, &dummy3, &dummy4, &dummy5);
   
-  double flat_chi2 = get_chi2(mod_vis, res, mod_obs, &dummy1, &dummy2, &dummy3, &dummy4, &dummy5);
-  
-  //  endTime = (double)clock()/CLOCKS_PER_SEC;
-  //  printf("%ld iterations in %f seconds = %f it/sec \n",nbench, endTime-startTime, (double)nbench/(endTime-startTime));
+  endTime = (double)clock()/CLOCKS_PER_SEC;
+  if(benchmark == TRUE)  printf("%ld iterations in %f seconds = %f it/sec for this datafile\n",nbench, endTime-startTime, (double)nbench/(endTime-startTime));
   
   free(res);
   free(mod_obs);
   free(mod_vis);
   RngStream_DeleteStream(&rngflat);
-  
+  if(benchmark == TRUE) getchar();
+
   return flat_chi2;
 }
 

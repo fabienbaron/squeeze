@@ -135,7 +135,7 @@ void vis_to_obs(const double complex *mod_vis, double *mod_obs);
 void obs_to_res(const double *mod_obs, double *res);
 double residuals_to_chi2(const double *res, double *chi2v2, double *chi2t3amp, double *chi2visamp, double *chi2t3phi, double *chi2visphi) ;
 
-double get_flat_chi2(void);
+double get_flat_chi2(bool benchmark);
 double fill_min_elts(long *min_elts, long depth, long threadnum);
 double dewrap(double diff);
 double fill_iframeburned(long *iframeburned, long depth, long threadnum, long nelements, long niter,  double *saved_lPosterior, double *saved_lLikelihood, double *saved_reg_value);

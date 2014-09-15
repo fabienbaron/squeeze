@@ -19,7 +19,7 @@ params(4) = Fractional Bandwidth
 Globals: nparams, nbaselines, u, v
 
 */
-
+extern double j1(double);
 int model_vis(double *params, double complex *modvis, double *lPriorModel, double *flux_frac_0)
 {
     int status = 0;
@@ -84,3 +84,5 @@ int model_vis(double *params, double complex *modvis, double *lPriorModel, doubl
 
     return (status != 0);
 }
+
+
