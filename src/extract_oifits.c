@@ -770,6 +770,10 @@ int extract_oifits(char* filename, bool use_v2, bool use_t3amp, bool use_t3phi, 
     free(visphi);
     free(visphi_sig) ;
 
+    free(time_vis);
+    free(time_v2);
+    free(time_t3);
+
     free(lambda_vis);
     free(lambda_v2);
     free(lambda_t3);
@@ -790,8 +794,6 @@ int extract_oifits(char* filename, bool use_v2, bool use_t3amp, bool use_t3phi, 
 void add_new_uv(long *obs_index, long *uvindex, double new_u, double new_v, double new_uv_lambda, double new_uv_dlambda, double new_uv_time, double *table_u, double *table_v, double *table_uv_lambda, double *table_uv_dlambda, double *table_uv_time, double uvtol)
 {
     // Check previous uv points for redundancy, and only create a new uv point if needed
-
-    // TBD: double check that this is taking into account the requested number of spectral channels and temporal channels
 
     // First check for redundancy
     long i;
