@@ -42,7 +42,9 @@
 
 // Mathematical constants
 #define MAS_RAD          206264806.2
-#define PI               3.141592654
+#ifndef M_PI
+#define M_PI           3.14159265358979323846
+#endif
 
 #define STEPS_PER_OUTPUT 1
 #define FRAC_COPYCAT     .1
@@ -115,12 +117,6 @@
 #include <complex.h>
 #include <stdbool.h>
 
-/* Simple inline function */
-static inline double modsq(double complex input)
-{
-    return creal(input) * creal(input) + cimag(input) * cimag(input);
-}
-
 /* Function prototypes for fred.c. Note that you have to include complex.h, and
  the complex number i is I.
  creal(vis_sig):  Error parallel to vis
@@ -137,7 +133,9 @@ double residuals_to_chi2(const double *res, double *chi2v2, double *chi2t3amp, d
 
 double get_flat_chi2(bool benchmark);
 double fill_min_elts(long *min_elts, long depth, long threadnum);
-double dewrap(double diff);
+static inline double dewrap(double diff) __attribute__((always_inline));
+static inline double modsq(double complex input)  __attribute__((always_inline));
+
 double fill_iframeburned(long *iframeburned, long depth, long threadnum, long nelements, long niter,  double *saved_lPosterior, double *saved_lLikelihood, double *saved_reg_value);
 int find_reg_param(double *regparam, long *iframeburned, long depth, long niter, long ndf, long nelements);
 int writeasfits(char *filename, double *image,
@@ -160,7 +158,7 @@ void mcmc_fullchain(char* file, long nthreads, long niter, int nchanr, long nele
 /* Function prototype for extract_oifits.c*/
 int extract_oifits(char* filename, bool use_v2, bool use_t3amp, bool use_t3phi, bool use_visamp, bool use_visphi,
                    double v2a, double v2s, double t3ampa, double t3amps, double t3phia, double t3phis,
-                   double visampa, double visamps, double visphia, double visphis, double fluxs, double cwhm, double uvtol, double* wavmin, double *wavmax);
+                   double visampa, double visamps, double visphia, double visphis, double fluxs, double cwhm, double uvtol, double* wavmin, double *wavmax, double *timemin, double *timemax);
 int write_best_oifits(char* filestring, double complex * mod_vis);
 
 /* Function prototype for modelcode.c */
@@ -185,3 +183,5 @@ double stddev(long *x, long n);
 
 inline void swapi(unsigned short* a, unsigned short* b);
 inline void swapd(double* a, double* b);
+double xatan2(double y, double x);
+double xatan2_u1(double y, double x);

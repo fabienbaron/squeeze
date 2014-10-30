@@ -5,6 +5,9 @@
 
    Copyright (c) 2006-2014 Fabien Baron, John Monnier, Michael Ireland
 
+   This code makes use of the OIFITSLIB library written by Dr John Young
+   (University of Cambridge).
+
    Based on SQUEEZE 1 written by Prof. Fabien Baron (Georgia State University)
    and on MACIM written by Dr. Michael Ireland with contributions from
    Prof. John Monnier (University of Michigan).
@@ -27,11 +30,11 @@
 #include <stdio.h>
 #include <stdbool.h>
 
-void add_new_uv(long *obs_index, long *uvindex, double new_u, double new_v, double new_uv_lambda, double new_uv_dlambda, double *table_u, double *table_v, double *table_uv_lambda, double *table_uv_dlambda, double uvtol);
+void add_new_uv(long *obs_index, long *uvindex, double new_u, double new_v, double new_uv_lambda, double new_uv_dlambda, double new_uv_time, double *table_u, double *table_v, double *table_uv_lambda, double *table_uv_dlambda, double *table_uv_time, double uvtol);
 
 int extract_oifits(char* filename, bool use_v2, bool use_t3amp, bool use_t3phi, bool use_visamp, bool use_visphi,
                    double v2a, double v2s, double t3ampa, double t3amps, double t3phia, double t3phis,
-                   double visampa, double visamps, double visphia, double visphis, double fluxs, double cwhm, double uvtol, double* wavmin, double *wavmax)
+                   double visampa, double visamps, double visphia, double visphis, double fluxs, double cwhm, double uvtol, double* wavmin, double *wavmax, double *timemin, double *timemax)
 {
     //oi_array array;
     oi_target targets;
@@ -42,6 +45,7 @@ int extract_oifits(char* filename, bool use_v2, bool use_t3amp, bool use_t3phi, 
     int nvis_tables, nv2_tables, nt3_tables;
     double *v2, *v2_sig, *t3phi, *t3phi_sig, *t3amp, *t3amp_sig, *visamp, *visamp_sig, *visphi, *visphi_sig ;
     double temp;
+    double *time_t3, *time_vis, *time_v2;
     float *lambda_t3, *lambda_vis, *lambda_v2;
     float *dlambda_t3, *dlambda_vis, *dlambda_v2;
     char *flag_t3, *flag_vis, *flag_v2;
@@ -148,8 +152,8 @@ int extract_oifits(char* filename, bool use_v2, bool use_t3amp, bool use_t3phi, 
             fflush(stdout);
         }
 
-    // nchand = number of spectral channels in the data
-    // nchanr = number of spectral channels in the reconstruction
+    // nwavd = number of spectral channels in the data
+    // nwavr = number of spectral channels in the reconstruction
     // data[ichan][...]  data as a function of channel
     // wav2chan() : function that returns the reconstruction channel as a function of data channel (or something else)
 
@@ -161,6 +165,7 @@ int extract_oifits(char* filename, bool use_v2, bool use_t3amp, bool use_t3phi, 
     v = malloc(nuv * sizeof(double));
     uv_lambda = malloc(nuv * sizeof(double));
     uv_dlambda = malloc(nuv * sizeof(double));
+    uv_time = malloc(nuv * sizeof(double));
 
     // Lookup tables for observable to corresponding UV numbers
 
@@ -169,9 +174,11 @@ int extract_oifits(char* filename, bool use_v2, bool use_t3amp, bool use_t3phi, 
     visamp_sig = malloc(nvis * sizeof(double));
     visphi = malloc(nvis * sizeof(double));
     visphi_sig = malloc(nvis * sizeof(double));
+    time_vis = malloc(nvis * sizeof(double));
     lambda_vis = malloc(nvis * sizeof(float));
     dlambda_vis = malloc(nvis * sizeof(float));
     flag_vis = malloc(nvis * sizeof(char));
+
     if(diffvis == TRUE)
         {
             dvisnwav = malloc(nvis * sizeof(long));
@@ -181,6 +188,7 @@ int extract_oifits(char* filename, bool use_v2, bool use_t3amp, bool use_t3phi, 
     v2in = malloc(nv2 * sizeof(long));
     v2 = malloc(nv2 * sizeof(double));
     v2_sig = malloc(nv2 * sizeof(double));
+    time_v2 = malloc(nv2 * sizeof(double));
     lambda_v2 = malloc(nv2 * sizeof(float));
     dlambda_v2 = malloc(nv2 * sizeof(float));
     flag_v2 = malloc(nv2 * sizeof(char));
@@ -192,10 +200,10 @@ int extract_oifits(char* filename, bool use_v2, bool use_t3amp, bool use_t3phi, 
     t3amp_sig = malloc(nt3 * sizeof(double));
     t3phi = malloc(nt3 * sizeof(double));
     t3phi_sig = malloc(nt3 * sizeof(double));
+    time_t3 = malloc(nt3 * sizeof(double));
     lambda_t3 = malloc(nt3 * sizeof(float));
     dlambda_t3 = malloc(nt3 * sizeof(float));
     flag_t3 = malloc(nt3 * sizeof(char));
-
 
     // V2
     if(nv2_tables > 0)
@@ -231,6 +239,7 @@ int extract_oifits(char* filename, bool use_v2, bool use_t3amp, bool use_t3phi, 
                                             // Add new V2 data
                                             v2[tempindex] = (vis2_table.record[i]).vis2data[j];
                                             v2_sig[tempindex] = 1. / (vis2_table.record[i]).vis2err[j];
+                                            time_v2[tempindex] = (vis2_table.record[i]).mjd;
                                             lambda_v2[tempindex] = wave.eff_wave[j];
                                             dlambda_v2[tempindex] = wave.eff_band[j];
                                             flag_v2[tempindex] = (vis2_table.record[i]).flag[j];
@@ -241,7 +250,8 @@ int extract_oifits(char* filename, bool use_v2, bool use_t3amp, bool use_t3phi, 
                                                        (vis2_table.record[i]).vcoord / lambda_v2[tempindex],   // new_v
                                                        wave.eff_wave[j], // new_uv_lambda
                                                        wave.eff_band[j], // new_uv_dlambda
-                                                       u, v, uv_lambda, uv_dlambda, uvtol);
+                                                       (vis2_table.record[i]).mjd, // new_uvtime
+                                                       u, v, uv_lambda, uv_dlambda, uv_time, uvtol);
 
                                             // Move to next V2 point
                                             tempindex++;
@@ -343,6 +353,7 @@ int extract_oifits(char* filename, bool use_v2, bool use_t3amp, bool use_t3phi, 
                                                     t3phi_sig[tempindex] = 0;
                                                 }
 
+                                            time_t3[tempindex] = (t3_table.record[i]).mjd;
                                             lambda_t3[tempindex] = wave.eff_wave[j];
                                             dlambda_t3[tempindex] = wave.eff_band[j];
                                             flag_t3[tempindex] = (t3_table.record[i]).flag[j];
@@ -353,21 +364,25 @@ int extract_oifits(char* filename, bool use_v2, bool use_t3amp, bool use_t3phi, 
                                                        (t3_table.record[i]).v1coord / lambda_t3[tempindex],   // new_v
                                                        wave.eff_wave[j], // new_uv_lambda
                                                        wave.eff_band[j], // new_uv_dlambda
-                                                       u, v, uv_lambda, uv_dlambda, uvtol);
+                                                       (t3_table.record[i]).mjd, // new_uvtime
+                                                       u, v, uv_lambda, uv_dlambda, uv_time, uvtol);
+
 
                                             add_new_uv(&t3in2[tempindex], &uvindex,
                                                        (t3_table.record[i]).u2coord / lambda_t3[tempindex],   // new_u
                                                        (t3_table.record[i]).v2coord / lambda_t3[tempindex],   // new_v
                                                        wave.eff_wave[j], // new_uv_lambda
                                                        wave.eff_band[j], // new_uv_dlambda
-                                                       u, v, uv_lambda, uv_dlambda, uvtol);
+                                                       (t3_table.record[i]).mjd, // new_uvtime
+                                                       u, v, uv_lambda, uv_dlambda, uv_time, uvtol);
 
                                             add_new_uv(&t3in3[tempindex], &uvindex,
                                                        ((t3_table.record[i]).u1coord + (t3_table.record[i]).u2coord) / lambda_t3[tempindex],       // new_u
                                                        ((t3_table.record[i]).v1coord + (t3_table.record[i]).v2coord) / lambda_t3[tempindex],       // new_v
                                                        wave.eff_wave[j], // new_uv_lambda
                                                        wave.eff_band[j], // new_uv_dlambda
-                                                       u, v, uv_lambda, uv_dlambda, uvtol);
+                                                      (t3_table.record[i]).mjd, // new_uvtime
+                                                       u, v, uv_lambda, uv_dlambda, uv_time, uvtol);
 
                                             tempindex++;
                                         }
@@ -455,6 +470,7 @@ int extract_oifits(char* filename, bool use_v2, bool use_t3amp, bool use_t3phi, 
                                                     visphi_sig[tempindex] = 0;
                                                 }
 
+                                            time_vis[tempindex] = (vis_table.record[i]).mjd;
                                             lambda_vis[tempindex] = wave.eff_wave[j];
                                             dlambda_vis[tempindex] = wave.eff_band[j];
                                             flag_vis[tempindex] = (vis_table.record[i]).flag[j];
@@ -464,7 +480,8 @@ int extract_oifits(char* filename, bool use_v2, bool use_t3amp, bool use_t3phi, 
                                                        (vis_table.record[i]).vcoord / lambda_vis[tempindex],
                                                        wave.eff_wave[j], // new_uv_lambda
                                                        wave.eff_band[j], // new_uv_lambda
-                                                       u, v, uv_lambda, uv_dlambda, uvtol);
+                                                      (vis_table.record[i]).mjd, // new_uvtime
+                                                       u, v, uv_lambda, uv_dlambda, uv_time, uvtol);
 
                                             tempindex++;
                                         }
@@ -565,23 +582,41 @@ int extract_oifits(char* filename, bool use_v2, bool use_t3amp, bool use_t3phi, 
         }
     printf("OIFITS import -- Wavelength range:\t%lf - %lf um\n", minwav * 1e6, maxwav * 1e6);
 
-    if(nchanr == 1)
+    if(nwavr == 1)
         {
             wavmin[0] = minwav;
             wavmax[0] = maxwav;
         }
 
-    //
+
+    double mintime = 0;
+    double maxtime = 0;
+    for(i = 0; i < nuv; i++)
+        {
+            if(uv_time[i] > maxtime)
+                maxtime= uv_time[i];
+            if((i == 0) || (uv_time[i] < mintime))
+                mintime= uv_time[i];
+        }
+    printf("OIFITS import -- MJD range:\t%lf - %lf \n", mintime, maxtime);
+
+    if(ntimer == 1)
+        {
+            timemin[0] = mintime;
+            timemax[0] = maxtime;
+        }
+
+   //
     // Assign uv points to reconstruction channels for polychromatic reconstruction
     //
 
-    long* nuv_chan = malloc(nchanr * sizeof(long));
-    for(w = 0; w < nchanr; w++) nuv_chan[w] = 0;
+    long* nuv_chan = malloc(nwavr * sizeof(long));
+    for(w = 0; w < nwavr; w++) nuv_chan[w] = 0;
     uvwav2chan = malloc(nuv * sizeof(double)) ;
     for(i = 0; i < nuv; i++)
         {
             uvwav2chan[i] = -1;
-            for(w = 0; w < nchanr; w++)
+            for(w = 0; w < nwavr; w++)
                 {
                     if((uv_lambda[i] >= wavmin[w]) && (uv_lambda[i] <= wavmax[w]))
                         {
@@ -599,7 +634,7 @@ int extract_oifits(char* filename, bool use_v2, bool use_t3amp, bool use_t3phi, 
                 }
         }
 
-    for(w = 0; w < nchanr; w++)
+    for(w = 0; w < nwavr; w++)
         {
             printf("OIFITS import -- Channel: %ld (%lf - %lf um), Number of uv points: %ld\n", w, wavmin[w] * 1e6, wavmax[w] * 1e6, nuv_chan[w]);
             if(nuv_chan[w] == 0)
@@ -641,13 +676,13 @@ int extract_oifits(char* filename, bool use_v2, bool use_t3amp, bool use_t3phi, 
 
     for(i = 0; i < nt3phi; i++)
         {
-            data[nv2 + nt3amp + nvisamp + i] = t3phi[i] / 180. * PI;
+            data[nv2 + nt3amp + nvisamp + i] = t3phi[i] / 180. * M_PI;
             data_err[nv2 + nt3amp + nvisamp + i] = t3phi_sig[i];
         }
 
     for(i = 0; i < nvisphi; i++)
         {
-            data[nv2 + nt3amp + nvisamp + nt3phi + i] = visphi[i] / 180. * PI ;
+            data[nv2 + nt3amp + nvisamp + nt3phi + i] = visphi[i] / 180. * M_PI ;
             data_err[nv2 + nt3amp + nvisamp + nt3phi + i] = visphi_sig[i];
         }
 
@@ -701,7 +736,7 @@ int extract_oifits(char* filename, bool use_v2, bool use_t3amp, bool use_t3phi, 
     for(i = 0; i < nt3phi; i++)
         {
             if(data_err[nv2 + nt3amp + nvisamp + i] > 0)
-                temp = (1. / data_err[nv2 + nt3amp + nvisamp + i] * t3phis + t3phia) / 180. * PI;
+                temp = (1. / data_err[nv2 + nt3amp + nvisamp + i] * t3phis + t3phia) / 180. * M_PI;
             else
                 temp = 0;
 
@@ -714,7 +749,7 @@ int extract_oifits(char* filename, bool use_v2, bool use_t3amp, bool use_t3phi, 
     for(i = 0; i < nvisphi; i++)
         {
             if(data_err[nv2 + nt3amp + nvisamp + nt3phi + i] > 0)
-                temp = (1. / data_err[nv2 + nt3amp + nvisamp + nt3phi + i] * visphis + visphia) / 180. * PI ;
+                temp = (1. / data_err[nv2 + nt3amp + nvisamp + nt3phi + i] * visphis + visphia) / 180. * M_PI ;
             else
                 temp = 0;
 
@@ -752,9 +787,11 @@ int extract_oifits(char* filename, bool use_v2, bool use_t3amp, bool use_t3phi, 
 
 
 
-void add_new_uv(long *obs_index, long *uvindex, double new_u, double new_v, double new_uv_lambda, double new_uv_dlambda, double *table_u, double *table_v, double *table_uv_lambda, double *table_uv_dlambda, double uvtol)
+void add_new_uv(long *obs_index, long *uvindex, double new_u, double new_v, double new_uv_lambda, double new_uv_dlambda, double new_uv_time, double *table_u, double *table_v, double *table_uv_lambda, double *table_uv_dlambda, double *table_uv_time, double uvtol)
 {
     // Check previous uv points for redundancy, and only create a new uv point if needed
+
+    // TBD: double check that this is taking into account the requested number of spectral channels and temporal channels
 
     // First check for redundancy
     long i;
@@ -772,6 +809,7 @@ void add_new_uv(long *obs_index, long *uvindex, double new_u, double new_v, doub
         {
             table_u[*uvindex] = new_u;
             table_v[*uvindex] = new_v;
+            table_uv_time[*uvindex] = new_uv_time;
             table_uv_lambda[*uvindex] = new_uv_lambda;
             table_uv_dlambda[*uvindex] = new_uv_dlambda;
             *obs_index = *uvindex;
@@ -798,7 +836,7 @@ int write_best_oifits(char* filestring, double complex * mod_vis)
         }
     for(i = 0; i < nv2; i++)
         {
-            fprintf(fileptr, "%10.7lf %10.7lf\n", modsq(mod_vis[v2in[i]]), 0.0);
+            fprintf(fileptr, "%10.7lf %10.7lf\n", creal(mod_vis[v2in[i]])*creal(mod_vis[v2in[i]])+cimag(mod_vis[v2in[i]])*cimag(mod_vis[v2in[i]]), 0.0);
         }
     for(i = 0; i < nvis; i++)
         {
