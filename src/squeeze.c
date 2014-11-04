@@ -1999,8 +1999,8 @@ void vis_to_obs(const double complex * __restrict mod_vis, double* __restrict mo
 
      if(nt3phi > 0)
       if(data_err[t3phioffset + i] > 0)
-	mod_obs[t3phioffset + i] = xatan2(cimag(modt3), creal(modt3));
-      //mod_obs[t3phioffset + i] = carg(modt3);
+	//mod_obs[t3phioffset + i] = xatan2(cimag(modt3), creal(modt3));
+      mod_obs[t3phioffset + i] = carg(modt3);
   }
 
   if(nvisamp > 0)
@@ -2132,7 +2132,7 @@ double get_flat_chi2(bool benchmark)
 #include "extract_oifits.c"
 #include "./models/modelcode.c"
 #include "regularizations.c"
-#include "smallsleef.c"
+//#include "smallsleef.c"
 
 /***********************************/
 /* Write fits image cube           */
