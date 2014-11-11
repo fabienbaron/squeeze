@@ -1,3 +1,5 @@
+#include <stdio.h>
+#include <math.h>
 /***************************************************************/
 /* Change the centroid statistic                               */
 /***************************************************************/
@@ -20,7 +22,8 @@ double cent_change(int channel, double* cent_xoffset, double *cent_yoffset, long
 /***********************/
 double entropy(unsigned long s)
 {
-    double ds;
+
+double ds;
     if(s < 2)
         return 0.0;
     else if(s < 8)
@@ -38,7 +41,20 @@ double entropy(unsigned long s)
             return 8.52516;
         }
     ds = (double) s;
-    return ds * log(ds) - ds + 1.969;    /* From Stirling's formula */
+    return ds * log(ds) - ds + 1.969;
+// note: this whole function could be replaced by lgamma(ds) but it seems buggy
+}
+
+double entropy_full(const double* x, const double* pr, const double eps, const int nx, const int ny)
+{
+    register int i;
+    double en = 0;
+    for(i = 0; i < nx * ny; i++)
+        {
+            if(x[i] > 1)
+	      en += entropy(x[i]);
+        }
+    return en;
 }
 
 /*********************************************************/

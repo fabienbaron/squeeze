@@ -151,7 +151,7 @@ void mcmc_tempering_image(char *file, double *image, long lowtempthread, long de
                           unsigned short axis_len, double complex * __restrict xtransform, double complex * __restrict ytransform,
                           double *mn_chi2, unsigned short *saved_x, unsigned short *saved_y, double *saved_params, long niter, int nchanr);
 
-void logZ_tempering(const double* temperature , const unsigned short* iStoragetoThread, const double* lLikelihood_expectation, const double *lLikelihood_deviation, int nthreads, double* logZ, double* logZ_err);
+void compute_logZ(const double* temperature , const unsigned short* iStoragetoThread, const double* lLikelihood_expectation, const double *lLikelihood_deviation, int nthreads, double* logZ, double* logZ_err);
 
 void mcmc_fullchain(char* file, long nthreads, long niter, int nchanr, long nelements, unsigned short axis_len, unsigned short *saved_x, unsigned short *saved_y, double *saved_params, double *saved_lLikelihood, double *saved_lPrior, double *saved_lPosterior, double *temperature, unsigned short* iThreadtoStorage);
 
@@ -172,6 +172,7 @@ double UDreg(const double* x, const double* pr, const double eps, const int nx, 
 double TV(const double* x, const double* pr, const double eps, const int nx, const int ny);
 double LAP(const double* x, const double* pr, const double eps, const int nx, const int ny);
 double L0(const double* x, const double* pr, const double eps, const int nx, const int ny);
+double entropy_full(const double* x, const double* pr, const double eps, const int nx, const int ny);
 double L2(const double* x, const double* pr, const double eps, const int nx, const int ny);
 double transpec(int nchanr, long axis_len, double *image);
 double cent_change(int channel, double* cent_xoffset, double *cent_yoffset, long new_x, long new_y, long old_x, long old_y, unsigned short axis_len, double fov, double cent_mult);
