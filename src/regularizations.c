@@ -48,20 +48,32 @@ double ds;
 double entropy_full(const double* x, const double* pr, const double eps, const int nx, const int ny)
 {
     register int i;
-    double en = 0;
+    double reg = 0;
     for(i = 0; i < nx * ny; i++)
         {
             if(x[i] > 1)
-	      en += entropy(x[i]);
+	      reg += entropy(x[i]);
         }
-    return en;
+    return reg;
 }
+
+double den_full(const double* x, const double* pr, const double eps, const int nx, const int ny)
+{
+    register int i,j;
+    double reg = 0;
+    for(i = 0; i < nx; i++)
+            for(j = 0; j < ny; j++)
+                reg += den_change(x, i, j, DEN_INIT, nx);
+    return 0.5*reg;
+}
+
+
 
 /*********************************************************/
 /* A function that calculates the change in dark energy. */
 /* DEN_ADD is 0, DEN_SUBTRACT is 1                       */
 /*********************************************************/
-double den_change(double *image, unsigned short i, unsigned short j, unsigned short direction, unsigned short axis_len)
+double den_change(const double *image, const unsigned short i, const unsigned short j, const unsigned short direction, const unsigned short axis_len)
 {
     double delta_den = 0.0;
     double edge_amount = 1.0;

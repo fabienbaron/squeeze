@@ -1018,20 +1018,7 @@ int main(int argc, char** argv)
                 for(i = 0; i < nelements; i++)
                     reg_value[w * NREGULS + REG_CENTERING] += cent_change(w, cent_xoffset, cent_yoffset, initial_x[i], initial_y[i], axis_len / 2, axis_len / 2, axis_len, fov, cent_mult);
 
-
-
-      //  if(reg_param[REG_ENTROPY] > 0)
-      //  {
-       //     for(w = 0; w < nwavr; w++)
-        //    {
-        //        reg_value[w * NREGULS + REG_ENTROPY] = 0.0;
-         //      for(i = 0; i < axis_len; i++)
-          //        for(j = 0; j < axis_len; j++)
-           //           if(image[w * axis_len * axis_len + j * axis_len + i] > 1)
-            //              reg_value[w * NREGULS + REG_ENTROPY] += entropy(image[w * axis_len * axis_len + j * axis_len + i]);
-          //  }
-      //  }
-
+       /*
         if(reg_param[REG_DARKENERGY] > 0)
         {
             for(w = 0; w < nwavr; w++)
@@ -1040,12 +1027,14 @@ int main(int argc, char** argv)
                 for(i = 0; i < axis_len; i++)
                     for(j = 0; j < axis_len; j++)
                         reg_value[w * NREGULS + REG_DARKENERGY] += den_change(&image[w * axis_len * axis_len], i, j, DEN_INIT, axis_len);
-                reg_value[w * NREGULS + REG_DARKENERGY] /= 2.0; /* We have counted all boundaries twice during initialization... */
+                reg_value[w * NREGULS + REG_DARKENERGY] /= 2.0;
             }
         }
-
+*/
         for(w=0; w<nwavr; w++)
         {
+            if(reg_param[REG_DARKENERGY] > 0)
+                reg_value[w * NREGULS + REG_DARKENERGY] = den_full(&image[w * axis_len * axis_len], NULL, 0.0 , axis_len, axis_len) ;
             if(reg_param[REG_ENTROPY]> 0.0)
                 reg_value[w * NREGULS + REG_ENTROPY]= entropy_full(&image[w * axis_len * axis_len], NULL, 0.0 , axis_len, axis_len) ;
             if(reg_param[REG_SPOT]> 0.0)

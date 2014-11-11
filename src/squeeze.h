@@ -167,7 +167,8 @@ int model_vis(double *params, double complex *modvis, double *logl, double *flux
 /* regularizations */
 
 double entropy(unsigned long s);
-double den_change(double *image, unsigned short i, unsigned short j, unsigned short direction, unsigned short axis_len);
+double den_full(const double* x, const double* pr, const double eps, const int nx, const int ny);
+double den_change(const double *image, const unsigned short i, const unsigned short j, const unsigned short direction, const unsigned short axis_len);
 double UDreg(const double* x, const double* pr, const double eps, const int nx, const int ny);
 double TV(const double* x, const double* pr, const double eps, const int nx, const int ny);
 double LAP(const double* x, const double* pr, const double eps, const int nx, const int ny);
@@ -177,6 +178,20 @@ double L2(const double* x, const double* pr, const double eps, const int nx, con
 double transpec(int nchanr, long axis_len, double *image);
 double cent_change(int channel, double* cent_xoffset, double *cent_yoffset, long new_x, long new_y, long old_x, long old_y, unsigned short axis_len, double fov, double cent_mult);
 /* helper functions */
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 double sinc(double x);
 double mean(long *x, long n);
