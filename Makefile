@@ -2,7 +2,10 @@ LIB_DIR = ./lib
 CFITSIO_DIR = cfitsio
 RNG_DIR = rngstreams-1.0.1
 
-CC = gcc -O2 -march=native -mfpmath=sse -flto -ftree-vectorize -pedantic -Wall -Wabi -Wold-style-definition  -Wredundant-decls -Wmissing-declarations -Wvla -Wmissing-format-attribute -Wpacked  -Wcast-qual -Winline -Wformat=2 -std=c99 -fopenmp -ggdb -fno-omit-frame-pointer
+CC = gcc -Ofast -march=native -mfpmath=sse -flto -ftree-vectorize -pedantic -std=c11 -fopenmp -ggdb -fno-omit-frame-pointer
+
+#for Apple clang uncomment the following line
+#CC = clang -Ofast -march=native -mfpmath=sse -flto -ftree-vectorize -pedantic -std=c11  -ggdb -fno-omit-frame-pointer
 
 
 ## Desctription of targets
