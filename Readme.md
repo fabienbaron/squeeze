@@ -1,35 +1,40 @@
-SQUEEZE 2.0 - readme by Fabien Baron
+# SQUEEZE 2.0 
 
-Installation on OSX
--------------------
+## Installation
+
+First download the current git version of SQUEEZE using:
+```ruby
+git clone https://gitorious.org/squeeze/squeeze.git
+```
+then install SQUEEZE by typing:
+```ruby
+cd squeeze/build
+cmake ..
+make
+```
+
+### OSX
 
 SQUEEZE includes all necessary libraries but an OpenMP-capable
 compiler is required if you want to use parallel tempering or parallel
-annealing. At the present time, this rules out the clang compiler
-included with OSX, which OpenMP support is flaky. 
+annealing.
 
-Apple also likes to redirect calls to gcc to the clang compiler, so to
-check which compiler you really have on OSX, type: gcc --version
+At the present time, this rules out the clang compiler included with
+OSX, which OpenMP support is flaky. Be warned that the default "gcc
+binary" included in OSX is actually a link to the clang compiler.
 
-So, you have two choices on OSX:
-
-* you may use gcc 4.8 from macports using:
+We recommend you use gcc 4.8 from macports. You will need to install Macports, then type:
+```ruby
 sudo port install gcc48
+```
 
-* you can compile without OpenMP support by uncommenting the right
-  line the Makefile
-
-
-Usage
------
+## Usage
 
 SQUEEZE help can be invoked by typing 'squeeze -h'.
 
 
-------------------------------------------
 
-GDL/IDL utilities (squeeze_gdl.pro, squeeze_threads, plot_res.pro)
---------------
+## GDL/IDL utilities (squeeze_gdl.pro, squeeze_threads, plot_res.pro)
 
 squeeze_gdl: displays the ongoing reconstruction (chi2 and regularizers,
 current image, previous final image)
