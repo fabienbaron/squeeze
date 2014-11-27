@@ -2,7 +2,7 @@
 
 SQUEEZE is an image reconstruction software developped by Fabien Baron at Georgia State University.
 
-## Prerequisite
+## Prerequisites
 SQUEEZE requires the git and cmake packages to be installed on your machine.
 
 ## Installation
@@ -37,7 +37,10 @@ SQUEEZE help can be invoked by typing 'squeeze -h'.
 
 
 
-## GDL/PYTHON/JULIA utilities (squeeze_display, squeeze_threads, plot_res)
+## Display utilities
+
+To display and analyze the reconstruction process, a set of utilities
+has been developped in several interpreted languages (IDL/GDL, PYTHON, JULIA).
 
 squeeze_display: displays the ongoing reconstruction (chi2 and regularizers,
 current image, previous final image)
