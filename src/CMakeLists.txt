@@ -26,5 +26,5 @@ file(GLOB SOURCE *.h squeeze.c free_fits.c read_fits.c)
 # Now add the binary
 add_executable(squeeze ${SOURCE})
 
-target_link_libraries(squeeze m pthread ${CMAKE_CURRENT_SOURCE_DIR}/../lib/cfitsio/libcfitsio.a ${CMAKE_CURRENT_SOURCE_DIR}/../lib/rngstreams/src/.libs/librngstreams.a)   
+target_link_libraries(squeeze m pthread ${CMAKE_CURRENT_SOURCE_DIR}/../lib/cfitsio/libcfitsio.so ${CMAKE_CURRENT_SOURCE_DIR}/../lib/rngstreams/src/.libs/librngstreams.a)   
 

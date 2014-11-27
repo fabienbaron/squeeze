@@ -35,8 +35,6 @@ ExternalProject_Add(
   CMAKE_ARGS "-DUSE_PTHREADS=ON"
   BUILD_COMMAND make
   BUILD_IN_SOURCE 1
-#  CONFIGURE_COMMAND ${CMAKE_CURRENT_SOURCE_DIR}/lib/cfitsio/configure --silent --enable-reentrant --enable-ssse3
-#  PREFIX ${CMAKE_CURRENT_SOURCE_DIR}/lib/cfitsio 
   INSTALL_COMMAND ""
 )
 
