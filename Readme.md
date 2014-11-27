@@ -30,6 +30,10 @@ We recommend you use gcc 4.8 from macports. You will need to install Macports, t
 ```ruby
 sudo port install gcc48
 ```
+Then before using the cmake command above:
+```ruby
+export CC=/opt/local/bin/gcc-mp-4.8
+```
 
 ## Usage
 
