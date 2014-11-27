@@ -1,6 +1,6 @@
 LIB_DIR = ./lib
 CFITSIO_DIR = cfitsio
-RNG_DIR = rngstreams-1.0.1
+RNG_DIR = rngstreams
 
 CC = gcc -Ofast -march=native -mfpmath=sse -flto -ftree-vectorize -pedantic -std=c11 -fopenmp -ggdb -fno-omit-frame-pointer
 
@@ -12,14 +12,14 @@ CC = gcc -Ofast -march=native -mfpmath=sse -flto -ftree-vectorize -pedantic -std
 
 all:  ./bin/squeeze
 
-./bin/squeeze:  ./src/read_fits.c ./src/free_fits.c ./src/squeeze.c ./src/squeeze.h ./src/regularizations.c ./src/models/modelcode.c ./src/extract_oifits.c $(LIB_DIR)/$(CFITSIO_DIR)/libcfitsio.a $(LIB_DIR)/$(RNG_DIR)/src/.libs/librngstreams.la
+./bin/squeeze:  ./src/read_fits.c ./src/free_fits.c ./src/squeeze.c ./src/squeeze.h ./src/regularizations.c ./src/models/modelcode.c ./src/extract_oifits.c $(LIB_DIR)/$(CFITSIO_DIR)/libcfitsio.a $(LIB_DIR)/$(RNG_DIR)/src/.libs/librngstreams.a
 
 	@echo 'Building SQUEEZE...' &&  ${CC} ./src/squeeze.c ./src/read_fits.c ./src/free_fits.c -I$(LIB_DIR)/$(CFITSIO_DIR) -I$(LIB_DIR)/$(RNG_DIR)/src -o ./bin/squeeze -lm -L$(LIB_DIR)/$(RNG_DIR)/src/.libs/ -lrngstreams -L$(LIB_DIR)/${CFITSIO_DIR} -lcfitsio && echo 'done !' 
 
 $(LIB_DIR)/$(RNG_DIR)/Makefile:
 	@cd $(LIB_DIR)/$(RNG_DIR) && ./configure --silent 
 
-$(LIB_DIR)/$(RNG_DIR)/src/.libs/librngstreams.la: $(LIB_DIR)/$(RNG_DIR)/Makefile
+$(LIB_DIR)/$(RNG_DIR)/src/.libs/librngstreams.a: $(LIB_DIR)/$(RNG_DIR)/Makefile
 	@cd $(LIB_DIR)/$(RNG_DIR) && echo 'Building the random number generator library...please wait...' && make -s
 
 $(LIB_DIR)/$(CFITSIO_DIR)/Makefile:

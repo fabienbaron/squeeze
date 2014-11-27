@@ -29,6 +29,9 @@
 
 #include <stdio.h>
 #include <stdbool.h>
+#include <complex.h>
+#include <math.h>
+#include "exchange.h"
 
 void add_new_uv(long *obs_index, long *uvindex, double new_u, double new_v, double new_uv_lambda, double new_uv_dlambda, double new_uv_time, double *table_u, double *table_v, double *table_uv_lambda, double *table_uv_dlambda, double *table_uv_time, double uvtol);
 

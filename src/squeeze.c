@@ -2152,7 +2152,6 @@ double get_flat_chi2(bool benchmark)
 #include "extract_oifits.c"
 #include "./models/modelcode.c"
 #include "regularizations.c"
-//#include "smallsleef.c"
 
 /***********************************/
 /* Write fits image cube           */
