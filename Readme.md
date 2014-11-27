@@ -1,5 +1,10 @@
 # SQUEEZE 2.0 
 
+SQUEEZE is an image reconstruction software developped by Fabien Baron at Georgia State University.
+
+## Prerequisite
+SQUEEZE requires the git and cmake packages to be installed on your machine.
+
 ## Installation
 
 First download the current git version of SQUEEZE using:
