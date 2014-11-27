@@ -33,7 +33,7 @@
 #include <signal.h>
 #include <time.h>
 #include <string.h>
-#include "../lib/rngstreams-1.0.1/src/RngStream.h"
+#include "../lib/rngstreams/src/RngStream.h"
 #include "squeeze.h"
 #include "exchange.h" // includes cfitio
 

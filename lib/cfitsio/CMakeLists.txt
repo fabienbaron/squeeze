@@ -3,9 +3,9 @@ CMAKE_MINIMUM_REQUIRED(VERSION 2.8.0)
 
 # Allow the developer to select if Dynamic or Static libraries are built
 OPTION (BUILD_SHARED_LIBS "Build Shared Libraries" ON)
-OPTION (USE_PTHREADS "Thread-safe build (using pthreads)" OFF)
+OPTION (USE_PTHREADS "Thread-safe build (using pthreads)" ON)
 
-set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}")
+set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/CMakeModules")
 set (LIB_DESTINATION "${CMAKE_INSTALL_PREFIX}/lib${LIB_SUFFIX}")
 set (INCLUDE_INSTALL_DIR "${CMAKE_INSTALL_PREFIX}/include/")
 
