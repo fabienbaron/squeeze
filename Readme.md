@@ -8,25 +8,25 @@ SQUEEZE is developed by Pr Fabien Baron of Georgia State University and distribu
 Features
 Imaging
 
-#*    Fully polychromatic imaging with FITS output
-#*    Support for numerous regularizers: L0, Total Variation, Laplacian, Maximum Entropy, Dark Energy
-#*    Marginal likelihood computation for model selection
-#*    Full output of the MCMC chain including all probabilities
+* Fully polychromatic imaging with FITS output
+*    Support for numerous regularizers: L0, Total Variation, Laplacian, Maximum Entropy, Dark Energy
+*    Marginal likelihood computation for model selection
+*    Full output of the MCMC chain including all probabilities
 
 Modeling
 
-#*    Uniform and limb-darkening discs, unresolved delta function, rings
-#*    Polychromatic support (a.k.a. SPARCO)
-#*    Bandwith smearing support
+*    Uniform and limb-darkening discs, unresolved delta function, rings
+*    Polychromatic support (a.k.a. SPARCO)
+*    Bandwith smearing support
 
 Minimization Engines:
 
-#*    Parallel simulated annealing with Metropolis-Hastings moves
-#*    Parallel tempering with Metropolis-Hastings moves
+*    Parallel simulated annealing with Metropolis-Hastings moves
+*    Parallel tempering with Metropolis-Hastings moves
 
 Supported data types:
 
-#*   Optical interferometric complex visibilities, differential visibilities, V2, T3 (amplitude and phase), T4 (coming soon)
+*   Optical interferometric complex visibilities, differential visibilities, V2, T3 (amplitude and phase), T4 (coming soon)
 
 ## System requirements
 
@@ -67,7 +67,7 @@ sudo port install gcc48
 ```
 
 Before using the cmake command above, you will have to set the default
-cmake compiler to be the macport one. If you use the bash shell:
+cmake compiler to be the Macports one. If you use the bash shell:
 ```
 export CC=/opt/local/bin/gcc-mp-4.8
 ```
@@ -75,52 +75,50 @@ For tsch:
 ```
 setenv CC /opt/local/bin/gcc-mp-4.8
 ```
-
+If you are not sure which shell you have, you may type 'echo $SHELL'.
 
 ## Usage
 
 SQUEEZE help can be invoked by typing 'squeeze -h'.
 
-#*    Classic imaging (spectrally grey) on a 64x64 image grid, with pixel size 0.2 milli-arcseconds
+*    Classic imaging (spectrally grey) on a 64x64 image grid, with pixel size 0.2 milli-arcseconds
 ```
 ./bin/squeeze ./sample_data/2004-data1.oifits -w 64 -s 0.2
 ```
-#*    Parallel simulated annealing with 50 threads, starting from a random image for each thread
+*    Parallel simulated annealing with 50 threads, starting from a random image for each thread
 ```
 ./bin/squeeze ./sample_data/2004-data1.oifits -w 64 -s 0.2 -threads 50 -i randomthr
 ```
-#*    Parallel tempering with 100 threads and full MCMC chain output
+*    Parallel tempering with 100 threads and full MCMC chain output
 ```
 ./bin/squeeze ./sample_data/2004-data1.oifits -w 64 -s 0.2 -threads 100 -tempering -fullchain
 ```
-#*    Polychromatic imaging, e.g. 3 channels (1.2 to 1.35 microns, 1.35-1.43 microns, and 1.6-1.8 microns).
+*    Polychromatic imaging, e.g. 3 channels (1.2 to 1.35 microns, 1.35-1.43 microns, and 1.6-1.8 microns).
 ```
 ./bin/squeeze mydata.oifits -w 64 -s 0.2 -chan 0 1.2e-6 1.35e-6 1 1.35e-6 1.43e-6 2 1.6e-6 1.8e-6
 ```
-#*    SPARCO imaging (= spectrally grey image and polychromatic modeling)
+*    SPARCO imaging (= spectrally grey image and polychromatic modeling)
 ```
 ./bin/squeeze mydata.oifits -w 64 -s 0.2 -P 1.6-e6 0.5 0.5 -2 -S 0 0.01 0.01 0.01
 ```
 
-## Display utilities
-
-Visualization
+## Display utilities - Visualization
 
 SQUEEZE includes several visualization tools for GDL and Python (requires Astropy). With these you can: 
-#* Follow monothread reconstructions as they run, seeing chi2 and regularizations evolve in real time. 
-#* Follow multithreaded reconstruction as they run, checking for thread mixing for parallel tempering or for converge for simulated annealing. 
-#* Analyze the full MCMC probability chain of a reconstruction. 
-#* Plot the residuals of the reconstructions.
+* Follow monothread reconstructions as they run, seeing chi2 and regularizations evolve in real time. 
+* Follow multithreaded reconstruction as they run, checking for thread mixing for parallel tempering or for converge for simulated annealing. 
+* Analyze the full MCMC probability chain of a reconstruction. 
+* Plot the residuals of the reconstructions.
 
 
 To display and analyze the reconstruction process, a set of utilities
 has been developped in several interpreted languages (IDL/GDL, PYTHON, JULIA).
 
-squeeze_display: displays the ongoing reconstruction (chi2 and regularizers,
+* squeeze_display: displays the ongoing reconstruction (chi2 and regularizers,
 current image, previous final image)
 
-squeeze_threads: displays the ongoing reconstruction when using multiple
+* squeeze_threads: displays the ongoing reconstruction when using multiple
 threads, e.g. when using parallel tempering
 
-plot_res: displays the final reconstructed FITS image, as well as how well
+* plot_res: displays the final reconstructed FITS image, as well as how well
 it fits the data. To be used after reconstruction.
