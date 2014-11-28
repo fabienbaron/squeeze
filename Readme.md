@@ -35,11 +35,11 @@ SQUEEZE is designed to be cross-platform compatible. It has been
 tested on several variants of GNU/Linux and on Mac OSX. Test on
 additional platforms are most welcomed.
 
-SQUEEZE requires the git and cmake packages to be installed on your machine. 
+SQUEEZE requires the *git*[http://git-scm.com/] and *cmake*[http://www.cmake.org/] packages to be installed on your machine. 
 
-SQUEEZE also makes use of C11 and OpenMP, which require a compatible
-compiler (gcc, Intel compiler, etc.). Support for OpenMP is now
-available for the clang/LLVM compiler, but may not be natively
+SQUEEZE requires your compiler to be compatible with the C11 and
+OpenMP[http://openmp.org] standards. These are supported by gcc, the
+Intel Compiler, the clang/LLVM compiler, but may not be natively
 available on your platform (e.g. Mac OSX).
 
 #### 2.1.1 Installing gcc on OSX
@@ -64,9 +64,11 @@ For tsch:
 ```
 setenv CC /opt/local/bin/gcc-mp-4.8
 ```
+
 If you are not sure which shell you have, you may type 'echo $SHELL'.
 
-### 2.1 Installing SQUEEZE
+
+### 2.2 Installing SQUEEZE
 
 First download the current git version of SQUEEZE using:
 ```
