@@ -1,8 +1,7 @@
 # SQUEEZE 2.0 
 
-SQUEEZE is an image reconstruction for optical interferometry. It is designed to image complex astrophysical sources, while (optionally) modeling them simultaneously with analytic models.
-
-SQUEEZE is based on Markov Chain Monte-Carlo (MCMC) exploration of the imaging probability space, and reconstructs images and associated error bars from standard OIFITS data. SQUEEZE leverages the Open Multi-Processing (OpenMP) application programming interface to implement simulated annealing and parallel tempering, in the hope of avoiding the local minima better than classic gradient-based image reconstruction software.
+## 1. Introduction
+SQUEEZE is an image reconstruction for optical interferometry. It is designed to image complex astrophysical sources, while (optionally) modeling them simultaneously with analytic models. SQUEEZE is based on Markov Chain Monte-Carlo (MCMC) exploration of the imaging probability space, and reconstructs images and associated error bars from standard OIFITS data. SQUEEZE leverages the Open Multi-Processing (OpenMP) application programming interface to implement simulated annealing and parallel tempering, in the hope of avoiding the local minima better than classic gradient-based image reconstruction software. Another key difference is that SQUEEZE can reconstruct images using non-convex regularizers, e.g. the l0 norm for true compressed sensing.
 
 SQUEEZE is developed by Pr Fabien Baron of Georgia State University and distributed under an open source (GPL v3) license. If you encounter bugs or if you have specific requests for additional features, models, or other enhancements, please send an email to Fabien Baron (baron@chara.gsu.edu).
 Features
@@ -28,32 +27,22 @@ Supported data types:
 
 *   Optical interferometric complex visibilities, differential visibilities, V2, T3 (amplitude and phase), T4 (coming soon)
 
-## System requirements
+## 2. Installation 
 
-SQUEEZE is designed to be cross-platform compatible. It has been tested on several variants of GNU/Linux and on Mac OSX. Test on additional platforms are most welcomed.
+### 2.1 Software requirements
 
-SQUEEZE makes use of OpenMP, which requires a compatible compiler (gcc, Intel compiler, etc.). Support for OpenMP is now available for the clang/LLVM compiler, but may not be currently available on your platform (e.g. Mac OSX).
-Installation
+SQUEEZE is designed to be cross-platform compatible. It has been
+tested on several variants of GNU/Linux and on Mac OSX. Test on
+additional platforms are most welcomed.
 
-SQUEEZE requires the git and cmake packages to be installed on your machine.
+SQUEEZE requires the git and cmake packages to be installed on your machine. 
 
-## Installation
+SQUEEZE also makes use of C11 and OpenMP, which require a compatible
+compiler (gcc, Intel compiler, etc.). Support for OpenMP is now
+available for the clang/LLVM compiler, but may not be natively
+available on your platform (e.g. Mac OSX).
 
-First download the current git version of SQUEEZE using:
-```
-git clone https://gitorious.org/squeeze/squeeze.git
-```
-which will create a squeeze subdirectory and download the SQUEEZE source into it.
-Then install SQUEEZE by typing:
-```
-cd squeeze/build
-cmake ..
-make
-```
-This will configure and build both SQUEEZE's sublibraries, CFITSIO and RngStreams, then SQUEEZE itself.
-
-
-### OSX
+#### 2.1.1 Installing gcc on OSX
 
 SQUEEZE includes all necessary libraries but an OpenMP-capable
 compiler is required if you want to use parallel tempering or parallel
@@ -77,9 +66,26 @@ setenv CC /opt/local/bin/gcc-mp-4.8
 ```
 If you are not sure which shell you have, you may type 'echo $SHELL'.
 
-## Usage
+### 2.1 Installing SQUEEZE
 
-SQUEEZE help can be invoked by typing 'squeeze -h'.
+First download the current git version of SQUEEZE using:
+```
+git clone https://gitorious.org/squeeze/squeeze.git
+```
+which will create a squeeze subdirectory and download the SQUEEZE source into it.
+Then install SQUEEZE by typing:
+```
+cd squeeze/build
+cmake ..
+make
+```
+This will configure and build both SQUEEZE's sublibraries, CFITSIO and RngStreams, then SQUEEZE itself.
+
+## 3. Usage
+
+### 3.1 Examples
+
+Note: SQUEEZE help can be invoked by typing 'squeeze -h'.
 
 *    Classic imaging (spectrally grey) on a 64x64 image grid, with pixel size 0.2 milli-arcseconds
 ```
@@ -102,7 +108,7 @@ SQUEEZE help can be invoked by typing 'squeeze -h'.
 ./bin/squeeze mydata.oifits -w 64 -s 0.2 -P 1.6-e6 0.5 0.5 -2 -S 0 0.01 0.01 0.01
 ```
 
-## Display utilities - Visualization
+## 3.2 Display utilities - Visualization
 
 SQUEEZE includes several visualization tools for GDL and Python (requires Astropy). With these you can: 
 * Follow monothread reconstructions as they run, seeing chi2 and regularizations evolve in real time. 
