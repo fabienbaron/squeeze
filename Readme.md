@@ -8,14 +8,12 @@ SQUEEZE is developed by Pr Fabien Baron of Georgia State University and distribu
 Main features of SQUEEZE:
 
 Imaging:
-
-*    Fully polychromatic imaging with FITS output
+* Fully polychromatic imaging with FITS output
 *    Support for numerous regularizers: L0, Total Variation, Laplacian, Maximum Entropy, Dark Energy
 *    Marginal likelihood computation for model selection
 *    Full output of the MCMC chain including all probabilities
 
 Modeling:
-
 *    Uniform and limb-darkening discs, unresolved delta function, rings
 *    Polychromatic support (a.k.a. SPARCO)
 *    Bandwith smearing support
@@ -37,10 +35,10 @@ SQUEEZE is designed to be cross-platform compatible. It has been
 tested on several variants of GNU/Linux and on Mac OSX. Test on
 additional platforms are most welcomed.
 
-SQUEEZE requires the [git](http://git-scm.com) and [cmake](http://www.cmake.org) packages to be installed on your machine. 
+SQUEEZE requires the *git*[http://git-scm.com/] and *cmake*[http://www.cmake.org/] packages to be installed on your machine. 
 
 SQUEEZE requires your compiler to be compatible with the C11 and
-[OpenMP](http://openmp.org) standards. These are supported by gcc, the
+OpenMP[http://openmp.org] standards. These are supported by gcc, the
 Intel Compiler, the clang/LLVM compiler, but may not be natively
 available on your platform (e.g. Mac OSX).
 
@@ -115,7 +113,6 @@ Note: SQUEEZE help can be invoked by typing 'squeeze -h'.
 ## 3.2 Display utilities - Visualization
 
 SQUEEZE includes several visualization tools for GDL and Python (requires Astropy). With these you can: 
-
 * Follow monothread reconstructions as they run, seeing chi2 and regularizations evolve in real time. 
 * Follow multithreaded reconstruction as they run, checking for thread mixing for parallel tempering or for converge for simulated annealing. 
 * Analyze the full MCMC probability chain of a reconstruction. 
