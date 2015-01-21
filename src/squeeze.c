@@ -150,7 +150,7 @@ int main(int argc, char** argv)
 
     printf(TEXT_COLOR_BLACK"SQUEEZE v2.0\n");
     /* Read in command line info... */
-    if((argc < 2) || (strcmp(argv[1], "-h") == 0) || (strcmp(argv[1], "--help") == 0))
+    if(argc < 2)
     {
         printhelp();
         return 0;
@@ -176,17 +176,17 @@ int main(int argc, char** argv)
         //        if ( strcmp ( argv[i], "-f" ) == 0 )
         //    output_type = FULL_OUTPUT;
 
-        if(strcmp(argv[i], "-h") == 0)
+      if( (strcmp(argv[i], "-h") == 0) || (strcmp(argv[i], "-help") == 0)|| (strcmp(argv[i], "--help") == 0))
         {
             printhelp();
         }
         else if(strcmp(argv[i], "-benchmark") == 0)
         {
-            benchmark = TRUE; // disable the t3amp
+	  benchmark = TRUE; // run benchmark
         }
         else if(strcmp(argv[i], "-nov2") == 0)
         {
-            use_v2 = FALSE; // disable the t3amp
+            use_v2 = FALSE; // disable the v2
         }
         else if(strcmp(argv[i], "-not3amp") == 0)
         {
@@ -203,11 +203,11 @@ int main(int argc, char** argv)
         }
         else if(strcmp(argv[i], "-novisamp") == 0)
         {
-            use_visamp = FALSE; // disable the t3amp
+            use_visamp = FALSE; // disable the visamp
         }
         else if(strcmp(argv[i], "-novisphi") == 0)
         {
-            use_visphi = FALSE; // disable the t3amp
+            use_visphi = FALSE; // disable the visphi
         }
         else if(strcmp(argv[i], "-novis") == 0)
         {
@@ -224,7 +224,7 @@ int main(int argc, char** argv)
         }
         else if(strcmp(argv[i], "-nobws") == 0)
         {
-            use_bandwidthsmearing = FALSE;
+	  use_bandwidthsmearing = FALSE; // disable bandwidth smearing
         }
         else if(strcmp(argv[i], "-tempering") == 0)
         {
