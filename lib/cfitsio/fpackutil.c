@@ -1329,7 +1329,7 @@ printf("    HDU %d does not meet noise criteria to be quantized, so losslessly c
 
     		fits_get_num_rowsll(inputfptr, &nrows, &stat);
     		fits_get_num_cols(inputfptr, &ncols, &stat);
- 		printf("\n File: %s, HDU %d,  %d cols X %ld rows\n", infits, extnum, ncols, nrows);
+ 		printf("\n File: %s, HDU %d,  %d cols X %lld rows\n", infits, extnum, ncols, nrows);
 		fp_test_table(inputfptr, outfptr, outfptr2, fpvar, &stat);	  
 
 	    } else {
