@@ -36,7 +36,7 @@ SQUEEZE is designed to be cross-platform compatible. It has been
 tested on several variants of GNU/Linux and on Mac OSX. Test on
 additional platforms are most welcomed.
 
-SQUEEZE requires the *git*[http://git-scm.com/] and *cmake*[http://www.cmake.org/] packages to be installed on your machine. 
+SQUEEZE requires the git [http://git-scm.com/] and cmake [http://www.cmake.org/] packages to be installed on your machine. 
 
 SQUEEZE requires your compiler to be compatible with the C11 and
 OpenMP[http://openmp.org] standards. These are supported by gcc, the
@@ -113,7 +113,8 @@ Note: SQUEEZE help can be invoked by typing 'squeeze -h'.
 
 ## 3.2 Display utilities - Visualization
 
-SQUEEZE includes several visualization tools for GDL and Python (requires Astropy). With these you can: 
+SQUEEZE includes several visualization tools for GDL and Python (requires Astropy). With these you can:
+ 
 * Follow monothread reconstructions as they run, seeing chi2 and regularizations evolve in real time. 
 * Follow multithreaded reconstruction as they run, checking for thread mixing for parallel tempering or for converge for simulated annealing. 
 * Analyze the full MCMC probability chain of a reconstruction. 
