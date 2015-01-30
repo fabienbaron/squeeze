@@ -39,7 +39,7 @@ additional platforms are most welcomed.
 SQUEEZE requires the [git](http://git-scm.com) and [cmake](http://www.cmake.org) packages to be installed on your machine. 
 
 SQUEEZE requires your compiler to be compatible with the C11 and
-OpenMP[http://openmp.org] standards. These are supported by gcc, the
+[OpenMP](http://openmp.org) standards. These are supported by gcc, the
 Intel Compiler, the clang/LLVM compiler, but may not be natively
 available on your platform (e.g. Mac OSX).
 
