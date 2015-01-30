@@ -8,7 +8,8 @@ SQUEEZE is developed by Pr Fabien Baron of Georgia State University and distribu
 Main features of SQUEEZE:
 
 Imaging:
-* Fully polychromatic imaging with FITS output
+
+*    Fully polychromatic imaging with FITS output
 *    Support for numerous regularizers: L0, Total Variation, Laplacian, Maximum Entropy, Dark Energy
 *    Marginal likelihood computation for model selection
 *    Full output of the MCMC chain including all probabilities
