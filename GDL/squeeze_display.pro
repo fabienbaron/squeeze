@@ -15,31 +15,33 @@
 ; This is a GDL viewer for SQUEEZE based on John Monnier's code for MACIM
 ;
 pro squeeze_display, dir
-if not(keyword_set(dir)) then dir ='./' else dir = dir +'/'
+if not(keyword_set(dir)) then dir ='../' else dir = dir +'/'
 print, 'Monitoring thread00.fits in '+dir
 device,retain=2, decompose=0
 nreguls = 9
 reg_names = ['PARAM', 'CENT', 'IMPRIOR', 'ENT', 'DEN', 'TV', 'SPOT', 'LAP', 'L0', 'TRANSPEC']
-
 loadct,3
 ltime =  systime(1)
 mtime =  ltime
 chi2 = -1
-;print,  'Press enter to end...'
-restart: ;restart from here if severe file read failure for thread.fits
+restart:                        ;restart from here if severe file read failure for thread.fits
 while (1) do begin
- while (mtime-ltime le  0) do begin
-  openr,  1,  dir+'thread00.fits',  error = err
+
+; monitor file changes
+ while(1) do begin 
+ openr, 1,  dir+'thread00.fits',  error = err
   if (err eq 0) then begin
    stat =  fstat(1)
    close,  1
    mtime =  stat.mtime
- endif else print,  'Trouble opening file (ignore if occasional message only)'
-  wait,  0.3
+   ;print, mtime
+  endif else print,  'Trouble opening file (ignore if occasional message only)'
+  if (mtime GT ltime) then break else wait, 0.3
  endwhile
- ltime = mtime
+ ltime = mtime		
  tab_im =  readfits(dir+'thread00.fits',  head, /silent)
  sz = size(tab_im)
+
  if(sz[0] LT 2) then goto, restart
  if(sz[0] EQ 2) then nchanr = 1 else nchanr = (size(tab_im))[3]
  if(n_elements(oldnchanr) EQ 0) then oldnchanr = nchanr
@@ -65,6 +67,7 @@ while (1) do begin
     reg_params[i] = sxpar(head,  'HYPER'+strcompress(string(i),/remove_all))
     if(reg_params[i] GT 0) then for j=0, nchanr-1 do reg_vals[j, i] = sxpar(head,  'REGUL'+strcompress(string(i),/remove_all)+'W'+strcompress(string(j),/remove_all))
  endfor
+
 reg_active = where(reg_params GT 0)
 valid = 0
 if (n_elements(reg_active) GT 1) then valid = 1 else if ((n_elements(reg_active) EQ 1) AND (reg_active NE -1) ) then valid = 1
@@ -73,6 +76,7 @@ if valid EQ 1 then begin
    for i=0, nchanr-1 do newregs[i, *] = reg_vals[i, reg_active]*reg_params[reg_active]/(2.*ndf)
    linesty = (indgen(9))[reg_active]
 endif
+
 
 xv=findgen(sz[1])*scale
 yv=findgen(sz[2])*scale

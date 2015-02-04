@@ -245,6 +245,8 @@ int main(int argc, char** argv)
                 sscanf(argv[i + 1], "%ld", &nelements);
             else if(strcmp(argv[i], "-n") == 0)
                 sscanf(argv[i + 1], "%ld", &niter);
+	    else if(strcmp(argv[i], "-ps") == 0)
+                sscanf(argv[i + 1], "%lf", &reg_param[REG_PRIORIMAGE]);
             else if(strcmp(argv[i], "-de") == 0)
                 sscanf(argv[i + 1], "%lf", &reg_param[REG_DARKENERGY]);
             else if(strcmp(argv[i], "-en") == 0)
@@ -777,7 +779,8 @@ int main(int argc, char** argv)
                             prior_image[i + axis_len * j + axis_len * axis_len * w] = log(prior_image[i + axis_len * j + axis_len * axis_len * w]);
                         else
                             prior_image[i + axis_len * j + axis_len * axis_len * w] = -1e9;
-        }
+	    if(reg_param[REG_PRIORIMAGE] == 0.) reg_param[REG_PRIORIMAGE]=1.;
+	}
         free(in_naxes);
     }
 
@@ -1006,8 +1009,6 @@ int main(int argc, char** argv)
         //
         // COMPUTE INITIAL REGULARIZERS
         //
-
-
         if(reg_param[REG_PRIORIMAGE] > 0)
             for(w = 0; w < nwavr; w++)
                 for(i = 0; i < nelements; i++)
@@ -1313,7 +1314,9 @@ int main(int argc, char** argv)
                         diagnostics_used += snprintf(diagnostics + diagnostics_used , 250 - diagnostics_used , "VA:%5.2f ", chi2visamp);
                     if(nvisphi > 0)
                         diagnostics_used += snprintf(diagnostics + diagnostics_used , 250 - diagnostics_used , "VP:%5.2f ", chi2visphi);
-                    if(reg_param[REG_ENTROPY] > 0)
+                    if(reg_param[REG_PRIORIMAGE] > 0)
+                        diagnostics_used += snprintf(diagnostics + diagnostics_used , 250 - diagnostics_used , "PRI:%5.2f ", reg_param[REG_PRIORIMAGE] * reg_value[w * NREGULS + REG_PRIORIMAGE]);
+		    if(reg_param[REG_ENTROPY] > 0)
                         diagnostics_used += snprintf(diagnostics + diagnostics_used , 250 - diagnostics_used , "ENT:%5.2f ", reg_param[REG_ENTROPY] * reg_value[w * NREGULS + REG_ENTROPY]);
                     if(reg_param[REG_DARKENERGY] > 0)
                         diagnostics_used += snprintf(diagnostics + diagnostics_used , 250 - diagnostics_used , "DEN:%5.2f ", reg_param[REG_DARKENERGY] * reg_value[w * NREGULS + REG_DARKENERGY]);
@@ -1969,6 +1972,7 @@ void printhelp(void)
     printf("  -ts param     : Transpectral L2 regularization for polychromatic reconstructions.\n");
     printf("  -fv param     : Field of view regularizer.\n");
     printf("  -p file.fits  : Prior image. Log of this is the regularization.\n");
+    printf("  -ps param     : Prior image regularization multiplier.\n");
     printf("  -i file.fits  : Initial image will be read from a FITS file.\n");
     printf("  -i random     : Initial image will be random, and common to all thread/wavelengths.\n");
     printf("  -i randomthr  : Initial image will be random, with a different image for each thread.\n");
