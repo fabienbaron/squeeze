@@ -170,15 +170,19 @@ int main(int argc, char** argv)
     mas_pixel = 0.0;
     axis_len = 0;
 
+    if( (strcmp(argv[1], "-h") == 0) || (strcmp(argv[1], "-help") == 0)|| (strcmp(argv[1], "--help") == 0))
+        {
+            printhelp();
+	    return 0;
+        }
+
     for(i = 2; i < argc; i++)
     {
         /* First the options without arguments */
-        //        if ( strcmp ( argv[i], "-f" ) == 0 )
-        //    output_type = FULL_OUTPUT;
-
       if( (strcmp(argv[i], "-h") == 0) || (strcmp(argv[i], "-help") == 0)|| (strcmp(argv[i], "--help") == 0))
         {
             printhelp();
+	    return 0;
         }
         else if(strcmp(argv[i], "-benchmark") == 0)
         {
