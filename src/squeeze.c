@@ -780,9 +780,9 @@ int main(int argc, char** argv)
                 for(i = 0; i < axis_len; i++)
                     for(j = 0; j < axis_len; j++)
                         if(prior_image[i + axis_len * j + axis_len * axis_len * w] > 0)
-                            prior_image[i + axis_len * j + axis_len * axis_len * w] = log(prior_image[i + axis_len * j + axis_len * axis_len * w]);
+                            prior_image[i + axis_len * j + axis_len * axis_len * w] = -log(prior_image[i + axis_len * j + axis_len * axis_len * w]);
                         else
-                            prior_image[i + axis_len * j + axis_len * axis_len * w] = -1e9;
+                            prior_image[i + axis_len * j + axis_len * axis_len * w] = 1e9;
 	    if(reg_param[REG_PRIORIMAGE] == 0.) reg_param[REG_PRIORIMAGE]=1.;
 	}
         free(in_naxes);
@@ -1441,7 +1441,7 @@ int main(int argc, char** argv)
                 //
 
                 if(reg_param[REG_ENTROPY]    > 0.0) new_reg_value[chan * NREGULS + REG_ENTROPY] = reg_value[REG_ENTROPY] - entropy(image[old_pos]) + entropy(image[old_pos] - 1);
-                if(reg_param[REG_PRIORIMAGE] > 0.0) new_reg_value[chan * NREGULS + REG_PRIORIMAGE] = reg_value[REG_PRIORIMAGE] - prior_image[old_pos];    // BUG
+                if(reg_param[REG_PRIORIMAGE] > 0.0) new_reg_value[chan * NREGULS + REG_PRIORIMAGE] = reg_value[REG_PRIORIMAGE] - prior_image[old_pos]; 
                 if(reg_param[REG_DARKENERGY] > 0.0) new_reg_value[chan * NREGULS + REG_DARKENERGY] = reg_value[REG_DARKENERGY] - den_change(image, old_x, old_y, DEN_SUBTRACT, axis_len);
                 if(reg_param[REG_SPOT]       > 0.0) reg_value[chan * NREGULS + REG_SPOT]   = UDreg(&image[chan * axis_len * axis_len], NULL, 0.0 , axis_len, axis_len) / (double) nelements;
                 if(reg_param[REG_TV]         > 0.0) reg_value[chan * NREGULS + REG_TV]     =    TV(&image[chan * axis_len * axis_len], NULL, 0.0 , axis_len, axis_len) / (double) nelements;
@@ -1452,7 +1452,7 @@ int main(int argc, char** argv)
                 image[old_pos]--;
 
                 if(reg_param[REG_ENTROPY]    > 0.0)  new_reg_value[chan * NREGULS + REG_ENTROPY]    += entropy(image[new_pos] + 1) - entropy(image[new_pos]);
-                if(reg_param[REG_PRIORIMAGE] > 0.0)  new_reg_value[chan * NREGULS + REG_PRIORIMAGE] += prior_image[new_pos];    // BUG
+                if(reg_param[REG_PRIORIMAGE] > 0.0)  new_reg_value[chan * NREGULS + REG_PRIORIMAGE] += prior_image[new_pos]; 
                 if(reg_param[REG_DARKENERGY] > 0.0)  new_reg_value[chan * NREGULS + REG_DARKENERGY] += den_change(image, new_x, new_y, DEN_ADD, axis_len);
 
                 image[new_pos]++;
