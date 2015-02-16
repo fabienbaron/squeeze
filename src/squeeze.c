@@ -794,7 +794,7 @@ int main(int argc, char** argv)
     ndf = (double)(nvisamp + nvisphi + nt3amp + nt3phi + nv2 + nparams);
 
     /* cent_mult should only be non-zero if there is no model to fit */
-    if(init_params[0] == 0)
+    if(nparams == 0)
     {
         cent_mult = DEFAULT_CENT_MULT;
         reg_param[REG_CENTERING] = 1.0;
@@ -2117,8 +2117,11 @@ double get_flat_chi2(bool benchmark)
         mod_vis[i] = cexp(-10.0 + I * (rlong % 1000) * 0.006283);
     }
 
-    printf("Benchmarking the chi2...\n");
-    if(benchmark == TRUE) nbench = 50000;
+
+    if(benchmark == TRUE) {
+      printf("Reconst setup -- Benchmarking the chi2...\n");
+      nbench = 50000;}
+      
     else nbench = 1;
     double flat_chi2 = 0;
     startTime = (double)clock()/CLOCKS_PER_SEC;
@@ -2126,7 +2129,7 @@ double get_flat_chi2(bool benchmark)
         flat_chi2 = get_chi2(mod_vis, res, mod_obs, &dummy1, &dummy2, &dummy3, &dummy4, &dummy5);
 
     endTime = (double)clock()/CLOCKS_PER_SEC;
-    if(benchmark == TRUE)  printf("%ld iterations in %f seconds = %f it/sec for this datafile\n",nbench, endTime-startTime, (double)nbench/(endTime-startTime));
+    if(benchmark == TRUE)  printf("Reconst setup -- %ld iterations in %f seconds = %f it/sec for this datafile\n",nbench, endTime-startTime, (double)nbench/(endTime-startTime));
 
     free(res);
     free(mod_obs);

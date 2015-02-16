@@ -93,8 +93,15 @@ int model_vis(double *params, double complex *modvis, double *lPriorModel, doubl
         lPriorParams[2] = 0;
     else
         lPriorParams[2] = 1e99;
-
-    *lPriorModel = lPriorParams[0] + lPriorParams[1] + lPriorParams[2] ;
+ 
+    
+    if(abs(params[3]) >= 10)
+        lPriorParams[3] = 1e99;
+    else
+        lPriorParams[3] = 0;
+   
+    
+    *lPriorModel = lPriorParams[0] + lPriorParams[1] + lPriorParams[2] +lPriorParams[3] ;
 
     return (status != 0);
 }
