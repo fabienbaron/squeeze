@@ -1066,7 +1066,6 @@ int main(int argc, char** argv)
         //Compute initial values for prior, likelihood, and posterior
 
         lLikelihood = 0.5 * get_chi2(mod_vis, res, mod_obs, &chi2v2, &chi2t3amp, &chi2visamp, &chi2t3phi, &chi2visphi);
-	printf("Initial chi2: %f %f %f %f\n", lLikelihood, chi2v2, chi2t3amp, chi2t3phi);
         lPrior =
             reg_param[REG_PRIORIMAGE]  * reg_value[chan * NREGULS + REG_PRIORIMAGE]
             + reg_param[REG_MODELPARAM]  * reg_value[chan * NREGULS + REG_MODELPARAM]
@@ -1080,9 +1079,6 @@ int main(int argc, char** argv)
             + reg_param[REG_TRANSPECL2]  * reg_value[REG_TRANSPECL2];
 
         lPosterior = lLikelihood + lPrior ;
-printf("Initial chi2: %f %f %f %f\n", lLikelihood, chi2v2, chi2t3amp, chi2t3phi);
-printf("Initial prior regparam: %f %f\n", lPrior, reg_param[REG_MODELPARAM]);
-
 
         if(minimization_engine == ENGINE_SIMULATED_ANNEALING)
         {
