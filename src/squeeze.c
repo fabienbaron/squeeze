@@ -102,7 +102,7 @@ int main(int argc, char** argv)
 
     bool dumpchain = FALSE;
     bool benchmark = FALSE;
-    //  const char *reg_names[NREGULS] = {"PARAM", "CENT", "IMPRIOR", "ENT", "DEN", "TV", "SPOT", "LAP", "L0", "TS"};
+    //  const char *reg_names[NREGULS] = {"PARAM", "C", "PRI", "ENT", "DEN", "TV", "UD", "LAP", "L0", "TS"};
     long i, j, k, w, depth = DEFAULT_DEPTH, offset = 0;
 
     //  long *indexes;
@@ -1013,29 +1013,8 @@ int main(int argc, char** argv)
         //
         // COMPUTE INITIAL REGULARIZERS
         //
-        if(reg_param[REG_PRIORIMAGE] > 0)
-            for(w = 0; w < nwavr; w++)
-                for(i = 0; i < nelements; i++)
-                    reg_value[w * NREGULS + REG_PRIORIMAGE] += prior_image[element_y[w * nelements + i] * axis_len + element_x[w * nelements + i]];
 
-        if(reg_param[REG_CENTERING] > 0)
-            for(w = 0; w < nwavr; w++)
-                for(i = 0; i < nelements; i++)
-                    reg_value[w * NREGULS + REG_CENTERING] += cent_change(w, cent_xoffset, cent_yoffset, initial_x[i], initial_y[i], axis_len / 2, axis_len / 2, axis_len, fov, cent_mult);
-
-       /*
-        if(reg_param[REG_DARKENERGY] > 0)
-        {
-            for(w = 0; w < nwavr; w++)
-            {
-                reg_value[w * NREGULS + REG_DARKENERGY] = 0.0;
-                for(i = 0; i < axis_len; i++)
-                    for(j = 0; j < axis_len; j++)
-                        reg_value[w * NREGULS + REG_DARKENERGY] += den_change(&image[w * axis_len * axis_len], i, j, DEN_INIT, axis_len);
-                reg_value[w * NREGULS + REG_DARKENERGY] /= 2.0;
-            }
-        }
-*/
+     
         for(w=0; w<nwavr; w++)
         {
             if(reg_param[REG_DARKENERGY] > 0)
@@ -1050,15 +1029,22 @@ int main(int argc, char** argv)
                 reg_value[w * NREGULS + REG_LAP]    =   LAP(&image[w * axis_len * axis_len], NULL, 0.0 , axis_len, axis_len) / (double) nelements;
             if(reg_param[REG_L0]> 0.0)
                 reg_value[w * NREGULS + REG_L0]     =    L0(&image[w * axis_len * axis_len], NULL, 0.0 , axis_len, axis_len) / (double) nelements;
-        }
+	    if(reg_param[REG_PRIORIMAGE] > 0)
+		  for(i = 0; i < nelements; i++)
+			reg_value[w * NREGULS + REG_PRIORIMAGE] += prior_image[element_y[w * nelements + i] * axis_len + element_x[w * nelements + i]];
+	    if(reg_param[REG_CENTERING] > 0)
+		  for(i = 0; i < nelements; i++)
+		    reg_value[w * NREGULS + REG_CENTERING] += cent_change(w, cent_xoffset, cent_yoffset, initial_x[i], initial_y[i], axis_len / 2, axis_len / 2, axis_len, fov, cent_mult); 
+	    if(reg_param[REG_MODELPARAM] > 0)
+		reg_value[w * NREGULS + REG_MODELPARAM] = 0.;
+	}
 
-	if(reg_param[REG_TRANSPECL2] > 0.0) reg_value[REG_TRANSPECL2]              = transpec(nwavr, axis_len, image) / (double) nelements;
+	if(reg_param[REG_TRANSPECL2] > 0.0) 
+	    reg_value[REG_TRANSPECL2] = transpec(nwavr, axis_len, image) / (double) nelements;
 
 	//
 	// Compute initial model
 	//
-
-
 
         if(nparams > 0)
             model_vis(params, param_vis, &reg_value[REG_MODELPARAM], fluxratio_image);
@@ -1080,6 +1066,7 @@ int main(int argc, char** argv)
         //Compute initial values for prior, likelihood, and posterior
 
         lLikelihood = 0.5 * get_chi2(mod_vis, res, mod_obs, &chi2v2, &chi2t3amp, &chi2visamp, &chi2t3phi, &chi2visphi);
+	printf("Initial chi2: %f %f %f %f\n", lLikelihood, chi2v2, chi2t3amp, chi2t3phi);
         lPrior =
             reg_param[REG_PRIORIMAGE]  * reg_value[chan * NREGULS + REG_PRIORIMAGE]
             + reg_param[REG_MODELPARAM]  * reg_value[chan * NREGULS + REG_MODELPARAM]
@@ -1093,6 +1080,8 @@ int main(int argc, char** argv)
             + reg_param[REG_TRANSPECL2]  * reg_value[REG_TRANSPECL2];
 
         lPosterior = lLikelihood + lPrior ;
+printf("Initial chi2: %f %f %f %f\n", lLikelihood, chi2v2, chi2t3amp, chi2t3phi);
+printf("Initial prior regparam: %f %f\n", lPrior, reg_param[REG_MODELPARAM]);
 
 
         if(minimization_engine == ENGINE_SIMULATED_ANNEALING)
@@ -1109,10 +1098,6 @@ int main(int argc, char** argv)
                 burn_in_times[iThread] = niter / BURN_IN_FRAC;
             }
         }
-
-
-
-
 
         /*--------------------------
          *    This is the main loop...

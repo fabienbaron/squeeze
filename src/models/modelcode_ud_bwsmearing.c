@@ -19,25 +19,25 @@ params(4) = Fractional Bandwidth
 Globals: nparams, nbaselines, u, v
 
 */
+extern double j1(double);
 
 int model_vis(double *params, double complex *modvis, double *lPriorModel, double *flux_frac_0)
 {
     int status = 0;
     long i;
     double tempd, vis_primary = 1.0, vis_bw = 1.0, delta_ra, delta_dec;
-    double complex phase_factor;
     double lPriorParams[5];
 
 
     delta_dec = params[1] / MAS_RAD;
     delta_ra  = params[0] / MAS_RAD;
 
-    for(i = 0; i < nbaselines; i++)
+    for(i = 0; i < nuv; i++)
         {
 
             if(params[3] > 0)
                 {
-                    tempd = PI * params[3] / MAS_RAD * sqrt(u[i] * u[i] + v[i] * v[i]) + 1e-15;
+                    tempd = M_PI * params[3] / MAS_RAD * sqrt(u[i] * u[i] + v[i] * v[i]) + 1e-15;
                     vis_primary = 2.0 * j1(tempd) / tempd;
                 }
             else
@@ -45,13 +45,13 @@ int model_vis(double *params, double complex *modvis, double *lPriorModel, doubl
 
             if(params[4] > 0)
                 {
-                    tempd = PI * params[4] * (u[i] * delta_ra + v[i] * delta_dec) + 1e-15;
+                    tempd = M_PI * params[4] * (u[i] * delta_ra + v[i] * delta_dec) + 1e-15;
                     vis_bw = sin(tempd) / tempd;
                 }
             else
                 vis_bw = 1.0;
 
-            modvis[i] = vis_bw * vis_primary * cexp(-2.0 * I * PI * (u[i] * delta_ra + v[i] * delta_dec));
+            modvis[i] = vis_bw * vis_primary * cexp(-2.0 * I * M_PI * (u[i] * delta_ra + v[i] * delta_dec));
 
             flux_frac_0[i] = 1. - params[2];
         }
@@ -85,3 +85,5 @@ int model_vis(double *params, double complex *modvis, double *lPriorModel, doubl
 
     return (status != 0);
 }
+
+
