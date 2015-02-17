@@ -985,8 +985,6 @@ int main(int argc, char** argv)
             new_fluxratio_image[i] = 1.0;
         }
 
-
-
         /* The next few lines is where the image is initialized... */
 
         for(i = 0; i < nwavr * axis_len * axis_len; i++)
@@ -1008,13 +1006,10 @@ int main(int argc, char** argv)
             }
         }
 
-
-
         //
         // COMPUTE INITIAL REGULARIZERS
         //
-
-     
+    
         for(w=0; w<nwavr; w++)
         {
             if(reg_param[REG_DARKENERGY] > 0)
@@ -1358,14 +1353,14 @@ int main(int argc, char** argv)
                 // alternate
                 chan = rlong % nwavr;
                 rlong /= nwavr;
-                //              printf("%ld", chan);
+                //printf("%ld", chan);
             }
             else chan = 0;
 
-
             current_elt = rlong % (nelements + nparams * PARAMS_PER_ELT);
             rlong /= (nelements + nparams * PARAMS_PER_ELT);
-            if(current_elt < nelements) /* Attempt image movement rather than parametric model movement */
+            
+	    if((nparams ==0)||(current_elt < nelements)) /* Attempt image movement rather than parametric model movement */
             {
 
                 // select step
@@ -1421,9 +1416,9 @@ int main(int argc, char** argv)
                 // Regularization
                 //
 
-                if(reg_param[REG_ENTROPY]    > 0.0) new_reg_value[chan * NREGULS + REG_ENTROPY] = reg_value[REG_ENTROPY] - entropy(image[old_pos]) + entropy(image[old_pos] - 1);
-                if(reg_param[REG_PRIORIMAGE] > 0.0) new_reg_value[chan * NREGULS + REG_PRIORIMAGE] = reg_value[REG_PRIORIMAGE] - prior_image[old_pos]; 
-                if(reg_param[REG_DARKENERGY] > 0.0) new_reg_value[chan * NREGULS + REG_DARKENERGY] = reg_value[REG_DARKENERGY] - den_change(image, old_x, old_y, DEN_SUBTRACT, axis_len);
+                if(reg_param[REG_ENTROPY]    > 0.0) new_reg_value[chan * NREGULS + REG_ENTROPY] = reg_value[chan * NREGULS + REG_ENTROPY] - entropy(image[old_pos]) + entropy(image[old_pos] - 1);
+                if(reg_param[REG_PRIORIMAGE] > 0.0) new_reg_value[chan * NREGULS + REG_PRIORIMAGE] = reg_value[chan * NREGULS + REG_PRIORIMAGE] - prior_image[old_pos]; 
+                if(reg_param[REG_DARKENERGY] > 0.0) new_reg_value[chan * NREGULS + REG_DARKENERGY] = reg_value[chan * NREGULS + REG_DARKENERGY] - den_change(image, old_x, old_y, DEN_SUBTRACT, axis_len);
                 if(reg_param[REG_SPOT]       > 0.0) reg_value[chan * NREGULS + REG_SPOT]   = UDreg(&image[chan * axis_len * axis_len], NULL, 0.0 , axis_len, axis_len) / (double) nelements;
                 if(reg_param[REG_TV]         > 0.0) reg_value[chan * NREGULS + REG_TV]     =    TV(&image[chan * axis_len * axis_len], NULL, 0.0 , axis_len, axis_len) / (double) nelements;
                 if(reg_param[REG_LAP]        > 0.0) reg_value[chan * NREGULS + REG_LAP]    =   LAP(&image[chan * axis_len * axis_len], NULL, 0.0 , axis_len, axis_len) / (double) nelements;
@@ -1455,7 +1450,7 @@ int main(int argc, char** argv)
                 image[new_pos]--;
 
                 if(reg_param[REG_CENTERING]  > 0.0)  new_reg_value[chan * NREGULS + REG_CENTERING] =
-                        reg_value[REG_CENTERING] + fov * cent_change(chan, cent_xoffset, cent_yoffset,
+                        reg_value[chan * NREGULS + REG_CENTERING] + fov * cent_change(chan, cent_xoffset, cent_yoffset,
                                 new_x, new_y, old_x, old_y, axis_len, fov, cent_mult);
                 if(reg_param[REG_MODELPARAM] > 0.0) new_reg_value[REG_MODELPARAM] = reg_value[REG_MODELPARAM];
 
