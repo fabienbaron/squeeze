@@ -1799,7 +1799,7 @@ int main(int argc, char** argv)
             printf("Output -- Final logZ: %f +/- %f\n", logZ_final, logZ_final_err);
 
             writeasfits(output_filename, image, k, niter - burn_in_times[0] - 1, chi2 / ndf, -1, nelements, &reg_param[0], NULL,
-                        niter, axis_len, ndf, tmin, chi2_temp, chi2_target, mas_pixel, 1, &saved_params[0], logZ_final, logZ_final_err, init_filename, prior_filename);
+                        niter, axis_len, ndf, tmin, chi2_temp, chi2_target, mas_pixel, nthreads, &saved_params[0], logZ_final, logZ_final_err, init_filename, prior_filename);
         }
 
 
@@ -2381,11 +2381,11 @@ void compute_logZ(const double* temperature , const unsigned short* iStoragetoTh
     long j;
     *logZ = 0;
     *logZ_err =   (1. / temperature[iStoragetoThread[1]] - 1. / temperature[iStoragetoThread[0]])
-                  * (1. / temperature[iStoragetoThread[1]] - 1. / temperature[iStoragetoThread[0]])
-                  * lLikelihood_expectation[iStoragetoThread[0]]
-                  + (1. / temperature[iStoragetoThread[nthreads-1]] - 1. / temperature[iStoragetoThread[nthreads-2]])
-                  * (1. / temperature[iStoragetoThread[nthreads-1]] - 1. / temperature[iStoragetoThread[nthreads-2]])
-                  * lLikelihood_expectation[iStoragetoThread[nthreads-1]] ;
+                * (1. / temperature[iStoragetoThread[1]] - 1. / temperature[iStoragetoThread[0]])
+                * lLikelihood_deviation[iStoragetoThread[0]]
+                + (1. / temperature[iStoragetoThread[nthreads-1]] - 1. / temperature[iStoragetoThread[nthreads-2]])
+                * (1. / temperature[iStoragetoThread[nthreads-1]] - 1. / temperature[iStoragetoThread[nthreads-2]])
+                * lLikelihood_deviation[iStoragetoThread[nthreads-1]] ;
 
     //  for(j = 0; j < nthreads; j++)
     // printf("temperature %lf lLike_avg[%ld] = %lf \n", temperature[iStoragetoThread[j]], j, lLikelihood_expectation[iStoragetoThread[j]]);

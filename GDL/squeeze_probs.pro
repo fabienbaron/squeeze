@@ -27,7 +27,7 @@ sigma_avg = dblarr(nthreads)
 contrib = dblarr(nthreads)  
 contrib_e = dblarr(nthreads)
 ;dumb averaging
-off = ceil(0.4*niter)
+off = ceil(0.5*niter)
 for i=0, nthreads-1 do like_avg[i] = mean(reform(like[off:*, i]))
 for i=0, nthreads-1 do sigma_avg[i] = (stdev(reform(like[off:*, i])))^2.
 
@@ -52,22 +52,36 @@ logZ_err = 0
 
 print, 'Thread #  ', 'Temperature scaling  ', 'Avg negloglike i/i+1   ', 'LogZ contrib i/i+1 ',  'LogZe^2 contrib i-1/i+1'
 for i = 0, nthreads-2 do begin
-   contrib[i] = 0.5*(1./temp[i]-1./temp[i+1])* (like_avg[i] + like_avg[i+1])
+   contrib[i] = (1./temp[i+1]-1./temp[i])* 0.5 *(like_avg[i] + like_avg[i+1])
    if(i EQ 0) then contrib_e[i] = (sigma_avg[0]*(1./temp[1]-1./temp[0])^2. + sigma_avg[nthreads-1]*(1./temp[nthreads-1]-1./temp[nthreads-2])^2.) else contrib_e[i]= sigma_avg[i]*(1./temp[i+1]-1./temp[i-1])^2.
    logZ += contrib[i]
    logZ_err += contrib_e[i]
-   print, i, (1./temp[i]-1./temp[i+1]), 0.5*(like_avg[i] + like_avg[i+1]), contrib[i], contrib_e[i]
+   print, i, (1./temp[i]-1./temp[i+1]), 0.5*(like_avg[i] + like_avg[i+1]), 0.5*contrib[i], 0.5*contrib_e[i]
 endfor
-
-logZ = -logZ ; give the correct sign
 logZ_err = sqrt(0.5*logZ_err)
 print, 'logZ = ', logZ, '+/-', logZ_err
 
 
+;newcontrib = contrib*0.
+;newlogZ=0
+;for i = 0, nthreads-2 do begin
+;   newcontrib[i] = alog(exp(1./temp[i+1]-1./temp[i])* like_avg[i])
+;   if(i EQ 0) then newcontrib_e[i] = (sigma_avg[0]*(1./temp[1]-1./temp[0])^2. + sigma_avg[nthreads-1]*(1./temp[nthreads-1]-1./temp[nthreads-2])^2.) else contrib_e[i]= sigma_avg[i]*(1./temp[i+1]-1./temp[i-1])^2.
+   newlogZ += contrib[i]
+;   newlogZ_err += contrib_e[i]
+;   print, i, (1./temp[i]-1./temp[i+1]), 0.5*(like_avg[i] + like_avg[i+1]), 0.5*contrib[i], 0.5*contrib_e[i]
+;endfor
+;print, 'other logZ expression: ', newlogZ
+
+
+
 window,2 
-plot, temp, -contrib, psym = 8, tit='Log Z contribution', xtit='Temperature', ytit = 'Log Z contrib', /xlog
+plot, temp, contrib, psym = 8, tit='Log Z contribution', xtit='Temperature', ytit = 'Log Z contrib', /xlog
 
 window, 3
+plot, temp, contrib_e, psym = 8, tit='Log Ze contribution', xtit='Temperature', ytit = 'Log Ze contrib', /xlog
+
+window, 4
 plot, temp, like_avg, psym = 8, tit='Avg neglogLikelihood', xtit='Temperature', ytit = 'Avg neglogLikelihood', /xlog, /ylog
 stop
 end
