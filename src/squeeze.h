@@ -129,6 +129,8 @@ void printhelp(void);
 
 bool read_commandline(int* argc, char** argv, bool* benchmark, bool* use_v2, bool* use_t3amp, bool* use_t3phi, bool* use_visamp, bool* use_visphi, bool* use_diffvis, bool* use_threadfits, bool* use_bandwidthsmearing, int* minimization_engine, bool* dumpchain,double* mas_pixel, unsigned short* axis_len, long* depth, long* niter, long* nelements, double* f_anywhere, double* f_copycat, int *nthreads, double* tempschedc, double* fov, double* chi2_temp, double* chi2_target, double* tmin, double* prob_auto, double* uvtol, char* output_filename, char* init_filename, char* prior_filename, double* v2s, double* v2a, double* t3amps, double* t3ampa, double* t3phia, double* t3phis, double* visamps, double* visampa, double* visphis, double* visphia, double* fluxs, double* cvfwhm, double* reg_param, double* init_param, double* wavmin, double* wavmax);
 
+void print_diagnostics(int iThread, long current_iter, long nvis, long nv2, long nt3, long nt3phi, long nt3amp, long nvisamp, long nvisphi, double chi2v2, double chi2t3amp,double chi2t3phi,double chi2visphi,double chi2visamp, double lPosterior, double lPrior, double lLikelihood, const double* reg_param, const double* reg_value, const double* cent_xoffset, const double* cent_yoffset, long nelements, int nwavr, long niter, const double* temperature, double prob_movement, const double* params, const double* stepsize);
+
 double compute_chi2(const double complex *mod_vis, double *res, double *mod_obs, double *chi2v2, double *chi2t3amp, double *chi2visamp, double *chi2t3phi, double *chi2visphi) ;
 void vis_to_obs(const double complex *mod_vis, double *mod_obs);
 void obs_to_res(const double *mod_obs, double *res);

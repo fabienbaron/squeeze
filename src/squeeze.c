@@ -685,8 +685,6 @@ int main(int argc, char** argv)
         double *new_reg_value = malloc(nwavr * NREGULS * sizeof(double));
         double *fluxratio_image = malloc(nuv * sizeof(double));
         double *new_fluxratio_image = malloc(nuv  * sizeof(double));
-        char diagnostics[250];
-        int diagnostics_used = 0 ;
         unsigned short thread1, thread2;
         double logZ = 0; // chose to have logZ to be a private variable
         double logZ_err = 0;
@@ -951,83 +949,15 @@ int main(int argc, char** argv)
                                 2.0 * lLikelihood / ndf, temperature[iThread], nelements, &reg_param[0], &reg_value[0],
                                 niter, axis_len, ndf, tmin, chi2_temp, chi2_target, mas_pixel, nthreads, &saved_params[iThreadtoStorage[iThread] * nparams * niter], 0, 0, "", "");
 
-                /* Print output to screen (or wherever stdout is piped to */
-
-                // compute reduced chi2
-                if(nv2 > 0)
-                    chi2v2 /= (double) nv2;
-                if(nt3amp > 0)
-                    chi2t3amp /= (double) nt3amp;
-                if(nt3phi > 0)
-                    chi2t3phi /= (double) nt3phi;
-                if(nvisphi > 0)
-                    chi2visphi /= (double) nvisphi;
-                if(nvisamp > 0)
-                    chi2visamp /= (double) nvisamp;
-
-                for(w = 0; w < nwavr; w++) // diagnostics
-                {
-                    if(nwavr > 1)
-                        diagnostics_used = snprintf(diagnostics , 250 , "Thread: %d Chan: %ld lPost:%8.1f lPrior:%8.1f lLike:%9.1f ",
-                                                    iThread, w, lPosterior, lPrior, lLikelihood);
-                    else
-                        diagnostics_used = snprintf(diagnostics , 250 , "Thread: %d lPost:%8.1f lPrior:%8.1f lLike:%9.1f ",
-                                                    iThread, lPosterior, lPrior, lLikelihood);
-
-                    if(nv2 > 0)
-                        diagnostics_used += snprintf(diagnostics + diagnostics_used , 250 - diagnostics_used,  TEXT_COLOR_RED "V2:%5.2f " TEXT_COLOR_BLACK, chi2v2);
-                    if(nt3amp > 0)
-                        diagnostics_used += snprintf(diagnostics + diagnostics_used , 250 - diagnostics_used , TEXT_COLOR_BLUE "T3A:%5.2f " TEXT_COLOR_BLACK, chi2t3amp);
-                    if(nt3phi > 0)
-                        diagnostics_used += snprintf(diagnostics + diagnostics_used , 250 - diagnostics_used , TEXT_COLOR_GREEN "T3P:%5.2f " TEXT_COLOR_BLACK, chi2t3phi);
-                    if(nvisamp > 0)
-                        diagnostics_used += snprintf(diagnostics + diagnostics_used , 250 - diagnostics_used , "VA:%5.2f ", chi2visamp);
-                    if(nvisphi > 0)
-                        diagnostics_used += snprintf(diagnostics + diagnostics_used , 250 - diagnostics_used , "VP:%5.2f ", chi2visphi);
-                    if(reg_param[REG_PRIORIMAGE] > 0)
-                        diagnostics_used += snprintf(diagnostics + diagnostics_used , 250 - diagnostics_used , "PRI:%5.2f ", reg_param[REG_PRIORIMAGE] * reg_value[w * NREGULS + REG_PRIORIMAGE]);
-		    if(reg_param[REG_ENTROPY] > 0)
-                        diagnostics_used += snprintf(diagnostics + diagnostics_used , 250 - diagnostics_used , "ENT:%5.2f ", reg_param[REG_ENTROPY] * reg_value[w * NREGULS + REG_ENTROPY]);
-                    if(reg_param[REG_DARKENERGY] > 0)
-                        diagnostics_used += snprintf(diagnostics + diagnostics_used , 250 - diagnostics_used , "DEN:%5.2f ", reg_param[REG_DARKENERGY] * reg_value[w * NREGULS + REG_DARKENERGY]);
-                    if(reg_param[REG_SPOT] > 0)
-                        diagnostics_used += snprintf(diagnostics + diagnostics_used , 250 - diagnostics_used , "UD:%5.2f ", reg_param[REG_SPOT]       * reg_value[w * NREGULS + REG_SPOT]);
-                    if(reg_param[REG_TV] > 0)
-                        diagnostics_used += snprintf(diagnostics + diagnostics_used , 250 - diagnostics_used , "TV:%5.2f ", reg_param[REG_TV]         * reg_value[w * NREGULS + REG_TV]);
-                    if(reg_param[REG_LAP] > 0)
-                        diagnostics_used += snprintf(diagnostics + diagnostics_used , 250 - diagnostics_used , "LAP:%5.2f ", reg_param[REG_LAP]       * reg_value[w * NREGULS + REG_LAP]);
-                    if(reg_param[REG_L0] > 0)
-                        diagnostics_used += snprintf(diagnostics + diagnostics_used , 250 - diagnostics_used , "L0:%5.2f ", reg_param[REG_L0]       * reg_value[w * NREGULS + REG_L0]);
-                    if(reg_param[REG_TRANSPECL2] > 0)
-                        diagnostics_used += snprintf(diagnostics + diagnostics_used , 250 - diagnostics_used , "TS:%5.2f ", reg_param[REG_TRANSPECL2]    * reg_value[REG_TRANSPECL2]);
-                    if(reg_param[REG_CENTERING] > 0)
-                        diagnostics_used += snprintf(diagnostics + diagnostics_used , 250 - diagnostics_used , "C:%5.1f XY:(%5.2f,%5.2f) ",
-                                                     reg_param[REG_CENTERING]  * reg_value[w * NREGULS + REG_CENTERING], cent_xoffset[w] / nelements, cent_yoffset[w] / nelements);
-
-
-                    diagnostics_used += snprintf(diagnostics + diagnostics_used , 250 - diagnostics_used , "E: %5ld MPr: %4.2f T: %5.2f Iter: %4ld of %4ld",
-                                                 nelements, prob_movement, temperature[iThread], i / (nwavr * nelements) + 1, niter);
-
-
-                    puts(diagnostics);
-
-                    fflush(stdout);
-                }
+		// PRINT DIAGNOSTICS
+		print_diagnostics(iThread,  (i / (nwavr * nelements) + 1), nvis, nv2, nt3, nt3phi, nt3amp, nvisamp, nvisphi, chi2v2, chi2t3amp, chi2t3phi, chi2visphi, chi2visamp, lPosterior, lPrior, lLikelihood, reg_param, reg_value, 
+				  cent_xoffset, cent_yoffset, nelements, nwavr, niter, temperature, prob_movement, params, stepsize);
 
 
                 if(prob_auto > 0)
-                    tmin = tmin * (1.0 - .5 * (prob_movement - prob_auto));
+		  tmin = tmin * (1.0 - .5 * (prob_movement - prob_auto)); // BUG ? should this be here ?
 
-                if(nparams > 0)
-                {
-                    printf("Thread: %d Model Parameters: ", iThread);
-                    for(j = 0; j < nparams; j++)
-                        printf(" %7.5g ", params[j]);
-                    printf("Stepsizes: ");
-                    for(j = 0; j < nparams; j++)
-                        printf(" %7.5g ", stepsize[j]);
-                    printf("\n");
-                }
+             
             }
 
             //
@@ -2866,14 +2796,82 @@ bool read_commandline(int* argc, char** argv, bool* benchmark, bool* use_v2, boo
 }
 
 
+void print_diagnostics(int iThread, long current_iter, long nvis, long nv2, long nt3, long nt3phi, long nt3amp, long nvisamp, long nvisphi, double chi2v2, double chi2t3amp,double chi2t3phi,double chi2visphi,double chi2visamp, double lPosterior, double lPrior, double lLikelihood, const double* reg_param, const double* reg_value, const double* cent_xoffset, const double* cent_yoffset, long nelements, int nwavr, long niter, const double* temperature, double prob_movement, const double* params, const double* stepsize)
+{
+  // Note: current_iter = i / (nwavr * nelements) + 1
 
+  long w, j;
+   char diagnostics[250];
+   int diagnostics_used = 0 ;
 
-
-
-
-
-
-
+   /* Print output to screen (or wherever stdout is piped to) */
+   
+   // compute reduced chi2
+   if(nv2 > 0)
+     chi2v2 /= (double) nv2;
+   if(nt3amp > 0)
+     chi2t3amp /= (double) nt3amp;
+   if(nt3phi > 0)
+     chi2t3phi /= (double) nt3phi;
+   if(nvisphi > 0)
+     chi2visphi /= (double) nvisphi;
+   if(nvisamp > 0)
+     chi2visamp /= (double) nvisamp;
+   
+   for(w = 0; w < nwavr; w++) // diagnostics
+     {
+       if(nwavr > 1)
+	 diagnostics_used = snprintf(diagnostics , 250 , "Thread: %d Chan: %ld lPost:%8.1f lPrior:%8.1f lLike:%9.1f ",
+				     iThread, w, lPosterior, lPrior, lLikelihood);
+       else
+	 diagnostics_used = snprintf(diagnostics , 250 , "Thread: %d lPost:%8.1f lPrior:%8.1f lLike:%9.1f ",
+				     iThread, lPosterior, lPrior, lLikelihood);
+       
+       if(nv2 > 0)
+	 diagnostics_used += snprintf(diagnostics + diagnostics_used , 250 - diagnostics_used,  TEXT_COLOR_RED "V2:%5.2f " TEXT_COLOR_BLACK, chi2v2);
+       if(nt3amp > 0)
+	 diagnostics_used += snprintf(diagnostics + diagnostics_used , 250 - diagnostics_used , TEXT_COLOR_BLUE "T3A:%5.2f " TEXT_COLOR_BLACK, chi2t3amp);
+       if(nt3phi > 0)
+	 diagnostics_used += snprintf(diagnostics + diagnostics_used , 250 - diagnostics_used , TEXT_COLOR_GREEN "T3P:%5.2f " TEXT_COLOR_BLACK, chi2t3phi);
+       if(nvisamp > 0)
+	 diagnostics_used += snprintf(diagnostics + diagnostics_used , 250 - diagnostics_used , "VA:%5.2f ", chi2visamp);
+       if(nvisphi > 0)
+	 diagnostics_used += snprintf(diagnostics + diagnostics_used , 250 - diagnostics_used , "VP:%5.2f ", chi2visphi);
+       if(reg_param[REG_PRIORIMAGE] > 0)
+	 diagnostics_used += snprintf(diagnostics + diagnostics_used , 250 - diagnostics_used , "PRI:%5.2f ", reg_param[REG_PRIORIMAGE] * reg_value[w * NREGULS + REG_PRIORIMAGE]);
+       if(reg_param[REG_ENTROPY] > 0)
+	 diagnostics_used += snprintf(diagnostics + diagnostics_used , 250 - diagnostics_used , "ENT:%5.2f ", reg_param[REG_ENTROPY] * reg_value[w * NREGULS + REG_ENTROPY]);
+       if(reg_param[REG_DARKENERGY] > 0)
+	 diagnostics_used += snprintf(diagnostics + diagnostics_used , 250 - diagnostics_used , "DEN:%5.2f ", reg_param[REG_DARKENERGY] * reg_value[w * NREGULS + REG_DARKENERGY]);
+       if(reg_param[REG_SPOT] > 0)
+	 diagnostics_used += snprintf(diagnostics + diagnostics_used , 250 - diagnostics_used , "UD:%5.2f ", reg_param[REG_SPOT]       * reg_value[w * NREGULS + REG_SPOT]);
+       if(reg_param[REG_TV] > 0)
+	 diagnostics_used += snprintf(diagnostics + diagnostics_used , 250 - diagnostics_used , "TV:%5.2f ", reg_param[REG_TV]         * reg_value[w * NREGULS + REG_TV]);
+       if(reg_param[REG_LAP] > 0)
+	 diagnostics_used += snprintf(diagnostics + diagnostics_used , 250 - diagnostics_used , "LAP:%5.2f ", reg_param[REG_LAP]       * reg_value[w * NREGULS + REG_LAP]);
+       if(reg_param[REG_L0] > 0)
+	 diagnostics_used += snprintf(diagnostics + diagnostics_used , 250 - diagnostics_used , "L0:%5.2f ", reg_param[REG_L0]       * reg_value[w * NREGULS + REG_L0]);
+       if(reg_param[REG_TRANSPECL2] > 0)
+	 diagnostics_used += snprintf(diagnostics + diagnostics_used , 250 - diagnostics_used , "TS:%5.2f ", reg_param[REG_TRANSPECL2]    * reg_value[REG_TRANSPECL2]);
+       if(reg_param[REG_CENTERING] > 0)
+	 diagnostics_used += snprintf(diagnostics + diagnostics_used , 250 - diagnostics_used , "C:%5.1f XY:(%5.2f,%5.2f) ",
+				      reg_param[REG_CENTERING]  * reg_value[w * NREGULS + REG_CENTERING], cent_xoffset[w] / nelements, cent_yoffset[w] / nelements);
+     
+       diagnostics_used += snprintf(diagnostics + diagnostics_used , 250 - diagnostics_used , "E: %5ld MPr: %4.2f T: %5.2f Iter: %4ld of %4ld",
+				    nelements, prob_movement, temperature[iThread],  current_iter, niter);
+       
+       puts(diagnostics);  
+     }
+   fflush(stdout);
+   
+   if(nparams > 0)
+     {
+       printf("Thread: %d Model Parameters: ", iThread);
+       for(j = 0; j < nparams; j++)
+	 printf("P[%ld]: %7.5g +/- %7.5g  ", j, params[j], stepsize[j]);
+       printf("\n");
+     }
+}
 
 
 
