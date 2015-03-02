@@ -58,7 +58,7 @@ long *visin, *v2in, *t3in1, *t3in2, *t3in3;
 double *u, *v;
 int nwavr;
 int ntimer;
-bool diffvis = FALSE; // default for VIS tables = complex vis, not differential vis
+bool use_diffvis = FALSE; // default for VIS tables = complex vis, not differential vis
 long *dvisnwav;
 long **dvisindx;
 
@@ -105,8 +105,6 @@ int main(int argc, char** argv)
     //  const char *reg_names[NREGULS] = {"PARAM", "C", "PRI", "ENT", "DEN", "TV", "UD", "LAP", "L0", "TS"};
     long i, j, k, w, depth = DEFAULT_DEPTH, offset = 0;
 
-    //  long *indexes;
-    //double* image = NULL;
     double* initial_image = NULL;
     char dummy_char[MAX_STRINGS], param_string[MAX_STRINGS];
     /* Variables needed for file i/o and creation of transform */
@@ -130,13 +128,11 @@ int main(int argc, char** argv)
     long* in_naxes;
 
     bool use_v2 = TRUE, use_t3amp = TRUE, use_t3phi = TRUE, use_visamp = TRUE, use_visphi = TRUE;
-    bool no_thread_fits = FALSE, use_bandwidthsmearing = TRUE;
+    bool use_threadfits = TRUE, use_bandwidthsmearing = TRUE;
     double v2a = 0., t3ampa = 0., t3phia = 0., visampa = 0., visphia = 0.;
     double v2s = 1., t3amps = 1., t3phis = 1., visamps = 1., visphis = 1.;
     double cvfwhm = 0., uvtol = 1e3, fluxs = 1.;
     double tempschedc = 3.0;
-
-    int wavchaninfo;
 
     double *timemin = NULL;
     double *timemax = NULL;
@@ -149,17 +145,12 @@ int main(int argc, char** argv)
     //    initstate(now.tv_usec, rstate, 32);
 
     printf(TEXT_COLOR_BLACK"SQUEEZE v2.0\n");
-    /* Read in command line info... */
-    if(argc < 2)
-    {
-        printhelp();
-        return 0;
-    }
+
+
 
     /* Initialize regularization parameters */
     for(i = 0; i < NREGULS; i++)
-        reg_param[i] = 0;
-
+       reg_param[i] = 0;
     /* Unless parameters are input, default to no model parameters (image only) */
     nparams = 0;
     /* Defults is to have the model parameters equal to 0 and fixed. */
@@ -167,258 +158,15 @@ int main(int argc, char** argv)
         init_params[i] = 0.0;
     for(i = 0; i < MAX_PARAMS; i++)
         init_stepsize[i] = 0.0;
+
     mas_pixel = 0.0;
     axis_len = 0;
 
-    if( (strcmp(argv[1], "-h") == 0) || (strcmp(argv[1], "-help") == 0)|| (strcmp(argv[1], "--help") == 0))
-        {
-            printhelp();
-	    return 0;
-        }
 
-    for(i = 2; i < argc; i++)
-    {
-        /* First the options without arguments */
-      if( (strcmp(argv[i], "-h") == 0) || (strcmp(argv[i], "-help") == 0)|| (strcmp(argv[i], "--help") == 0))
-        {
-            printhelp();
-	    return 0;
-        }
-        else if(strcmp(argv[i], "-benchmark") == 0)
-        {
-	  benchmark = TRUE; // run benchmark
-        }
-        else if(strcmp(argv[i], "-nov2") == 0)
-        {
-            use_v2 = FALSE; // disable the v2
-        }
-        else if(strcmp(argv[i], "-not3amp") == 0)
-        {
-            use_t3amp = FALSE; // disable the t3amp
-        }
-        else if(strcmp(argv[i], "-not3phi") == 0)
-        {
-            use_t3phi = FALSE; // disable the t3phi
-        }
-        else if(strcmp(argv[i], "-not3") == 0)
-        {
-            use_t3amp = FALSE; // disable the t3amp
-            use_t3phi = FALSE; // disable the t3phi
-        }
-        else if(strcmp(argv[i], "-novisamp") == 0)
-        {
-            use_visamp = FALSE; // disable the visamp
-        }
-        else if(strcmp(argv[i], "-novisphi") == 0)
-        {
-            use_visphi = FALSE; // disable the visphi
-        }
-        else if(strcmp(argv[i], "-novis") == 0)
-        {
-            use_visamp = FALSE; // disable the t3amp
-            use_visphi = FALSE; // disable the t3phi
-        }
-        else if(strcmp(argv[i], "-diffvis") == 0)
-        {
-            diffvis = TRUE; // interpret VIS tables as differential visibilities, not complex visibilities
-        }
-        else if(strcmp(argv[i], "-nothreadfits") == 0)
-        {
-            no_thread_fits = TRUE; // disable writing threadxx.fits to disc
-        }
-        else if(strcmp(argv[i], "-nobws") == 0)
-        {
-	  use_bandwidthsmearing = FALSE; // disable bandwidth smearing
-        }
-        else if(strcmp(argv[i], "-tempering") == 0)
-        {
-            minimization_engine = ENGINE_PARALLEL_TEMPERING;
-            printf("Command line -- Using parallel tempering\n");
-        }
-        else if(strcmp(argv[i], "-fullchain") == 0)
-        {
-            dumpchain = TRUE; // write the full MCMC chain in output.fullchain
-        }
-        else if(argc > i + 1)        /* Now the options with arguments*/
-        {
-            if(strcmp(argv[i], "-s") == 0)
-                sscanf(argv[i + 1], "%lf", &mas_pixel);
-            else if(strcmp(argv[i], "-w") == 0)
-                sscanf(argv[i + 1], "%hu", &axis_len);
-            else if(strcmp(argv[i], "-e") == 0)
-                sscanf(argv[i + 1], "%ld", &nelements);
-            else if(strcmp(argv[i], "-n") == 0)
-                sscanf(argv[i + 1], "%ld", &niter);
-	    else if(strcmp(argv[i], "-ps") == 0)
-                sscanf(argv[i + 1], "%lf", &reg_param[REG_PRIORIMAGE]);
-            else if(strcmp(argv[i], "-de") == 0)
-                sscanf(argv[i + 1], "%lf", &reg_param[REG_DARKENERGY]);
-            else if(strcmp(argv[i], "-en") == 0)
-                sscanf(argv[i + 1], "%lf", &reg_param[REG_ENTROPY]);
-            else if(strcmp(argv[i], "-ud") == 0)
-                sscanf(argv[i + 1], "%lf", &reg_param[REG_SPOT]);
-            else if(strcmp(argv[i], "-tv") == 0)
-                sscanf(argv[i + 1], "%lf", &reg_param[REG_TV]);
-            else if(strcmp(argv[i], "-la") == 0)
-                sscanf(argv[i + 1], "%lf", &reg_param[REG_LAP]);
-            else if(strcmp(argv[i], "-l0") == 0)
-                sscanf(argv[i + 1], "%lf", &reg_param[REG_L0]);
-            else if(strcmp(argv[i], "-ts") == 0)
-                sscanf(argv[i + 1], "%lf", &reg_param[REG_TRANSPECL2]);
-            else if(strcmp(argv[i], "-f_any") == 0)
-                sscanf(argv[i + 1], "%lf", &f_anywhere);
-            else if(strcmp(argv[i], "-f_copy") == 0)
-                sscanf(argv[i + 1], "%lf", &f_copycat);
-            else if(strcmp(argv[i], "-d") == 0)
-                sscanf(argv[i + 1], "%ld", &depth);
-            else if(strcmp(argv[i], "-threads") == 0)
-                sscanf(argv[i + 1], "%d", &nthreads);
-            else if(strcmp(argv[i], "-tempschedc") == 0)
-                sscanf(argv[i + 1], "%lf", &tempschedc);
-            else if(strcmp(argv[i], "-fv") == 0)
-                sscanf(argv[i + 1], "%lf", &fov);
-            else if(strcmp(argv[i], "-ct") == 0)
-                sscanf(argv[i + 1], "%lf", &chi2_temp);
-            else if(strcmp(argv[i], "-fc") == 0)
-                sscanf(argv[i + 1], "%lf", &chi2_target);
-            else if(strcmp(argv[i], "-tm") == 0)
-                sscanf(argv[i + 1], "%lf", &tmin);
-            else if(strcmp(argv[i], "-pa") == 0)
-                sscanf(argv[i + 1], "%lf", &prob_auto);
-            else if(strcmp(argv[i], "-uvtol") == 0)
-                sscanf(argv[i + 1], "%lf", &uvtol);
-            else if(strcmp(argv[i], "-o") == 0)
-            {
-                sscanf(argv[i + 1], "%s", output_filename);
-                if(strstr (output_filename,".fits") !=NULL)
-                {
-                    output_filename[strlen(output_filename)-5] = 0;
-                }
-            }
-            else if(strcmp(argv[i], "-i") == 0)
-                sscanf(argv[i + 1], "%s", init_filename);
-            else if(strcmp(argv[i], "-p") == 0)
-                sscanf(argv[i + 1], "%s", prior_filename);
-            else if(strcmp(argv[i], "-v2s") == 0)
-            {
-                sscanf(argv[i + 1], "%lf", &v2s);
-            }
-            else if(strcmp(argv[i], "-v2a") == 0)
-            {
-                sscanf(argv[i + 1], "%lf", &v2a);
-            }
-            else if(strcmp(argv[i], "-t3amps") == 0)
-            {
-                sscanf(argv[i + 1], "%lf", &t3amps);
-            }
-            else if(strcmp(argv[i], "-t3ampa") == 0)
-            {
-                sscanf(argv[i + 1], "%lf", &t3ampa);
-            }
-            else if(strcmp(argv[i], "-t3phia") == 0)
-            {
-                sscanf(argv[i + 1], "%lf", &t3phia);
-            }
-            else if(strcmp(argv[i], "-t3phis") == 0)
-            {
-                sscanf(argv[i + 1], "%lf", &t3phis);
-            }
-            else if(strcmp(argv[i], "-visamps") == 0)
-            {
-                sscanf(argv[i + 1], "%lf", &visamps);
-            }
-            else if(strcmp(argv[i], "-visampa") == 0)
-            {
-                sscanf(argv[i + 1], "%lf", &visampa);
-            }
-            else if(strcmp(argv[i], "-visphis") == 0)
-            {
-                sscanf(argv[i + 1], "%lf", &visphis);
-            }
-            else if(strcmp(argv[i], "-visphia") == 0)
-            {
-                sscanf(argv[i + 1], "%lf", &visphia);
-            }
-            else if(strcmp(argv[i], "-fs") == 0)
-            {
-                sscanf(argv[i + 1], "%lf", &fluxs);
-            }
-            else if(strcmp(argv[i], "-cv") == 0)
-            {
-                sscanf(argv[i + 1], "%lf", &cvfwhm);
-            }
-            else if(strcmp(argv[i], "-P") == 0)
-            {
-                reg_param[REG_MODELPARAM] = 1.0;
-                for(j = i + 1; j < argc; j++)
-                {
-                    /* If the next parameter is "-" followed by a non-numeric character,
-                     *            then we have reached the end of the parameter list. */
-                    if(argv[j][0] == 45)
-                        if(argv[j][1] > 64)
-                            break;
-                    nparams++;
-                }
-                for(j = 0; j < nparams; j++)
-                    sscanf(argv[i + 1 + j], "%lf", & (init_params[j]));
-                i += nparams - 1;
-            }
-            else if(strcmp(argv[i], "-S") == 0)
-            {
-                /* NB the way this is set up, the -P option must come before a -S option */
-                for(j = 0; j < nparams; j++)
-                    sscanf(argv[i + 1 + j], "%lf", & (init_stepsize[j]));
-                i += nparams - 1;
-            }
-            else if(strcmp(argv[i], "-wavchan") == 0)
-            {
+    // READ IN COMMAND LINE ARGUMENTS
 
-                wavchaninfo = 0;
-                for(j = i + 1; j < argc; j++)
-                {
-                    /* If the next parameter is "-" followed by a non-numeric character,
-                     *            then we have reached the end of the parameter list. */
-                    if(argv[j][0] == 45)
-                        if(argv[j][1] > 64)
-                            break;
-                    wavchaninfo++;
-                }
-                printf("Command line  -- set to polychromatic reconstruction\n");
-
-                nwavr = wavchaninfo / 3;
-                wavmin = malloc(nwavr  * sizeof(double));
-                wavmax = malloc(nwavr  * sizeof(double));
-                for(j = 0; j < nwavr; j++)
-                {
-                    sscanf(argv[i + 1 + 3 * j], "%ld", &k);
-                    sscanf(argv[i + 1 + 3 * j + 1], "%lf", &wavmin[k]);
-                    sscanf(argv[i + 1 + 3 * j + 2], "%lf", &wavmax[k]);
-                    if(k != j)
-                    {
-                        printf("Command line  -- Misformed channel information \n");
-                        getchar();
-                        break;
-                    }
-                    else
-                    {
-                        printf("Command line  -- channel %ld = %lg m to\t %lg m\n", k, wavmin[k], wavmax[k]);
-                    }
-                }
-                i += wavchaninfo - 1;
-            }
-            else
-            {
-                printf("Command line  -- invalid option %s. Type squeeze -h for help.\n", argv[i]);
-                return 0;
-            }
-            i++;
-        }
-        else
-        {
-            printf("Command line  -- invalid option. Type squeeze -h for help.\n");
-            return 0;
-        }
-    }
+    if( read_commandline(&argc, argv, &benchmark, &use_v2, &use_t3amp, &use_t3phi, &use_visamp, &use_visphi, &use_diffvis, &use_threadfits, &use_bandwidthsmearing, &minimization_engine, &dumpchain, &mas_pixel, &axis_len, &depth, &niter, &nelements, &f_anywhere, &f_copycat, &nthreads, &tempschedc, &fov, &chi2_temp, &chi2_target, &tmin, &prob_auto, &uvtol, &output_filename[0], &init_filename[0], &prior_filename[0], &v2s, &v2a, &t3amps, &t3ampa, &t3phia, &t3phis, &visamps, &visampa, &visphis, &visphia, &fluxs, &cvfwhm, reg_param, init_params, wavmin, wavmax) == FALSE) 
+      return 0;
 
 
     // If we want to use parallel tempering but no threads are defined,
@@ -876,7 +624,7 @@ int main(int argc, char** argv)
     // Start old thread
     //
     #pragma omp parallel private(i,j,k,w) shared(temperature, iThreadtoStorage, iStoragetoThread, iMovedThread, burn_in_times, saved_x, saved_y, saved_lLikelihood, \
-    saved_lPosterior, saved_lPrior, saved_params, saved_reg_value, minimization_engine, no_thread_fits,init_filename, \
+    saved_lPosterior, saved_lPrior, saved_params, saved_reg_value, minimization_engine, use_threadfits,init_filename, \
     ctrlcpressed, f_anywhere, f_copycat, prob_auto, tmin, chi2_target, mas_pixel, niter, chi2_temp, flat_chi2, \
     axis_len, lLikelihood_expectation, lLikelihood_deviation , nwavr, nelements, nthreads, tempschedc, \
     uvwav2chan, uvtime2chan, nuv,nv2,nt3amp,nt3phi,nvisamp,nvisphi,init_params,init_stepsize,initial_x,initial_y, \
@@ -967,8 +715,6 @@ int main(int argc, char** argv)
                 new_reg_value[w * NREGULS + i] = 0;
             }
 
-
-
         /* Initialise the model parameters, if any */
         for(i = 0; i < MAX_PARAMS; i++)
         {
@@ -985,84 +731,28 @@ int main(int argc, char** argv)
             new_fluxratio_image[i] = 1.0;
         }
 
-        /* The next few lines is where the image is initialized... */
-
-        for(i = 0; i < nwavr * axis_len * axis_len; i++)
-            image[i] = 0;
-
-
-        // Initial image channels
-        if(! strcmp(init_filename, "randomthr"))
-            k = iThread;
-        else
-            k = 0;
-        for(w = 0; w < nwavr; w++)
-        {
-            for(i = 0; i < nelements; i++)
-            {
-                element_x[w * nelements + i] = initial_x[k * nelements + i];
-                element_y[w * nelements + i] = initial_y[k * nelements + i];
-                image[ w * axis_len * axis_len + initial_y[i] * axis_len + initial_x[i] ]++;
-            }
-        }
-
-        //
-        // COMPUTE INITIAL REGULARIZERS
-        //
-    
-        for(w=0; w<nwavr; w++)
-        {
-            if(reg_param[REG_DARKENERGY] > 0)
-                reg_value[w * NREGULS + REG_DARKENERGY] = den_full(&image[w * axis_len * axis_len], NULL, 0.0 , axis_len, axis_len) ;
-            if(reg_param[REG_ENTROPY]> 0.0)
-                reg_value[w * NREGULS + REG_ENTROPY]= entropy_full(&image[w * axis_len * axis_len], NULL, 0.0 , axis_len, axis_len) ;
-            if(reg_param[REG_SPOT]> 0.0)
-                reg_value[w * NREGULS + REG_SPOT]   = UDreg(&image[w * axis_len * axis_len], NULL, 0.0 , axis_len, axis_len) / (double) nelements;
-            if(reg_param[REG_TV]> 0.0)
-                reg_value[w * NREGULS + REG_TV]     =    TV(&image[w * axis_len * axis_len], NULL, 0.0 , axis_len, axis_len) / (double) nelements;
-            if(reg_param[REG_LAP]> 0.0)
-                reg_value[w * NREGULS + REG_LAP]    =   LAP(&image[w * axis_len * axis_len], NULL, 0.0 , axis_len, axis_len) / (double) nelements;
-            if(reg_param[REG_L0]> 0.0)
-                reg_value[w * NREGULS + REG_L0]     =    L0(&image[w * axis_len * axis_len], NULL, 0.0 , axis_len, axis_len) / (double) nelements;
-	    if(reg_param[REG_PRIORIMAGE] > 0)
-		  for(i = 0; i < nelements; i++)
-			reg_value[w * NREGULS + REG_PRIORIMAGE] += prior_image[element_y[w * nelements + i] * axis_len + element_x[w * nelements + i]];
-	    if(reg_param[REG_CENTERING] > 0)
-		  for(i = 0; i < nelements; i++)
-		    reg_value[w * NREGULS + REG_CENTERING] += cent_change(w, cent_xoffset, cent_yoffset, initial_x[i], initial_y[i], axis_len / 2, axis_len / 2, axis_len, fov, cent_mult); 
-	    if(reg_param[REG_MODELPARAM] > 0)
-		reg_value[w * NREGULS + REG_MODELPARAM] = 0.;
-	}
-
-	if(reg_param[REG_TRANSPECL2] > 0.0) 
-	    reg_value[REG_TRANSPECL2] = transpec(nwavr, axis_len, image) / (double) nelements;
 
 	//
-	// Compute initial model
+	// INITIALIZE IMAGE
 	//
+	initialize_image(iThread, image, element_x, element_y, initial_x, initial_y, axis_len, nwavr, nelements, &init_filename[0]);
 
-        if(nparams > 0)
-            model_vis(params, param_vis, &reg_value[REG_MODELPARAM], fluxratio_image);
-        else
-            for(j = 0; j < nuv; j++)
-              param_vis[j] = 0.0;
+        //
+        // COMPUTE INITIAL REGULARIZER VALUE
+        //
+	compute_regularizers(reg_param, reg_value, image, prior_image, initial_x, initial_y, element_x, element_y, nwavr, axis_len, nelements, cent_xoffset, cent_yoffset, fov, cent_mult);
 
-        // Compute initial visibilities
-        for(j = 0; j < nuv; j++)
-        {
-            im_vis[j] = 0;
-            for(i = 0; i < nelements; i++)
-                im_vis[j] += xtransform[element_x[ uvwav2chan[j] * nelements + i] * nuv + j]
-                             * ytransform[element_y[ uvwav2chan[j] * nelements + i] * nuv + j] ;
-            im_vis[j] *= fluxratio_image[j] / (double) nelements;   // Will add SED here
-            mod_vis[j] = param_vis[j] + im_vis[j];
-        }
+	//
+	// COMPUTE INITIAL VISIBILITIES
+	//
+        compute_model_visibilities(mod_vis, im_vis, param_vis, params, fluxratio_image, element_x, element_y, xtransform, ytransform, reg_value, nparams, nelements);
+
 
         //Compute initial values for prior, likelihood, and posterior
+        lLikelihood = 0.5 * compute_chi2(mod_vis, res, mod_obs, &chi2v2, &chi2t3amp, &chi2visamp, &chi2t3phi, &chi2visphi);
 
-        lLikelihood = 0.5 * get_chi2(mod_vis, res, mod_obs, &chi2v2, &chi2t3amp, &chi2visamp, &chi2t3phi, &chi2visphi);
-        lPrior =
-            reg_param[REG_PRIORIMAGE]  * reg_value[chan * NREGULS + REG_PRIORIMAGE]
+        lPrior = 
+              reg_param[REG_PRIORIMAGE]  * reg_value[chan * NREGULS + REG_PRIORIMAGE]
             + reg_param[REG_MODELPARAM]  * reg_value[chan * NREGULS + REG_MODELPARAM]
             + reg_param[REG_CENTERING]   * reg_value[chan * NREGULS + REG_CENTERING]
             + reg_param[REG_ENTROPY]     * reg_value[chan * NREGULS + REG_ENTROPY]
@@ -1070,7 +760,7 @@ int main(int argc, char** argv)
             + reg_param[REG_SPOT]        * reg_value[chan * NREGULS + REG_SPOT]
             + reg_param[REG_TV]          * reg_value[chan * NREGULS + REG_TV]
             + reg_param[REG_LAP]         * reg_value[chan * NREGULS + REG_LAP]
-            + reg_param[REG_L0]         * reg_value[chan * NREGULS + REG_L0]
+            + reg_param[REG_L0]          * reg_value[chan * NREGULS + REG_L0]
             + reg_param[REG_TRANSPECL2]  * reg_value[REG_TRANSPECL2];
 
         lPosterior = lLikelihood + lPrior ;
@@ -1256,7 +946,7 @@ int main(int argc, char** argv)
             //
             if((i % (STEPS_PER_OUTPUT * nwavr * nelements)) == 0)
             {
-                if(no_thread_fits == FALSE)
+                if(use_threadfits == TRUE)
                     writeasfits(temp_filename, image, 1, (iThread) * niter + i / (nelements * nwavr),
                                 2.0 * lLikelihood / ndf, temperature[iThread], nelements, &reg_param[0], &reg_value[0],
                                 niter, axis_len, ndf, tmin, chi2_temp, chi2_target, mas_pixel, nthreads, &saved_params[iThreadtoStorage[iThread] * nparams * niter], 0, 0, "", "");
@@ -1497,7 +1187,7 @@ int main(int argc, char** argv)
             // Evaluate posterior probability
             //
 
-            new_lLikelihood = 0.5 * get_chi2(new_mod_vis, res, mod_obs, &chi2v2, &chi2t3amp, &chi2visamp, &chi2t3phi, &chi2visphi);
+            new_lLikelihood = 0.5 * compute_chi2(new_mod_vis, res, mod_obs, &chi2v2, &chi2t3amp, &chi2visamp, &chi2t3phi, &chi2visphi);
             lPrior =
                 reg_param[REG_PRIORIMAGE]  * reg_value[chan * NREGULS + REG_PRIORIMAGE]
                 + reg_param[REG_CENTERING]   * reg_value[chan * NREGULS + REG_CENTERING]
@@ -1671,7 +1361,7 @@ int main(int argc, char** argv)
         /* Write the fits file */
         if(ctrlcpressed == FALSE)
         {
-            if(no_thread_fits == FALSE)
+            if(use_threadfits == TRUE)
                 writeasfits(temp_filename, image, 1, (iThread) * niter + i / (nelements * nwavr),
                             2.0 * lLikelihood / ndf, temperature[iThread], nelements, &reg_param[0], &reg_value[0],
                             niter, axis_len, ndf, tmin, chi2_temp, chi2_target, mas_pixel, nthreads, &saved_params[iThread * niter * nparams], 0, 0, "", "");
@@ -1776,9 +1466,6 @@ int main(int argc, char** argv)
             mcmc_annealing_image(output_filename, image, iframeburned, nburned, nelements, axis_len, xtransform, ytransform, &chi2, saved_x, saved_y, saved_params, niter, nwavr);
 
             // Recompute all the regularizers, likelihood, prior & posterior probability
-
-
-
             writeasfits(output_filename, image, k, niter - burn_in_times[0] - 1, chi2 / ndf, -1, nelements, &reg_param[0], NULL,
                         niter, axis_len, ndf, tmin, chi2_temp, chi2_target, mas_pixel, nthreads, &saved_params[0], 0, 0, init_filename, prior_filename);
         }
@@ -1790,7 +1477,6 @@ int main(int argc, char** argv)
             //     }
 
             mcmc_tempering_image(output_filename, image, iStoragetoThread[0], nburned, nelements, axis_len, xtransform, ytransform, &chi2, saved_x, saved_y, saved_params, niter, nwavr);
-
 
             double logZ_final = 0;
             double logZ_final_err = 0.;
@@ -1851,9 +1537,9 @@ int main(int argc, char** argv)
     free(uv_dlambda);
 
     free(dvisnwav);
-    if(diffvis == TRUE)
+    if(use_diffvis == TRUE)
     for(i = 0; i < nvis; i++)
-free(dvisindx[i]);
+      free(dvisindx[i]);
     free(dvisindx);
 
     free(data);
@@ -1972,7 +1658,7 @@ void printhelp(void)
 /**********************************************************************/
 /* Calculate complex vis chi^2 taking into account the known_phases   */
 /**********************************************************************/
-double get_chi2(const double complex * __restrict mod_vis, double* __restrict res, double* __restrict mod_obs, double *chi2v2, double *chi2t3amp, double *chi2visamp, double *chi2t3phi, double *chi2visphi)
+double compute_chi2(const double complex * __restrict mod_vis, double* __restrict res, double* __restrict mod_obs, double *chi2v2, double *chi2t3amp, double *chi2visamp, double *chi2t3phi, double *chi2visphi)
 {
     vis_to_obs(mod_vis, mod_obs);
     obs_to_res(mod_obs, res);
@@ -2121,7 +1807,7 @@ double get_flat_chi2(bool benchmark)
     double flat_chi2 = 0;
     startTime = (double)clock()/CLOCKS_PER_SEC;
     for (i=0; i<nbench; i++)
-        flat_chi2 = get_chi2(mod_vis, res, mod_obs, &dummy1, &dummy2, &dummy3, &dummy4, &dummy5);
+        flat_chi2 = compute_chi2(mod_vis, res, mod_obs, &dummy1, &dummy2, &dummy3, &dummy4, &dummy5);
 
     endTime = (double)clock()/CLOCKS_PER_SEC;
     if(benchmark == TRUE)  printf("Reconst setup -- %ld iterations in %f seconds = %f it/sec for this datafile\n",nbench, endTime-startTime, (double)nbench/(endTime-startTime));
@@ -2488,7 +2174,7 @@ void mcmc_fullchain(char *file, long nthreads, long niter, int nwavr, long nelem
                 {
                     for(i = 0; i < nelements; i++)
                     {
-                        images[t*niter*axis_len*axis_len*nwavr+ n*axis_len*axis_len*nwavr+ w * axis_len * axis_len + saved_x[t * nwavr * nelements * niter + n * nwavr * nelements + w * nelements + i]+ axis_len * saved_y[t * nwavr * nelements * niter + n * nwavr * nelements + w * nelements + i]]+=1;
+                        images[t*niter*axis_len*axis_len*nwavr+ n*axis_len*axis_len*nwavr+ w * axis_len * axis_len + saved_x[t * nwavr * nelements * niter + n * nwavr * nelements + w * nelements + i]+ axis_len * saved_y[t * nwavr * nelements * niter + n * nwavr * nelements + w * nelements + i]] +=1;
                     }
                 }
             }
@@ -2654,7 +2340,7 @@ void mcmc_annealing_image(char *file, double *image, long *iframeburned, long de
             res[i] = 0;
             mod_obs[i] = 0;
         }
-        *mn_chi2 = get_chi2(mod_vis, res, mod_obs, &dummy1, &dummy2, &dummy3, &dummy4, &dummy5);
+        *mn_chi2 = compute_chi2(mod_vis, res, mod_obs, &dummy1, &dummy2, &dummy3, &dummy4, &dummy5);
 
 
         // Output obs and residuals in separate file
@@ -2774,7 +2460,7 @@ void mcmc_tempering_image(char* file, double *image, long lowtempthread, long de
             res[i] = 0;
             mod_obs[i] = 0;
         }
-        *mn_chi2 = get_chi2(mod_vis, res, mod_obs, &dummy1, &dummy2, &dummy3, &dummy4, &dummy5);
+        *mn_chi2 = compute_chi2(mod_vis, res, mod_obs, &dummy1, &dummy2, &dummy3, &dummy4, &dummy5);
 
         // Output obs and residuals in separate file
         char data_filename[100];
@@ -2829,4 +2515,375 @@ void intHandler(int signum)
     else ctrlcpressed = TRUE;
 
 }
+
+void compute_regularizers(double *reg_param, double *reg_value, double* image, double* prior_image, unsigned short* initial_x, unsigned short* initial_y, unsigned short* element_x,  unsigned short* element_y, int nwavr, unsigned short axis_len, long nelements, double* cent_xoffset, double* cent_yoffset, double fov, double cent_mult)
+{
+  long w, i, j;
+	for(w=0; w<nwavr; w++)
+	  {
+            if(reg_param[REG_DARKENERGY] > 0)
+	      reg_value[w * NREGULS + REG_DARKENERGY] = den_full(&image[w * axis_len * axis_len], NULL, 0.0 , axis_len, axis_len) ;
+            
+	    if(reg_param[REG_ENTROPY]> 0.0)
+	      reg_value[w * NREGULS + REG_ENTROPY]= entropy_full(&image[w * axis_len * axis_len], NULL, 0.0 , axis_len, axis_len) ;
+            
+	    if(reg_param[REG_SPOT]> 0.0)
+	      reg_value[w * NREGULS + REG_SPOT]   = UDreg(&image[w * axis_len * axis_len], NULL, 0.0 , axis_len, axis_len) / (double) nelements;
+            
+	    if(reg_param[REG_TV]> 0.0)
+	      reg_value[w * NREGULS + REG_TV]     =    TV(&image[w * axis_len * axis_len], NULL, 0.0 , axis_len, axis_len) / (double) nelements;
+            
+	    if(reg_param[REG_LAP]> 0.0)
+	      reg_value[w * NREGULS + REG_LAP]    =   LAP(&image[w * axis_len * axis_len], NULL, 0.0 , axis_len, axis_len) / (double) nelements;
+            
+	    if(reg_param[REG_L0]> 0.0)
+	      reg_value[w * NREGULS + REG_L0]     =    L0(&image[w * axis_len * axis_len], NULL, 0.0 , axis_len, axis_len) / (double) nelements;
+	    
+	    reg_value[w * NREGULS + REG_PRIORIMAGE] = 0;
+	     if(reg_param[REG_PRIORIMAGE] > 0)
+	      for(i = 0; i < nelements; i++)
+		reg_value[w * NREGULS + REG_PRIORIMAGE] += prior_image[element_y[w * nelements + i] * axis_len + element_x[w * nelements + i]];
+	    
+	    reg_value[w * NREGULS + REG_CENTERING] = 0;
+	    if(reg_param[REG_CENTERING] > 0)
+	      for(i = 0; i < nelements; i++)
+		reg_value[w * NREGULS + REG_CENTERING] += cent_change(w, cent_xoffset, cent_yoffset, initial_x[i], initial_y[i], axis_len / 2, axis_len / 2, axis_len, fov, cent_mult); 
+	    
+	    if(reg_param[REG_MODELPARAM] > 0)
+	      reg_value[w * NREGULS + REG_MODELPARAM] = 0.;
+          }
+
+	if(reg_param[REG_TRANSPECL2] > 0.0) 
+	    reg_value[REG_TRANSPECL2] = transpec(nwavr, axis_len, image) / (double) nelements;
+}
+
+
+void compute_model_visibilities(double complex* mod_vis, double complex* im_vis, double complex* param_vis, double* params, double* fluxratio_image, unsigned short* element_x, unsigned short* element_y, double complex* xtransform, double complex* ytransform, double* reg_value, long nparams, long nelements)
+{
+  long i, j;
+   if(nparams > 0)
+     model_vis(params, param_vis, &reg_value[REG_MODELPARAM], fluxratio_image);
+   else
+     for(j = 0; j < nuv; j++)
+       param_vis[j] = 0.0;
+   
+   // Compute initial visibilities
+   for(j = 0; j < nuv; j++)
+     {
+       im_vis[j] = 0;
+       for(i = 0; i < nelements; i++)
+	 im_vis[j] += xtransform[element_x[ uvwav2chan[j] * nelements + i] * nuv + j]
+	   * ytransform[element_y[ uvwav2chan[j] * nelements + i] * nuv + j] ;
+       im_vis[j] *= fluxratio_image[j] / (double) nelements;   // Will add SED here
+       mod_vis[j] = param_vis[j] + im_vis[j];
+     }
+ }
+
+
+void initialize_image(int iThread, double* image, unsigned short* element_x, unsigned short* element_y, unsigned short* initial_x, unsigned short* initial_y, unsigned short axis_len, int nwavr, long nelements, char* init_filename)
+{
+  long i,k,w;
+  for(i = 0; i < nwavr * axis_len * axis_len; i++)
+    image[i] = 0;
+  
+  // Initial image channels
+  if(! strcmp(init_filename, "randomthr"))
+    k = iThread;
+  else
+    k = 0;
+  for(w = 0; w < nwavr; w++)
+    {
+      for(i = 0; i < nelements; i++)
+	{
+	  element_x[w * nelements + i] = initial_x[k * nelements + i];
+	  element_y[w * nelements + i] = initial_y[k * nelements + i];
+	  image[ w * axis_len * axis_len + initial_y[i] * axis_len + initial_x[i] ]++;
+	}
+    }
+}
+
+bool read_commandline(int* argc, char** argv, bool* benchmark, bool* use_v2, bool* use_t3amp, bool* use_t3phi, bool* use_visamp, bool* use_visphi, bool* use_diffvis, bool* use_threadfits, bool* use_bandwidthsmearing, int* minimization_engine, bool* dumpchain,double* mas_pixel, unsigned short* axis_len, long* depth, long* niter, long* nelements, double* f_anywhere, double* f_copycat, int *nthreads, double* tempschedc, double* fov, double* chi2_temp, double* chi2_target, double* tmin, double* prob_auto, double* uvtol, char* output_filename, char* init_filename, char* prior_filename, double* v2s, double* v2a, double* t3amps, double* t3ampa, double* t3phia, double* t3phis, double* visamps, double* visampa, double* visphis, double* visphia, double* fluxs, double* cvfwhm, double* reg_param, double* init_param, double* wavmin, double* wavmax)
+{
+  long i, j, k;
+
+    /* Read in command line info... */
+    if(*argc < 2)
+    {
+        printhelp();
+        return 0;
+    }
+
+    if( (strcmp(argv[1], "-h") == 0) || (strcmp(argv[1], "-help") == 0)|| (strcmp(argv[1], "--help") == 0))
+        {
+            printhelp();
+	    return 0;
+        }
+
+    for(i = 2; i < *argc; i++)
+    {
+        /* First the options without arguments */
+      if( (strcmp(argv[i], "-h") == 0) || (strcmp(argv[i], "-help") == 0)|| (strcmp(argv[i], "--help") == 0))
+        {
+            printhelp();
+	    return 0;
+        }
+        else if(strcmp(argv[i], "-benchmark") == 0)
+        {
+	  *benchmark = TRUE; // run benchmark
+        }
+        else if(strcmp(argv[i], "-nov2") == 0)
+        {
+            *use_v2 = FALSE; // disable the v2
+        }
+        else if(strcmp(argv[i], "-not3amp") == 0)
+        {
+            *use_t3amp = FALSE; // disable the t3amp
+        }
+        else if(strcmp(argv[i], "-not3phi") == 0)
+        {
+            *use_t3phi = FALSE; // disable the t3phi
+        }
+        else if(strcmp(argv[i], "-not3") == 0)
+        {
+            *use_t3amp = FALSE; // disable the t3amp
+            *use_t3phi = FALSE; // disable the t3phi
+        }
+        else if(strcmp(argv[i], "-novisamp") == 0)
+        {
+            *use_visamp = FALSE; // disable the visamp
+        }
+        else if(strcmp(argv[i], "-novisphi") == 0)
+        {
+            *use_visphi = FALSE; // disable the visphi
+        }
+        else if(strcmp(argv[i], "-novis") == 0)
+        {
+            *use_visamp = FALSE; // disable the t3amp
+            *use_visphi = FALSE; // disable the t3phi
+        }
+        else if(strcmp(argv[i], "-diffvis") == 0)
+        {
+            *use_diffvis = TRUE; // interpret VIS tables as differential visibilities, not complex visibilities
+        }
+        else if(strcmp(argv[i], "-nothreadfits") == 0)
+        {
+            *use_threadfits = FALSE; // disable writing threadxx.fits to disc
+        }
+        else if(strcmp(argv[i], "-nobws") == 0)
+        {
+	  *use_bandwidthsmearing = FALSE; // disable bandwidth smearing
+        }
+        else if(strcmp(argv[i], "-tempering") == 0)
+        {
+            *minimization_engine = ENGINE_PARALLEL_TEMPERING;
+            printf("Command line -- Using parallel tempering\n");
+        }
+        else if(strcmp(argv[i], "-fullchain") == 0)
+        {
+            *dumpchain = TRUE; // write the full MCMC chain in output.fullchain
+        }
+        else if(*argc > i + 1)        /* Now the options with arguments*/
+        {
+            if(strcmp(argv[i], "-s") == 0)
+                sscanf(argv[i + 1], "%lf", mas_pixel);
+            else if(strcmp(argv[i], "-w") == 0)
+                sscanf(argv[i + 1], "%hu", axis_len);
+            else if(strcmp(argv[i], "-e") == 0)
+                sscanf(argv[i + 1], "%ld", nelements);
+            else if(strcmp(argv[i], "-n") == 0)
+                sscanf(argv[i + 1], "%ld", niter);
+	    else if(strcmp(argv[i], "-ps") == 0)
+                sscanf(argv[i + 1], "%lf", &reg_param[REG_PRIORIMAGE]);
+            else if(strcmp(argv[i], "-de") == 0)
+                sscanf(argv[i + 1], "%lf", &reg_param[REG_DARKENERGY]);
+            else if(strcmp(argv[i], "-en") == 0)
+                sscanf(argv[i + 1], "%lf", &reg_param[REG_ENTROPY]);
+            else if(strcmp(argv[i], "-ud") == 0)
+                sscanf(argv[i + 1], "%lf", &reg_param[REG_SPOT]);
+            else if(strcmp(argv[i], "-tv") == 0)
+                sscanf(argv[i + 1], "%lf", &reg_param[REG_TV]);
+            else if(strcmp(argv[i], "-la") == 0)
+                sscanf(argv[i + 1], "%lf", &reg_param[REG_LAP]);
+            else if(strcmp(argv[i], "-l0") == 0)
+                sscanf(argv[i + 1], "%lf", &reg_param[REG_L0]);
+            else if(strcmp(argv[i], "-ts") == 0)
+                sscanf(argv[i + 1], "%lf", &reg_param[REG_TRANSPECL2]);
+            else if(strcmp(argv[i], "-f_any") == 0)
+                sscanf(argv[i + 1], "%lf", f_anywhere);
+            else if(strcmp(argv[i], "-f_copy") == 0)
+                sscanf(argv[i + 1], "%lf", f_copycat);
+            else if(strcmp(argv[i], "-d") == 0)
+                sscanf(argv[i + 1], "%ld", depth);
+            else if(strcmp(argv[i], "-threads") == 0)
+                sscanf(argv[i + 1], "%d", nthreads);
+            else if(strcmp(argv[i], "-tempschedc") == 0)
+                sscanf(argv[i + 1], "%lf", tempschedc);
+            else if(strcmp(argv[i], "-fv") == 0)
+                sscanf(argv[i + 1], "%lf", fov);
+            else if(strcmp(argv[i], "-ct") == 0)
+                sscanf(argv[i + 1], "%lf", chi2_temp);
+            else if(strcmp(argv[i], "-fc") == 0)
+                sscanf(argv[i + 1], "%lf", chi2_target);
+            else if(strcmp(argv[i], "-tm") == 0)
+                sscanf(argv[i + 1], "%lf", tmin);
+            else if(strcmp(argv[i], "-pa") == 0)
+                sscanf(argv[i + 1], "%lf", prob_auto);
+            else if(strcmp(argv[i], "-uvtol") == 0)
+                sscanf(argv[i + 1], "%lf", uvtol);
+            else if(strcmp(argv[i], "-o") == 0)
+            {
+                sscanf(argv[i + 1], "%s", output_filename);
+                if(strstr (output_filename,".fits") !=NULL)
+                {
+                    output_filename[strlen(output_filename)-5] = 0;
+                }
+            }
+            else if(strcmp(argv[i], "-i") == 0)
+                sscanf(argv[i + 1], "%s", init_filename);
+            else if(strcmp(argv[i], "-p") == 0)
+                sscanf(argv[i + 1], "%s", prior_filename);
+            else if(strcmp(argv[i], "-v2s") == 0)
+            {
+                sscanf(argv[i + 1], "%lf", v2s);
+            }
+            else if(strcmp(argv[i], "-v2a") == 0)
+            {
+                sscanf(argv[i + 1], "%lf", v2a);
+            }
+            else if(strcmp(argv[i], "-t3amps") == 0)
+            {
+                sscanf(argv[i + 1], "%lf", t3amps);
+            }
+            else if(strcmp(argv[i], "-t3ampa") == 0)
+            {
+                sscanf(argv[i + 1], "%lf", t3ampa);
+            }
+            else if(strcmp(argv[i], "-t3phia") == 0)
+            {
+                sscanf(argv[i + 1], "%lf", t3phia);
+            }
+            else if(strcmp(argv[i], "-t3phis") == 0)
+            {
+                sscanf(argv[i + 1], "%lf", t3phis);
+            }
+            else if(strcmp(argv[i], "-visamps") == 0)
+            {
+                sscanf(argv[i + 1], "%lf", visamps);
+            }
+            else if(strcmp(argv[i], "-visampa") == 0)
+            {
+                sscanf(argv[i + 1], "%lf", visampa);
+            }
+            else if(strcmp(argv[i], "-visphis") == 0)
+            {
+                sscanf(argv[i + 1], "%lf", visphis);
+            }
+            else if(strcmp(argv[i], "-visphia") == 0)
+            {
+                sscanf(argv[i + 1], "%lf", visphia);
+            }
+            else if(strcmp(argv[i], "-fs") == 0)
+            {
+                sscanf(argv[i + 1], "%lf", fluxs);
+            }
+            else if(strcmp(argv[i], "-cv") == 0)
+            {
+                sscanf(argv[i + 1], "%lf", cvfwhm);
+            }
+            else if(strcmp(argv[i], "-P") == 0)
+            {
+                reg_param[REG_MODELPARAM] = 1.0;
+                for(j = i + 1; j < *argc; j++)
+                {
+                    /* If the next parameter is "-" followed by a non-numeric character,
+                     *            then we have reached the end of the parameter list. */
+                    if(argv[j][0] == 45)
+                        if(argv[j][1] > 64)
+                            break;
+                    nparams++;
+                }
+                for(j = 0; j < nparams; j++)
+                    sscanf(argv[i + 1 + j], "%lf", & (init_params[j]));
+                i += nparams - 1;
+            }
+            else if(strcmp(argv[i], "-S") == 0)
+            {
+                /* NB the way this is set up, the -P option must come before a -S option */
+                for(j = 0; j < nparams; j++)
+                    sscanf(argv[i + 1 + j], "%lf", & (init_stepsize[j]));
+                i += nparams - 1;
+            }
+            else if(strcmp(argv[i], "-wavchan") == 0)
+            {
+	      int wavchaninfo = 0;
+                for(j = i + 1; j < *argc; j++)
+                {
+                    /* If the next parameter is "-" followed by a non-numeric character,
+                     *            then we have reached the end of the parameter list. */
+                    if(argv[j][0] == 45)
+                        if(argv[j][1] > 64)
+                            break;
+                    wavchaninfo++;
+                }
+                printf("Command line  -- set to polychromatic reconstruction\n");
+
+                nwavr = wavchaninfo / 3;
+                wavmin = malloc(nwavr  * sizeof(double));
+                wavmax = malloc(nwavr  * sizeof(double));
+                for(j = 0; j < nwavr; j++)
+                {
+                    sscanf(argv[i + 1 + 3 * j], "%ld", &k);
+                    sscanf(argv[i + 1 + 3 * j + 1], "%lf", &wavmin[k]);
+                    sscanf(argv[i + 1 + 3 * j + 2], "%lf", &wavmax[k]);
+                    if(k != j)
+                    {
+                        printf("Command line  -- Misformed channel information \n");
+                        getchar();
+                        break;
+                    }
+                    else
+                    {
+                        printf("Command line  -- channel %ld = %lg m to\t %lg m\n", k, wavmin[k], wavmax[k]);
+                    }
+                }
+                i += wavchaninfo - 1;
+            }
+            else
+            {
+                printf("Command line  -- invalid option %s. Type squeeze -h for help.\n", argv[i]);
+                return FALSE;
+            }
+            i++;
+        }
+        else
+        {
+            printf("Command line  -- invalid option. Type squeeze -h for help.\n");
+	    return FALSE;
+        }
+    
+    }
+
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 

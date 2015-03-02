@@ -182,7 +182,7 @@ int extract_oifits(char* filename, bool use_v2, bool use_t3amp, bool use_t3phi, 
     dlambda_vis = malloc(nvis * sizeof(float));
     flag_vis = malloc(nvis * sizeof(char));
 
-    if(diffvis == TRUE)
+    if(use_diffvis == TRUE)
         {
             dvisnwav = malloc(nvis * sizeof(long));
             dvisindx = malloc(nvis * sizeof(long *));
@@ -496,7 +496,7 @@ int extract_oifits(char* filename, bool use_v2, bool use_t3amp, bool use_t3phi, 
                                 }
 
 
-                            if(diffvis == TRUE)
+                            if(use_diffvis == TRUE)
                                 {
                                     // if dvis can be defined: there are enough wavelengths & no points were flagged/bad
                                     if((vis_table.nwave > 1) && ((tempindex - tempindex0) == vis_table.nwave))
@@ -552,7 +552,7 @@ int extract_oifits(char* filename, bool use_v2, bool use_t3amp, bool use_t3phi, 
 
     if(nvis > 0)
         {
-            if(diffvis == TRUE) printf("OIFITS import -- VIS: %ld differential visibilities imported\n", nvis);
+            if(use_diffvis == TRUE) printf("OIFITS import -- VIS: %ld differential visibilities imported\n", nvis);
             else printf("OIFITS import -- VIS: %ld complex visibilities imported\n", nvis);
             printf("OIFITS import --     VISAMP: %ld", nvisamp);
             if(nvisamp_orphans > 0)

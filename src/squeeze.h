@@ -126,7 +126,10 @@ void * main_loop(void *index);
 void printerror(int status);
 void intHandler(int signum);
 void printhelp(void);
-double get_chi2(const double complex *mod_vis, double *res, double *mod_obs, double *chi2v2, double *chi2t3amp, double *chi2visamp, double *chi2t3phi, double *chi2visphi) ;
+
+bool read_commandline(int* argc, char** argv, bool* benchmark, bool* use_v2, bool* use_t3amp, bool* use_t3phi, bool* use_visamp, bool* use_visphi, bool* use_diffvis, bool* use_threadfits, bool* use_bandwidthsmearing, int* minimization_engine, bool* dumpchain,double* mas_pixel, unsigned short* axis_len, long* depth, long* niter, long* nelements, double* f_anywhere, double* f_copycat, int *nthreads, double* tempschedc, double* fov, double* chi2_temp, double* chi2_target, double* tmin, double* prob_auto, double* uvtol, char* output_filename, char* init_filename, char* prior_filename, double* v2s, double* v2a, double* t3amps, double* t3ampa, double* t3phia, double* t3phis, double* visamps, double* visampa, double* visphis, double* visphia, double* fluxs, double* cvfwhm, double* reg_param, double* init_param, double* wavmin, double* wavmax);
+
+double compute_chi2(const double complex *mod_vis, double *res, double *mod_obs, double *chi2v2, double *chi2t3amp, double *chi2visamp, double *chi2t3phi, double *chi2visphi) ;
 void vis_to_obs(const double complex *mod_vis, double *mod_obs);
 void obs_to_res(const double *mod_obs, double *res);
 double residuals_to_chi2(const double *res, double *chi2v2, double *chi2t3amp, double *chi2visamp, double *chi2t3phi, double *chi2visphi) ;
@@ -155,6 +158,12 @@ void compute_logZ(const double* temperature , const unsigned short* iStoragetoTh
 
 void mcmc_fullchain(char* file, long nthreads, long niter, int nchanr, long nelements, unsigned short axis_len, unsigned short *saved_x, unsigned short *saved_y, double *saved_params, double *saved_lLikelihood, double *saved_lPrior, double *saved_lPosterior, double *temperature, unsigned short* iThreadtoStorage);
 
+void compute_regularizers(double *reg_param, double *reg_value, double* image, double* prior_image, unsigned short* initial_x, unsigned short* initial_y, unsigned short* element_x,  unsigned short* element_y, int nwavr, unsigned short axis_len, long nelements, double* cent_xoffset, double* cent_yoffset, double fov, double cent_mult);
+
+void compute_model_visibilities(double complex* mod_vis, double complex* im_vis, double complex* param_vis, double* params, double* fluxratio_image, unsigned short* element_x, unsigned short* element_y, double complex* xtransform, double complex* ytransform, double* reg_value, long nparams, long nelements);
+
+void initialize_image(int iThread, double* image, unsigned short* element_x, unsigned short* element_y, unsigned short* initial_x, unsigned short* initial_y, unsigned short axis_len, int nwavr, long nelements, char* init_filename);
+
 /* Function prototype for extract_oifits.c*/
 int extract_oifits(char* filename, bool use_v2, bool use_t3amp, bool use_t3phi, bool use_visamp, bool use_visphi,
                    double v2a, double v2s, double t3ampa, double t3amps, double t3phia, double t3phis,
@@ -178,20 +187,6 @@ double L2(const double* x, const double* pr, const double eps, const int nx, con
 double transpec(int nchanr, long axis_len, double *image);
 double cent_change(int channel, double* cent_xoffset, double *cent_yoffset, long new_x, long new_y, long old_x, long old_y, unsigned short axis_len, double fov, double cent_mult);
 /* helper functions */
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 double sinc(double x);
 double mean(long *x, long n);
