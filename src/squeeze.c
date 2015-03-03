@@ -1350,7 +1350,7 @@ int main(int argc, char** argv)
             }
 
 
-            mcmc_annealing_image(output_filename, image, iframeburned, nburned, nelements, axis_len, xtransform, ytransform, &chi2, saved_x, saved_y, saved_params, niter, nwavr);
+            mcmc_annealing_results(output_filename, image, iframeburned, nburned, nelements, axis_len, xtransform, ytransform, &chi2, saved_x, saved_y, saved_params, niter, nwavr);
 
             // Recompute all the regularizers, likelihood, prior & posterior probability
             writeasfits(output_filename, image, k, niter - burn_in_times[0] - 1, chi2 / ndf, -1, nelements, &reg_param[0], NULL,
@@ -1364,7 +1364,7 @@ int main(int argc, char** argv)
             //         printf("Thread: %ld\t temperature: %lf\t ThreadtoStorage: %d Storage(%ld)toThread: %d\n", i, temperature[i], iThreadtoStorage[i], i, iStoragetoThread[i]);
             //     }
 
-            mcmc_tempering_image(output_filename, image, iStoragetoThread[0], nburned, nelements, axis_len, xtransform, ytransform, &chi2, saved_x, saved_y, saved_params, niter, nwavr);
+            mcmc_tempering_results(output_filename, image, iStoragetoThread[0], nburned, nelements, axis_len, xtransform, ytransform, &chi2, saved_x, saved_y, saved_params, niter, nwavr);
 
             double logZ_final = 0;
             double logZ_final_err = 0.;
@@ -1377,14 +1377,11 @@ int main(int argc, char** argv)
         }
 
 
-            printf("Output -- Total number of realizations in mean image: %ld\n", nburned);
-            printf("Output -- Chi2 of mean image: %lf \n", chi2 / ndf);
-            if(lowest_lLikelihood < 1e99)
-                printf("Output -- Best single-frame chi2: %f obtained at iteration: %ld thread: %ld.\n",
-                       2.0 * lowest_lLikelihood / ndf, lowest_lLikelihood_indx % niter, lowest_lLikelihood_indx / niter);
-
-
-
+        printf("Output -- Total number of realizations in mean image: %ld\n", nburned);
+        printf("Output -- Chi2 of mean image: %lf \n", chi2 / ndf);
+        if(lowest_lLikelihood < 1e99)
+            printf("Output -- Best single-frame chi2: %f obtained at iteration: %ld thread: %ld.\n",
+                   2.0 * lowest_lLikelihood / ndf, lowest_lLikelihood_indx % niter, lowest_lLikelihood_indx / niter);
 
 
         if(dumpchain == TRUE)
@@ -1626,7 +1623,7 @@ double residuals_to_chi2(const double *res, double *chi2v2, double *chi2t3amp, d
     }
 
     if(chi2v2 !=NULL)
-            *chi2v2 = temp1;
+        *chi2v2 = temp1;
 
     // #pragma omp simd reduction(+:temp2)
     for(i = nv2; i < nv2 + nt3amp; i++)
@@ -1635,7 +1632,7 @@ double residuals_to_chi2(const double *res, double *chi2v2, double *chi2t3amp, d
     }
 
     if(chi2t3amp !=NULL)
-    *chi2t3amp = temp2;
+        *chi2t3amp = temp2;
 
 
     // #pragma omp simd reduction(+:temp3)
@@ -1644,7 +1641,7 @@ double residuals_to_chi2(const double *res, double *chi2v2, double *chi2t3amp, d
         temp3 += res[i] * res[i];
     }
     if(chi2visamp !=NULL)
-    *chi2visamp = temp3;
+        *chi2visamp = temp3;
 
 
     //#pragma omp simd reduction(+:temp4)
@@ -1653,7 +1650,7 @@ double residuals_to_chi2(const double *res, double *chi2v2, double *chi2t3amp, d
         temp4 += res[i] * res[i];
     }
     if(chi2visphi !=NULL)
-    *chi2visphi = temp4;
+        *chi2visphi = temp4;
 
     // #pragma omp simd reduction(+:temp5)
     for(i = nv2 + nt3amp + nvisamp; i < nv2 + nt3amp + nvisamp + nt3phi; i++)
@@ -1661,7 +1658,7 @@ double residuals_to_chi2(const double *res, double *chi2v2, double *chi2t3amp, d
         temp5 += res[i] * res[i];
     }
     if(chi2t3phi !=NULL)
-    *chi2t3phi = temp5;
+        *chi2t3phi = temp5;
 
     return temp1+temp2+temp3+temp4+temp5;
 }
@@ -2011,7 +2008,7 @@ void mcmc_fullchain(char *file, long nthreads, long niter, int nwavr, long nelem
 
     // Dump all probabilities + temperatures
     char prob_filename[100];
-    sprintf(prob_filename, "%s.probs", file);
+    sprintf(prob_filename, "%s.fullprobs", file);
     FILE * pFile2 = fopen(prob_filename, "w");
     fprintf(pFile2, "%ld , %ld, 0. \n", nthreads, niter);
 
@@ -2051,7 +2048,7 @@ void mcmc_fullchain(char *file, long nthreads, long niter, int nwavr, long nelem
     }
 
     fclose(pFile2);
-    printf("Output -- Probabilities output to output.probs.\n");
+    printf("Output -- Probabilities output to output.fullprobs.\n");
 
     // Dump the content of saved_x, saved_y, saved_params into a file
 
@@ -2120,9 +2117,9 @@ void mcmc_fullchain(char *file, long nthreads, long niter, int nwavr, long nelem
 /***************************************************************/
 /* Fill an image from the saved_x and y, and a iframeburned vector */
 /****************************************************************/
-void mcmc_annealing_image(char *file, double *image, long *iframeburned, long depth, long nelements, unsigned short axis_len,
-                          double complex * __restrict xtransform, double complex * __restrict ytransform, double *annealed_chi2,
-                          unsigned short *saved_x, unsigned short *saved_y, double *saved_params, long niter, int nwavr)
+void mcmc_annealing_results(char *file, double *image, long *iframeburned, long depth, long nelements, unsigned short axis_len,
+                            double complex * __restrict xtransform, double complex * __restrict ytransform, double *annealed_chi2,
+                            unsigned short *saved_x, unsigned short *saved_y, double *saved_params, long niter, int nwavr)
 // This averages the image obtained by MCMC over the iterations and threads
 // the depth input should be the actual available depth, not the requested one
 {
@@ -2184,38 +2181,35 @@ void mcmc_annealing_image(char *file, double *image, long *iframeburned, long de
     double lPriorModel  = 0 ;
     compute_model_visibilities_fromimage(mod_vis, im_vis, param_vis, &annealed_params[0], annealed_fluxratio_image, image, xtransform, ytransform, &lPriorModel, nparams, nelements, axis_len);
 
-
-    if(annealed_chi2 != NULL) // then we want to compute the observables and the total chi2
+    double dummy1 = 0, dummy2 = 0, dummy3 = 0, dummy4 = 0, dummy5 = 0;
+    double *res = malloc((nv2 + nt3amp + nt3phi + nvisamp + nvisphi) * sizeof(double));         // current residuals
+    double *mod_obs = malloc((nv2 + nt3amp + nt3phi + nvisamp + nvisphi) * sizeof(double));         // current observables
+    for(i = 0; i < (nv2 + nt3amp + nt3phi + nvisamp + nvisphi); i++)
     {
-        double dummy1 = 0, dummy2 = 0, dummy3 = 0, dummy4 = 0, dummy5 = 0;
-        double *res = malloc((nv2 + nt3amp + nt3phi + nvisamp + nvisphi) * sizeof(double));         // current residuals
-        double *mod_obs = malloc((nv2 + nt3amp + nt3phi + nvisamp + nvisphi) * sizeof(double));         // current observables
-        for(i = 0; i < (nv2 + nt3amp + nt3phi + nvisamp + nvisphi); i++)
-        {
-            res[i] = 0;
-            mod_obs[i] = 0;
-        }
-        compute_lLikelihood(annealed_chi2, mod_vis, res, mod_obs, &dummy1, &dummy2, &dummy3, &dummy4, &dummy5);
-        *annealed_chi2 *= 2.;
-
-
-        // Output obs and residuals in separate file
-        char data_filename[MAX_STRINGS];
-        sprintf(data_filename, "%s.data", file);
-        FILE * pFile = fopen(data_filename, "w");
-        fprintf(pFile, "%lf %lf %lf %lf\n", (double)nuv, (double)nv2 , (double)nt3amp , (double)nvisamp);
-        fprintf(pFile, "%lf %lf %lf %lf\n", (double)nt3phi , (double)nt3, (double)nvisphi, (double)nwavr);
-        for(i = 0; i < nuv; i++)
-            fprintf(pFile, "%lf %lf %lf %lf\n", u[i], v[i], uv_lambda[i] * 1E6, uv_dlambda[i] * 1E6);
-        for(i = 0; i < nt3; i++)
-            fprintf(pFile, "%lf %lf %lf %lf\n", (double)(t3in1[i]), (double)(t3in2[i]), (double)(t3in3[i]), 0.0);
-        for(i = 0; i < nv2 + nt3amp + nvisamp + nt3phi + nvisphi; i++)
-            fprintf(pFile, "%lf %lf %lf %lf\n", mod_obs[i], data[i], data_err[i], res[i]);
-        fclose(pFile);
-
-        free(res);
-        free(mod_obs);
+        res[i] = 0;
+        mod_obs[i] = 0;
     }
+    compute_lLikelihood(annealed_chi2, mod_vis, res, mod_obs, &dummy1, &dummy2, &dummy3, &dummy4, &dummy5);
+    *annealed_chi2 *= 2.;
+//        compute_lPrior(lPrior, chan, reg_param, reg_value);
+
+    // Output obs and residuals in separate file
+    char data_filename[MAX_STRINGS];
+    sprintf(data_filename, "%s.data", file);
+    FILE * pFile = fopen(data_filename, "w");
+    fprintf(pFile, "%lf %lf %lf %lf\n", (double)nuv, (double)nv2 , (double)nt3amp , (double)nvisamp);
+    fprintf(pFile, "%lf %lf %lf %lf\n", (double)nt3phi , (double)nt3, (double)nvisphi, (double)nwavr);
+    for(i = 0; i < nuv; i++)
+        fprintf(pFile, "%lf %lf %lf %lf\n", u[i], v[i], uv_lambda[i] * 1E6, uv_dlambda[i] * 1E6);
+    for(i = 0; i < nt3; i++)
+        fprintf(pFile, "%lf %lf %lf %lf\n", (double)(t3in1[i]), (double)(t3in2[i]), (double)(t3in3[i]), 0.0);
+    for(i = 0; i < nv2 + nt3amp + nvisamp + nt3phi + nvisphi; i++)
+        fprintf(pFile, "%lf %lf %lf %lf\n", mod_obs[i], data[i], data_err[i], res[i]);
+    fclose(pFile);
+
+
+    free(res);
+    free(mod_obs);
 
     free(annealed_fluxratio_image);
     free(mod_vis);
@@ -2225,9 +2219,9 @@ void mcmc_annealing_image(char *file, double *image, long *iframeburned, long de
 }
 
 
-void mcmc_tempering_image(char* file, double *image, long lowtempthread, long depth, long nelements, unsigned short axis_len,
-                          double complex * __restrict xtransform, double complex * __restrict ytransform, double *annealed_chi2,
-                          unsigned short *saved_x, unsigned short *saved_y, double *saved_params, long niter, int nwavr)
+void mcmc_tempering_results(char* file, double *image, long lowtempthread, long depth, long nelements, unsigned short axis_len,
+                            double complex * __restrict xtransform, double complex * __restrict ytransform, double *annealed_chi2,
+                            unsigned short *saved_x, unsigned short *saved_y, double *saved_params, long niter, int nwavr)
 // note: depth is the actual available depth
 {
     // TODO: rework this to use standard image2vis, etc. functions
@@ -2306,40 +2300,32 @@ void mcmc_tempering_image(char* file, double *image, long lowtempthread, long de
             mod_vis[j] = im_vis[j];
     }
 
-
-    //
-
-
-
-    if(annealed_chi2 != NULL)
+    double dummy1 = 0, dummy2 = 0, dummy3 = 0, dummy4 = 0, dummy5 = 0;
+    double *res = malloc((nv2 + nt3amp + nt3phi + nvisamp + nvisphi) * sizeof(double));         // current residuals
+    double *mod_obs = malloc((nv2 + nt3amp + nt3phi + nvisamp + nvisphi) * sizeof(double));         // current observables
+    for(i = 0; i < (nv2 + nt3amp + nt3phi + nvisamp + nvisphi); i++)
     {
-        double dummy1 = 0, dummy2 = 0, dummy3 = 0, dummy4 = 0, dummy5 = 0;
-        double *res = malloc((nv2 + nt3amp + nt3phi + nvisamp + nvisphi) * sizeof(double));         // current residuals
-        double *mod_obs = malloc((nv2 + nt3amp + nt3phi + nvisamp + nvisphi) * sizeof(double));         // current observables
-        for(i = 0; i < (nv2 + nt3amp + nt3phi + nvisamp + nvisphi); i++)
-        {
-            res[i] = 0;
-            mod_obs[i] = 0;
-        }
-        compute_lLikelihood(annealed_chi2, mod_vis, res, mod_obs, &dummy1, &dummy2, &dummy3, &dummy4, &dummy5);
-
-        // Output obs and residuals in separate file
-        char data_filename[100];
-        sprintf(data_filename, "%s.data", file);
-        FILE * pFile = fopen(data_filename, "w");
-        fprintf(pFile, "%lf %lf %lf %lf\n", (double)nuv, (double)nv2 , (double)nt3amp , (double)nvisamp);
-        fprintf(pFile, "%lf %lf %lf %lf\n", (double)nt3phi , (double)nt3, (double)nvisphi, (double)nwavr);
-        for(i = 0; i < nuv; i++)
-            fprintf(pFile, "%lf %lf %lf %lf\n", u[i], v[i], uv_lambda[i] * 1E6, uv_dlambda[i] * 1E6);
-        for(i = 0; i < nt3; i++)
-            fprintf(pFile, "%lf %lf %lf %lf\n", (double)(t3in1[i]), (double)(t3in2[i]), (double)(t3in3[i]), 0.0);
-        for(i = 0; i < nv2 + nt3amp + nvisamp + nt3phi + nvisphi; i++)
-            fprintf(pFile, "%lf %lf %lf %lf\n", mod_obs[i], data[i], data_err[i], res[i]);
-        fclose(pFile);
-
-        free(res);
-        free(mod_obs);
+        res[i] = 0;
+        mod_obs[i] = 0;
     }
+    compute_lLikelihood(annealed_chi2, mod_vis, res, mod_obs, &dummy1, &dummy2, &dummy3, &dummy4, &dummy5);
+
+    // Output obs and residuals in separate file
+    char data_filename[100];
+    sprintf(data_filename, "%s.data", file);
+    FILE * pFile = fopen(data_filename, "w");
+    fprintf(pFile, "%lf %lf %lf %lf\n", (double)nuv, (double)nv2 , (double)nt3amp , (double)nvisamp);
+    fprintf(pFile, "%lf %lf %lf %lf\n", (double)nt3phi , (double)nt3, (double)nvisphi, (double)nwavr);
+    for(i = 0; i < nuv; i++)
+        fprintf(pFile, "%lf %lf %lf %lf\n", u[i], v[i], uv_lambda[i] * 1E6, uv_dlambda[i] * 1E6);
+    for(i = 0; i < nt3; i++)
+        fprintf(pFile, "%lf %lf %lf %lf\n", (double)(t3in1[i]), (double)(t3in2[i]), (double)(t3in3[i]), 0.0);
+    for(i = 0; i < nv2 + nt3amp + nvisamp + nt3phi + nvisphi; i++)
+        fprintf(pFile, "%lf %lf %lf %lf\n", mod_obs[i], data[i], data_err[i], res[i]);
+    fclose(pFile);
+
+    free(res);
+    free(mod_obs);
 
     free(avg_fluxratio_image);
     free(mod_vis);
