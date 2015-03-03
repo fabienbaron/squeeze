@@ -48,10 +48,8 @@ configure:2771: result: yes
 configure:2796: checking for a thread-safe mkdir -p
 configure:2835: result: /bin/mkdir -p
 configure:2848: checking for gawk
-configure:2878: result: no
-configure:2848: checking for mawk
-configure:2864: found /usr/bin/mawk
-configure:2875: result: mawk
+configure:2864: found /usr/bin/gawk
+configure:2875: result: gawk
 configure:2886: checking whether make sets $(MAKE)
 configure:2908: result: yes
 configure:3098: checking if malloc debugging is wanted
@@ -705,7 +703,7 @@ ac_cv_path_EGREP='/bin/grep -E'
 ac_cv_path_GREP=/bin/grep
 ac_cv_path_install='/usr/bin/install -c'
 ac_cv_path_mkdir=/bin/mkdir
-ac_cv_prog_AWK=mawk
+ac_cv_prog_AWK=gawk
 ac_cv_prog_CPP='gcc -E'
 ac_cv_prog_CXXCPP='g++ -E'
 ac_cv_prog_ac_ct_AR=ar
@@ -746,7 +744,7 @@ lt_cv_prog_gnu_ldcxx=yes
 lt_cv_sys_global_symbol_pipe='sed -n -e '\''s/^.*[ 	]\([ABCDGIRSTW][ABCDGIRSTW]*\)[ 	][ 	]*\([_A-Za-z][_A-Za-z0-9]*\)$/\1 \2 \2/p'\'''
 lt_cv_sys_global_symbol_to_c_name_address='sed -n -e '\''s/^: \([^ ]*\) $/  {\"\1\", (lt_ptr) 0},/p'\'' -e '\''s/^[BCDEGRST] \([^ ]*\) \([^ ]*\)$/  {"\2", (lt_ptr) \&\2},/p'\'''
 lt_cv_sys_global_symbol_to_cdecl='sed -n -e '\''s/^. .* \(.*\)$/extern int \1;/p'\'''
-lt_cv_sys_lib_dlsearch_path_spec='/lib /usr/lib /usr/lib/x86_64-linux-gnu/libfakeroot /lib/i386-linux-gnu /usr/lib/i386-linux-gnu /lib/i686-linux-gnu /usr/lib/i686-linux-gnu /usr/local/lib /lib/x86_64-linux-gnu /usr/lib/x86_64-linux-gnu /usr/lib/x86_64-linux-gnu/mesa-egl /usr/lib/nvidia-346 /usr/lib32/nvidia-346 /usr/lib/x86_64-linux-gnu/mir/client8driver/mesa /lib32 /usr/lib32 '
+lt_cv_sys_lib_dlsearch_path_spec='/lib /usr/lib /usr/lib/x86_64-linux-gnu/libfakeroot /lib/i386-linux-gnu /usr/lib/i386-linux-gnu /lib/i686-linux-gnu /usr/lib/i686-linux-gnu /usr/local/lib /lib/x86_64-linux-gnu /usr/lib/x86_64-linux-gnu /usr/lib/x86_64-linux-gnu/mesa-egl /usr/lib/nvidia-346 /usr/lib32/nvidia-346 /usr/lib/x86_64-linux-gnu/mir/client8driver/mesa /lib32 /usr/lib32 /libx32 /usr/libx32 '
 lt_cv_sys_lib_search_path_spec='/usr/lib/gcc/x86_64-linux-gnu/4.9 /usr/lib/x86_64-linux-gnu /usr/lib /lib/x86_64-linux-gnu /lib'
 lt_cv_sys_max_cmd_len=1572864
 lt_lt_cv_prog_compiler_c_o='"yes"'
@@ -770,7 +768,7 @@ AR='ar'
 AUTOCONF='${SHELL} /home/baron/SOFTWARE/squeeze/lib/rngstreams/missing --run autoconf'
 AUTOHEADER='${SHELL} /home/baron/SOFTWARE/squeeze/lib/rngstreams/missing --run autoheader'
 AUTOMAKE='${SHELL} /home/baron/SOFTWARE/squeeze/lib/rngstreams/missing --run automake-1.10'
-AWK='mawk'
+AWK='gawk'
 CC='gcc'
 CCDEPMODE='depmode=gcc3'
 CFLAGS='-g -O2'

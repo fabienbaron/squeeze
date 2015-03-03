@@ -150,7 +150,7 @@ int main(int argc, char** argv)
 
     /* Initialize regularization parameters */
     for(i = 0; i < NREGULS; i++)
-       reg_param[i] = 0;
+        reg_param[i] = 0;
     /* Unless parameters are input, default to no model parameters (image only) */
     nparams = 0;
     /* Defults is to have the model parameters equal to 0 and fixed. */
@@ -165,8 +165,8 @@ int main(int argc, char** argv)
 
     // READ IN COMMAND LINE ARGUMENTS
 
-    if( read_commandline(&argc, argv, &benchmark, &use_v2, &use_t3amp, &use_t3phi, &use_visamp, &use_visphi, &use_diffvis, &use_threadfits, &use_bandwidthsmearing, &minimization_engine, &dumpchain, &mas_pixel, &axis_len, &depth, &niter, &nelements, &f_anywhere, &f_copycat, &nthreads, &tempschedc, &fov, &chi2_temp, &chi2_target, &tmin, &prob_auto, &uvtol, &output_filename[0], &init_filename[0], &prior_filename[0], &v2s, &v2a, &t3amps, &t3ampa, &t3phia, &t3phis, &visamps, &visampa, &visphis, &visphia, &fluxs, &cvfwhm, reg_param, init_params, wavmin, wavmax) == FALSE) 
-      return 0;
+    if( read_commandline(&argc, argv, &benchmark, &use_v2, &use_t3amp, &use_t3phi, &use_visamp, &use_visphi, &use_diffvis, &use_threadfits, &use_bandwidthsmearing, &minimization_engine, &dumpchain, &mas_pixel, &axis_len, &depth, &niter, &nelements, &f_anywhere, &f_copycat, &nthreads, &tempschedc, &fov, &chi2_temp, &chi2_target, &tmin, &prob_auto, &uvtol, &output_filename[0], &init_filename[0], &prior_filename[0], &v2s, &v2a, &t3amps, &t3ampa, &t3phia, &t3phis, &visamps, &visampa, &visphis, &visphia, &fluxs, &cvfwhm, reg_param, init_params, wavmin, wavmax) == FALSE)
+        return 0;
 
 
     // If we want to use parallel tempering but no threads are defined,
@@ -176,8 +176,6 @@ int main(int argc, char** argv)
         printf("Command line -- Please restart SQUEEZE and set the number of threads N using \"-threads N\"\n");
         return 0;
     }
-
-
 
     // If no wavelength info was given, then we are in monochromatic mode
     if((wavmin == NULL) || (wavmax == NULL))
@@ -531,8 +529,8 @@ int main(int argc, char** argv)
                             prior_image[i + axis_len * j + axis_len * axis_len * w] = -log(prior_image[i + axis_len * j + axis_len * axis_len * w]);
                         else
                             prior_image[i + axis_len * j + axis_len * axis_len * w] = 1e9;
-	    if(reg_param[REG_PRIORIMAGE] == 0.) reg_param[REG_PRIORIMAGE]=1.;
-	}
+            if(reg_param[REG_PRIORIMAGE] == 0.) reg_param[REG_PRIORIMAGE]=1.;
+        }
         free(in_naxes);
     }
 
@@ -730,38 +728,26 @@ int main(int argc, char** argv)
         }
 
 
-	//
-	// INITIALIZE IMAGE
-	//
-	initialize_image(iThread, image, element_x, element_y, initial_x, initial_y, axis_len, nwavr, nelements, &init_filename[0]);
+        //
+        // INITIALIZE IMAGE
+        //
+        initialize_image(iThread, image, element_x, element_y, initial_x, initial_y, axis_len, nwavr, nelements, &init_filename[0]);
 
         //
         // COMPUTE INITIAL REGULARIZER VALUE
         //
-	compute_regularizers(reg_param, reg_value, image, prior_image, initial_x, initial_y, element_x, element_y, nwavr, axis_len, nelements, cent_xoffset, cent_yoffset, fov, cent_mult);
+        compute_regularizers(reg_param, reg_value, image, prior_image, initial_x, initial_y, element_x, element_y, nwavr, axis_len, nelements, cent_xoffset, cent_yoffset, fov, cent_mult);
 
-	//
-	// COMPUTE INITIAL VISIBILITIES
-	//
-        compute_model_visibilities(mod_vis, im_vis, param_vis, params, fluxratio_image, element_x, element_y, xtransform, ytransform, reg_value, nparams, nelements);
-
+        //
+        // COMPUTE INITIAL VISIBILITIES
+        //
+        compute_model_visibilities_fromelements(mod_vis, im_vis, param_vis, params, fluxratio_image, element_x, element_y, xtransform, ytransform, &reg_value[REG_MODELPARAM], nparams, nelements);
 
         //Compute initial values for prior, likelihood, and posterior
-        lLikelihood = 0.5 * compute_chi2(mod_vis, res, mod_obs, &chi2v2, &chi2t3amp, &chi2visamp, &chi2t3phi, &chi2visphi);
-
-        lPrior = 
-              reg_param[REG_PRIORIMAGE]  * reg_value[chan * NREGULS + REG_PRIORIMAGE]
-            + reg_param[REG_MODELPARAM]  * reg_value[chan * NREGULS + REG_MODELPARAM]
-            + reg_param[REG_CENTERING]   * reg_value[chan * NREGULS + REG_CENTERING]
-            + reg_param[REG_ENTROPY]     * reg_value[chan * NREGULS + REG_ENTROPY]
-            + reg_param[REG_DARKENERGY]  * reg_value[chan * NREGULS + REG_DARKENERGY]
-            + reg_param[REG_SPOT]        * reg_value[chan * NREGULS + REG_SPOT]
-            + reg_param[REG_TV]          * reg_value[chan * NREGULS + REG_TV]
-            + reg_param[REG_LAP]         * reg_value[chan * NREGULS + REG_LAP]
-            + reg_param[REG_L0]          * reg_value[chan * NREGULS + REG_L0]
-            + reg_param[REG_TRANSPECL2]  * reg_value[REG_TRANSPECL2];
-
+        compute_lLikelihood(&lLikelihood, mod_vis, res, mod_obs, &chi2v2, &chi2t3amp, &chi2visamp, &chi2t3phi, &chi2visphi);
+        compute_lPrior(&lPrior, chan, reg_param, reg_value);
         lPosterior = lLikelihood + lPrior ;
+
 
         if(minimization_engine == ENGINE_SIMULATED_ANNEALING)
         {
@@ -949,15 +935,15 @@ int main(int argc, char** argv)
                                 2.0 * lLikelihood / ndf, temperature[iThread], nelements, &reg_param[0], &reg_value[0],
                                 niter, axis_len, ndf, tmin, chi2_temp, chi2_target, mas_pixel, nthreads, &saved_params[iThreadtoStorage[iThread] * nparams * niter], 0, 0, "", "");
 
-		// PRINT DIAGNOSTICS
-		print_diagnostics(iThread,  (i / (nwavr * nelements) + 1), nvis, nv2, nt3, nt3phi, nt3amp, nvisamp, nvisphi, chi2v2, chi2t3amp, chi2t3phi, chi2visphi, chi2visamp, lPosterior, lPrior, lLikelihood, reg_param, reg_value, 
-				  cent_xoffset, cent_yoffset, nelements, nwavr, niter, temperature, prob_movement, params, stepsize);
+                // PRINT DIAGNOSTICS
+                print_diagnostics(iThread,  (i / (nwavr * nelements) + 1), nvis, nv2, nt3, nt3phi, nt3amp, nvisamp, nvisphi, chi2v2, chi2t3amp, chi2t3phi, chi2visphi, chi2visamp, lPosterior, lPrior, lLikelihood, reg_param, reg_value,
+                                  cent_xoffset, cent_yoffset, nelements, nwavr, niter, temperature, prob_movement, params, stepsize);
 
 
                 if(prob_auto > 0)
-		  tmin = tmin * (1.0 - .5 * (prob_movement - prob_auto)); // BUG ? should this be here ?
+                    tmin = tmin * (1.0 - .5 * (prob_movement - prob_auto)); // BUG ? should this be here ?
 
-             
+
             }
 
             //
@@ -979,8 +965,8 @@ int main(int argc, char** argv)
 
             current_elt = rlong % (nelements + nparams * PARAMS_PER_ELT);
             rlong /= (nelements + nparams * PARAMS_PER_ELT);
-            
-	    if((nparams ==0)||(current_elt < nelements)) /* Attempt image movement rather than parametric model movement */
+
+            if((nparams ==0)||(current_elt < nelements)) /* Attempt image movement rather than parametric model movement */
             {
 
                 // select step
@@ -1037,7 +1023,7 @@ int main(int argc, char** argv)
                 //
 
                 if(reg_param[REG_ENTROPY]    > 0.0) new_reg_value[chan * NREGULS + REG_ENTROPY] = reg_value[chan * NREGULS + REG_ENTROPY] - entropy(image[old_pos]) + entropy(image[old_pos] - 1);
-                if(reg_param[REG_PRIORIMAGE] > 0.0) new_reg_value[chan * NREGULS + REG_PRIORIMAGE] = reg_value[chan * NREGULS + REG_PRIORIMAGE] - prior_image[old_pos]; 
+                if(reg_param[REG_PRIORIMAGE] > 0.0) new_reg_value[chan * NREGULS + REG_PRIORIMAGE] = reg_value[chan * NREGULS + REG_PRIORIMAGE] - prior_image[old_pos];
                 if(reg_param[REG_DARKENERGY] > 0.0) new_reg_value[chan * NREGULS + REG_DARKENERGY] = reg_value[chan * NREGULS + REG_DARKENERGY] - den_change(image, old_x, old_y, DEN_SUBTRACT, axis_len);
                 if(reg_param[REG_SPOT]       > 0.0) reg_value[chan * NREGULS + REG_SPOT]   = UDreg(&image[chan * axis_len * axis_len], NULL, 0.0 , axis_len, axis_len) / (double) nelements;
                 if(reg_param[REG_TV]         > 0.0) reg_value[chan * NREGULS + REG_TV]     =    TV(&image[chan * axis_len * axis_len], NULL, 0.0 , axis_len, axis_len) / (double) nelements;
@@ -1048,7 +1034,7 @@ int main(int argc, char** argv)
                 image[old_pos]--;
 
                 if(reg_param[REG_ENTROPY]    > 0.0)  new_reg_value[chan * NREGULS + REG_ENTROPY]    += entropy(image[new_pos] + 1) - entropy(image[new_pos]);
-                if(reg_param[REG_PRIORIMAGE] > 0.0)  new_reg_value[chan * NREGULS + REG_PRIORIMAGE] += prior_image[new_pos]; 
+                if(reg_param[REG_PRIORIMAGE] > 0.0)  new_reg_value[chan * NREGULS + REG_PRIORIMAGE] += prior_image[new_pos];
                 if(reg_param[REG_DARKENERGY] > 0.0)  new_reg_value[chan * NREGULS + REG_DARKENERGY] += den_change(image, new_x, new_y, DEN_ADD, axis_len);
 
                 image[new_pos]++;
@@ -1117,31 +1103,9 @@ int main(int argc, char** argv)
             // Evaluate posterior probability
             //
 
-            new_lLikelihood = 0.5 * compute_chi2(new_mod_vis, res, mod_obs, &chi2v2, &chi2t3amp, &chi2visamp, &chi2t3phi, &chi2visphi);
-            lPrior =
-                reg_param[REG_PRIORIMAGE]  * reg_value[chan * NREGULS + REG_PRIORIMAGE]
-                + reg_param[REG_CENTERING]   * reg_value[chan * NREGULS + REG_CENTERING]
-                + reg_param[REG_ENTROPY]     * reg_value[chan * NREGULS + REG_ENTROPY]
-                + reg_param[REG_MODELPARAM]  * reg_value[chan * NREGULS + REG_MODELPARAM]
-                + reg_param[REG_DARKENERGY]  * reg_value[chan * NREGULS + REG_DARKENERGY]
-                + reg_param[REG_SPOT]        * reg_value[chan * NREGULS + REG_SPOT]
-                + reg_param[REG_TV]          * reg_value[chan * NREGULS + REG_TV]
-                + reg_param[REG_LAP]         * reg_value[chan * NREGULS + REG_LAP]
-                + reg_param[REG_L0]          * reg_value[chan * NREGULS + REG_L0]
-                + reg_param[REG_TRANSPECL2]  * reg_value[REG_TRANSPECL2];
-
-            new_lPrior =
-                reg_param[REG_PRIORIMAGE]  * new_reg_value[chan * NREGULS + REG_PRIORIMAGE]
-                + reg_param[REG_CENTERING]   * new_reg_value[chan * NREGULS + REG_CENTERING]
-                + reg_param[REG_ENTROPY]     * new_reg_value[chan * NREGULS + REG_ENTROPY]
-                + reg_param[REG_MODELPARAM]  * new_reg_value[chan * NREGULS + REG_MODELPARAM]
-                + reg_param[REG_DARKENERGY]  * new_reg_value[chan * NREGULS + REG_DARKENERGY]
-                + reg_param[REG_SPOT]        * new_reg_value[chan * NREGULS + REG_SPOT]
-                + reg_param[REG_TV]          * new_reg_value[chan * NREGULS + REG_TV]
-                + reg_param[REG_LAP]         * new_reg_value[chan * NREGULS + REG_LAP]
-                + reg_param[REG_L0]          * new_reg_value[chan * NREGULS + REG_L0]
-                + reg_param[REG_TRANSPECL2]  * new_reg_value[REG_TRANSPECL2];
-
+            compute_lLikelihood(&new_lLikelihood, new_mod_vis, res, mod_obs, &chi2v2, &chi2t3amp, &chi2visamp, &chi2t3phi, &chi2visphi);
+            compute_lPrior(&lPrior    , chan, reg_param, reg_value);
+            compute_lPrior(&new_lPrior, chan, reg_param, new_reg_value);
             lPosterior = new_lLikelihood + new_lPrior;
 
             // BUG: think how to rescale priors with fluxratio_image ?
@@ -1181,7 +1145,6 @@ int main(int argc, char** argv)
                     reg_value[chan * NREGULS + REG_SPOT] = new_reg_value[chan * NREGULS + REG_SPOT];
                     reg_value[chan * NREGULS + REG_CENTERING] = new_reg_value[chan * NREGULS + REG_CENTERING];
                     reg_value[REG_TRANSPECL2] = new_reg_value[REG_TRANSPECL2];
-
                     prob_movement += 1.0 / DAMPING_TIME;
                 }
                 /* For parameter movement, update parameters */
@@ -1337,20 +1300,24 @@ int main(int argc, char** argv)
 
     // Determine the number of usable frames for statistics and image averaging
     // depth is the requested maximum number of usable frames
-
     long nburned  = 0; // actual number of burnt frames (for parallel simulated annealing)
-
     // iframeburned will contain the index of the frames that have actually been burned,
     // these indexes are for saved_elements and thus go accross all threads
     long *iframeburned = malloc(nthreads * niter * sizeof(long));
         double lowest_lLikelihood = 1e99;
         long lowest_lLikelihood_indx = 0;
 
-
-        if(minimization_engine != ENGINE_PARALLEL_TEMPERING)
+        //
+        // Also allocate memory for the MCMC image
+        //
+        double *image = malloc(nwavr * axis_len * axis_len * sizeof(double));
+        if(image == NULL)
         {
-            // THE FOLLOWING IS ONLY VALID FOR SIMULATED ANNEALING
+            printf("Output -- Not enough memory to allocate final image\n");
+        }
 
+        if(minimization_engine != ENGINE_PARALLEL_TEMPERING) // CASE = (parallel) simulated annealing
+        {
             for(i = 0; i < nthreads; i++)
             {
                 for(j = burn_in_times[i]; j < niter; j++)
@@ -1372,7 +1339,7 @@ int main(int argc, char** argv)
             if(nburned == 0)
             {
                 printf("Output -- DID NOT REACH BURN IN ! Writing mean image based on depth parameter anyway\n");
-                printf("Output -- DID NOT REACH BURN IN ! Be careful interpreting the resulting image.\n");
+                printf("Output -- DID NOT REACH BURN IN ! Be careful when interpreting the resulting image.\n");
                 for(i = 0; i < nthreads; i++)
                     for(j = niter - depth; j < niter; j++)
                     {
@@ -1382,24 +1349,15 @@ int main(int argc, char** argv)
                     }
             }
 
-            printf("Output -- Total number of realizations in mean image: %ld\n", nburned);
 
-        }
-
-        //
-        // Compute mean image
-        //
-        double *image = malloc(nwavr * axis_len * axis_len * sizeof(double));
-
-        if(minimization_engine != ENGINE_PARALLEL_TEMPERING)
-        {
             mcmc_annealing_image(output_filename, image, iframeburned, nburned, nelements, axis_len, xtransform, ytransform, &chi2, saved_x, saved_y, saved_params, niter, nwavr);
 
             // Recompute all the regularizers, likelihood, prior & posterior probability
             writeasfits(output_filename, image, k, niter - burn_in_times[0] - 1, chi2 / ndf, -1, nelements, &reg_param[0], NULL,
                         niter, axis_len, ndf, tmin, chi2_temp, chi2_target, mas_pixel, nthreads, &saved_params[0], 0, 0, init_filename, prior_filename);
         }
-        else
+
+        else // (minimization_engine == ENGINE_PARALLEL_TEMPERING)
         {
             // for(i = 0; i < nthreads; i++)
             //      {
@@ -1419,13 +1377,20 @@ int main(int argc, char** argv)
         }
 
 
+            printf("Output -- Total number of realizations in mean image: %ld\n", nburned);
+            printf("Output -- Chi2 of mean image: %lf \n", chi2 / ndf);
+            if(lowest_lLikelihood < 1e99)
+                printf("Output -- Best single-frame chi2: %f obtained at iteration: %ld thread: %ld.\n",
+                       2.0 * lowest_lLikelihood / ndf, lowest_lLikelihood_indx % niter, lowest_lLikelihood_indx / niter);
+
+
+
+
+
         if(dumpchain == TRUE)
             mcmc_fullchain(output_filename, nthreads, niter, nwavr, nelements, axis_len, saved_x, saved_y, saved_params, saved_lLikelihood, saved_lPrior, saved_lPosterior, temperature, iThreadtoStorage);
 
-        printf("Output -- Chi2 of mean image: %lf \n", chi2 / ndf);
-        if(lowest_lLikelihood < 1e99)
-            printf("Output -- Best single-frame chi2: %f obtained at iteration: %ld thread: %ld.\n",
-                   2.0 * lowest_lLikelihood / ndf, lowest_lLikelihood_indx % niter, lowest_lLikelihood_indx / niter);
+
 
 
         free(image);
@@ -1469,7 +1434,7 @@ int main(int argc, char** argv)
     free(dvisnwav);
     if(use_diffvis == TRUE)
     for(i = 0; i < nvis; i++)
-      free(dvisindx[i]);
+free(dvisindx[i]);
     free(dvisindx);
 
     free(data);
@@ -1588,12 +1553,11 @@ void printhelp(void)
 /**********************************************************************/
 /* Calculate complex vis chi^2 taking into account the known_phases   */
 /**********************************************************************/
-double compute_chi2(const double complex * __restrict mod_vis, double* __restrict res, double* __restrict mod_obs, double *chi2v2, double *chi2t3amp, double *chi2visamp, double *chi2t3phi, double *chi2visphi)
+void compute_lLikelihood(double* likelihood, const double complex * __restrict mod_vis, double* __restrict res, double* __restrict mod_obs, double *chi2v2, double *chi2t3amp, double *chi2visamp, double *chi2t3phi, double *chi2visphi)
 {
     vis_to_obs(mod_vis, mod_obs);
     obs_to_res(mod_obs, res);
-    double chi2 = residuals_to_chi2(res, chi2v2, chi2t3amp, chi2visamp, chi2t3phi, chi2visphi);
-    return chi2;
+    *likelihood  = 0.5 * residuals_to_chi2(res, chi2v2, chi2t3amp, chi2visamp, chi2t3phi, chi2visphi);
 }
 
 void vis_to_obs(const double complex * __restrict mod_vis, double* __restrict mod_obs)
@@ -1604,10 +1568,11 @@ void vis_to_obs(const double complex * __restrict mod_vis, double* __restrict mo
     const long t3phioffset =  nv2 + nt3amp + nvisamp;
     const long visphioffset = nv2 + nt3amp + nvisamp + nt3phi;
 
-
+    // #pragma omp for simd
     for(i = 0; i < nv2; i++)
         mod_obs[i] = modsq(mod_vis[v2in[i]]);
 
+    // #pragma omp for simd
     for(i = 0; i < nt3; i++)
     {
         modt3 = mod_vis[ t3in1[i] ] * mod_vis[ t3in2[i] ] * conj(mod_vis[ t3in3[i] ]);
@@ -1638,11 +1603,13 @@ void vis_to_obs(const double complex * __restrict mod_vis, double* __restrict mo
 void obs_to_res(const double* __restrict mod_obs, double* __restrict res)
 {
     long i;
+    //#pragma omp simd
     for(i = 0; i < nv2 + nt3amp + nvisamp; i++)
     {
         res[i] = (mod_obs[i] - data[i]) * data_err[i];
     }
 
+    //#pragma omp simd
     for(i = nv2 + nt3amp + nvisamp ; i < nv2 + nt3amp + nvisamp + nt3phi + nvisphi; i++)
         res[i] = dewrap(mod_obs[i] - data[i]) * data_err[i]; // TBD: improve wrapping
 }
@@ -1650,48 +1617,53 @@ void obs_to_res(const double* __restrict mod_obs, double* __restrict res)
 double residuals_to_chi2(const double *res, double *chi2v2, double *chi2t3amp, double *chi2visamp, double *chi2t3phi, double *chi2visphi)
 {
     long i;
-    double temp = 0; // local accumulator (fast)
+    double temp1 = 0, temp2 = 0, temp3 = 0, temp4 = 0, temp5 = 0; // local accumulator (faster than using chi2)
 
+    //  #pragma omp simd reduction(+:temp1)
     for(i = 0; i < nv2; i++)
     {
-        temp += res[i] * res[i];
+        temp1 += res[i] * res[i];
     }
 
-    *chi2v2 = temp;
+    if(chi2v2 !=NULL)
+            *chi2v2 = temp1;
 
-    temp = 0;
+    // #pragma omp simd reduction(+:temp2)
     for(i = nv2; i < nv2 + nt3amp; i++)
     {
-        temp += res[i] * res[i];
+        temp2 += res[i] * res[i];
     }
 
-    *chi2t3amp = temp;
+    if(chi2t3amp !=NULL)
+    *chi2t3amp = temp2;
 
 
-    temp = 0;
+    // #pragma omp simd reduction(+:temp3)
     for(i = nv2 + nt3amp; i < nv2 + nt3amp + nvisamp; i++)
     {
-        temp += res[i] * res[i];
+        temp3 += res[i] * res[i];
     }
-    *chi2visamp = temp;
+    if(chi2visamp !=NULL)
+    *chi2visamp = temp3;
 
 
-    temp = 0;
+    //#pragma omp simd reduction(+:temp4)
     for(i = nv2 + nt3amp + nvisamp + nt3phi; i < nv2 + nt3amp + nvisamp + nt3phi + nvisphi; i++)
     {
-        temp += res[i] * res[i];
+        temp4 += res[i] * res[i];
     }
-    *chi2visphi = temp;
+    if(chi2visphi !=NULL)
+    *chi2visphi = temp4;
 
-
-    temp = 0;
+    // #pragma omp simd reduction(+:temp5)
     for(i = nv2 + nt3amp + nvisamp; i < nv2 + nt3amp + nvisamp + nt3phi; i++)
     {
-        temp += res[i] * res[i];
+        temp5 += res[i] * res[i];
     }
-    *chi2t3phi = temp;
+    if(chi2t3phi !=NULL)
+    *chi2t3phi = temp5;
 
-    return *chi2v2 + *chi2t3amp + *chi2visamp + *chi2t3phi + *chi2visphi;
+    return temp1+temp2+temp3+temp4+temp5;
 }
 
 
@@ -1729,15 +1701,17 @@ double get_flat_chi2(bool benchmark)
     }
 
 
-    if(benchmark == TRUE) {
-      printf("Reconst setup -- Benchmarking the chi2...\n");
-      nbench = 50000;}
-      
+    if(benchmark == TRUE)
+    {
+        printf("Reconst setup -- Benchmarking the chi2...\n");
+        nbench = 50000;
+    }
+
     else nbench = 1;
     double flat_chi2 = 0;
     startTime = (double)clock()/CLOCKS_PER_SEC;
     for (i=0; i<nbench; i++)
-        flat_chi2 = compute_chi2(mod_vis, res, mod_obs, &dummy1, &dummy2, &dummy3, &dummy4, &dummy5);
+        compute_lLikelihood(&flat_chi2, mod_vis, res, mod_obs, &dummy1, &dummy2, &dummy3, &dummy4, &dummy5);
 
     endTime = (double)clock()/CLOCKS_PER_SEC;
     if(benchmark == TRUE)  printf("Reconst setup -- %ld iterations in %f seconds = %f it/sec for this datafile\n",nbench, endTime-startTime, (double)nbench/(endTime-startTime));
@@ -1748,7 +1722,7 @@ double get_flat_chi2(bool benchmark)
     RngStream_DeleteStream(&rngflat);
     if(benchmark == TRUE) getchar();
 
-    return flat_chi2;
+    return 2.*flat_chi2;
 }
 
 
@@ -1997,11 +1971,11 @@ void compute_logZ(const double* temperature , const unsigned short* iStoragetoTh
     long j;
     *logZ = 0;
     *logZ_err =   (1. / temperature[iStoragetoThread[1]] - 1. / temperature[iStoragetoThread[0]])
-                * (1. / temperature[iStoragetoThread[1]] - 1. / temperature[iStoragetoThread[0]])
-                * lLikelihood_deviation[iStoragetoThread[0]]
-                + (1. / temperature[iStoragetoThread[nthreads-1]] - 1. / temperature[iStoragetoThread[nthreads-2]])
-                * (1. / temperature[iStoragetoThread[nthreads-1]] - 1. / temperature[iStoragetoThread[nthreads-2]])
-                * lLikelihood_deviation[iStoragetoThread[nthreads-1]] ;
+                  * (1. / temperature[iStoragetoThread[1]] - 1. / temperature[iStoragetoThread[0]])
+                  * lLikelihood_deviation[iStoragetoThread[0]]
+                  + (1. / temperature[iStoragetoThread[nthreads-1]] - 1. / temperature[iStoragetoThread[nthreads-2]])
+                  * (1. / temperature[iStoragetoThread[nthreads-1]] - 1. / temperature[iStoragetoThread[nthreads-2]])
+                  * lLikelihood_deviation[iStoragetoThread[nthreads-1]] ;
 
     //  for(j = 0; j < nthreads; j++)
     // printf("temperature %lf lLike_avg[%ld] = %lf \n", temperature[iStoragetoThread[j]], j, lLikelihood_expectation[iStoragetoThread[j]]);
@@ -2147,27 +2121,17 @@ void mcmc_fullchain(char *file, long nthreads, long niter, int nwavr, long nelem
 /* Fill an image from the saved_x and y, and a iframeburned vector */
 /****************************************************************/
 void mcmc_annealing_image(char *file, double *image, long *iframeburned, long depth, long nelements, unsigned short axis_len,
-                          double complex * __restrict xtransform, double complex * __restrict ytransform, double *mn_chi2,
+                          double complex * __restrict xtransform, double complex * __restrict ytransform, double *annealed_chi2,
                           unsigned short *saved_x, unsigned short *saved_y, double *saved_params, long niter, int nwavr)
-// note: depth is the actual available depth
+// This averages the image obtained by MCMC over the iterations and threads
+// the depth input should be the actual available depth, not the requested one
 {
-    // TODO: rework this to use standard image2vis, etc. functions
-    int i, j, k, w, ix, iy;
-    double lPriorModel  = 0 ;
-    double avg_params[MAX_PARAMS];
-    double complex *mod_vis   = malloc(nuv * sizeof(double complex));
-    double complex *im_vis    = malloc(nuv * sizeof(double complex));
-    double complex *param_vis = malloc(nuv * sizeof(double complex));
-    double *avg_fluxratio_image = malloc(nuv * sizeof(double));
+    int i, j, k, w;
 
+    //
+    // Compute annealed image
+    //
 
-    for(j = 0; j < MAX_PARAMS; j++)
-        avg_params[j] = 0;
-
-    for(j = 0; j < nuv; j++)
-        param_vis[j] = 0.0;
-
-    // Compute mean image
     // Initialize image and parameters
     for(i = 0; i < nwavr * axis_len * axis_len; i++)
         image[i] = 0;
@@ -2175,7 +2139,6 @@ void mcmc_annealing_image(char *file, double *image, long *iframeburned, long de
     for(k = 0; k < depth; k++)
     {
         //    printf("k: %d iframeburned[k]: %ld thread_number: %ld\n", k, iframeburned[k], (iframeburned[k] / niter));
-        //    getchar();
         for(w = 0; w < nwavr; w++)
         {
             for(i = 0; i < nelements; i++)
@@ -2192,75 +2155,37 @@ void mcmc_annealing_image(char *file, double *image, long *iframeburned, long de
         }
     }
 
-    // We loop through each pixel of each wavelength
-    // For each of these pixels: we check the history and take the mean, median, mode...
-    // This is NOT an efficient algorithm, but easier for mode/median/stddev
-    /*
-     *    long* pix_history = calloc(depth , sizeof(long));
-     *    for(w = 0; w < nwavr; w++)
-     *      {
-     *    for(i=0; i< axis_len;i++)
-     *      {
-     *        for(j=0; j<axis_len;j++)
-     *          {
-     *        // build MCMC history for this pixel
-     *        for(k = 0; k < depth; k++)
-     *          {
-     *            pix_history[k] = 0;
-     *            for(n = 0; n < nelements; n++)
-     *              {
-     *            if(    (j == saved_y[0][iframeburned[k] * nwavr * nelements + w * nelements + n])
-     *                && (i == saved_x[0][iframeburned[k] * nwavr * nelements + w * nelements + n]))
-     *              pix_history[k] +=1;
-    }
-    }
-    // here we switch depending on mean, median, mode
-    image[w * axis_len * axis_len + j * axis_len + i] = mean(pix_history, depth)/(double)nelements;//stddev(pix_history, depth)/(double)nelements;
-    }
-    }
-    }
-    free( pix_history);
-    */
+    //
+    // Compute annealed parametric model
+    //
+    double annealed_params[MAX_PARAMS];
+    for(j = 0; j < MAX_PARAMS; j++)
+        annealed_params[j] = 0;
 
-
-    // The following three blocks are the default image + param to vis routine
-    // TODO: move these to a function
-
-    // Compute image visibilities
-    for(j = 0; j < nuv; j++)
-    {
-        im_vis[j] = 0;
-        for(ix = 0; ix < axis_len; ix++)
-            for(iy = 0; iy < axis_len; iy++)
-                im_vis[j] += image[uvwav2chan[j] * axis_len * axis_len + iy * axis_len + ix] * xtransform[ix * nuv + j] * ytransform[iy * nuv + j] ;
-    }
-
-    // Compute model visibilities
     if(nparams > 0)
     {
         for(k = 0; k < depth; k++)
         {
             for(j = 0; j < nparams; j++)
-                avg_params[j] += saved_params[iframeburned[k] * nparams + j];
+                annealed_params[j] += saved_params[iframeburned[k] * nparams + j];
         }
 
-        for(j = 0; j < MAX_PARAMS; j++)
-            avg_params[j] /= (double) depth;
-        // Note: we don't use the history of the flux ratio between image and model
+        for(j = 0; j < nparams; j++)
+            annealed_params[j] /= (double) depth;
+        // Note: we don't average over the history of flux ratio between image and model
         // as it is recomputed from the averaged parameters
-        model_vis(&avg_params[0], param_vis, &lPriorModel, avg_fluxratio_image);
+
     }
 
-    // Total visibilities
-    for(j = 0; j < nuv; j++)
-    {
-        if(nparams > 0)
-            mod_vis[j] = param_vis[j] + im_vis[j] * avg_fluxratio_image[j];
-        else
-            mod_vis[j] = im_vis[j];
-    }
+    double complex *mod_vis   = malloc(nuv * sizeof(double complex));
+    double complex *im_vis    = malloc(nuv * sizeof(double complex));
+    double complex *param_vis = malloc(nuv * sizeof(double complex));
+    double *annealed_fluxratio_image = malloc(nuv * sizeof(double));
+    double lPriorModel  = 0 ;
+    compute_model_visibilities_fromimage(mod_vis, im_vis, param_vis, &annealed_params[0], annealed_fluxratio_image, image, xtransform, ytransform, &lPriorModel, nparams, nelements, axis_len);
 
-    if(mn_chi2 != NULL)
+
+    if(annealed_chi2 != NULL) // then we want to compute the observables and the total chi2
     {
         double dummy1 = 0, dummy2 = 0, dummy3 = 0, dummy4 = 0, dummy5 = 0;
         double *res = malloc((nv2 + nt3amp + nt3phi + nvisamp + nvisphi) * sizeof(double));         // current residuals
@@ -2270,7 +2195,8 @@ void mcmc_annealing_image(char *file, double *image, long *iframeburned, long de
             res[i] = 0;
             mod_obs[i] = 0;
         }
-        *mn_chi2 = compute_chi2(mod_vis, res, mod_obs, &dummy1, &dummy2, &dummy3, &dummy4, &dummy5);
+        compute_lLikelihood(annealed_chi2, mod_vis, res, mod_obs, &dummy1, &dummy2, &dummy3, &dummy4, &dummy5);
+        *annealed_chi2 *= 2.;
 
 
         // Output obs and residuals in separate file
@@ -2291,7 +2217,7 @@ void mcmc_annealing_image(char *file, double *image, long *iframeburned, long de
         free(mod_obs);
     }
 
-    free(avg_fluxratio_image);
+    free(annealed_fluxratio_image);
     free(mod_vis);
     free(im_vis);
     free(param_vis);
@@ -2300,7 +2226,7 @@ void mcmc_annealing_image(char *file, double *image, long *iframeburned, long de
 
 
 void mcmc_tempering_image(char* file, double *image, long lowtempthread, long depth, long nelements, unsigned short axis_len,
-                          double complex * __restrict xtransform, double complex * __restrict ytransform, double *mn_chi2,
+                          double complex * __restrict xtransform, double complex * __restrict ytransform, double *annealed_chi2,
                           unsigned short *saved_x, unsigned short *saved_y, double *saved_params, long niter, int nwavr)
 // note: depth is the actual available depth
 {
@@ -2380,7 +2306,12 @@ void mcmc_tempering_image(char* file, double *image, long lowtempthread, long de
             mod_vis[j] = im_vis[j];
     }
 
-    if(mn_chi2 != NULL)
+
+    //
+
+
+
+    if(annealed_chi2 != NULL)
     {
         double dummy1 = 0, dummy2 = 0, dummy3 = 0, dummy4 = 0, dummy5 = 0;
         double *res = malloc((nv2 + nt3amp + nt3phi + nvisamp + nvisphi) * sizeof(double));         // current residuals
@@ -2390,7 +2321,7 @@ void mcmc_tempering_image(char* file, double *image, long lowtempthread, long de
             res[i] = 0;
             mod_obs[i] = 0;
         }
-        *mn_chi2 = compute_chi2(mod_vis, res, mod_obs, &dummy1, &dummy2, &dummy3, &dummy4, &dummy5);
+        compute_lLikelihood(annealed_chi2, mod_vis, res, mod_obs, &dummy1, &dummy2, &dummy3, &dummy4, &dummy5);
 
         // Output obs and residuals in separate file
         char data_filename[100];
@@ -2448,93 +2379,125 @@ void intHandler(int signum)
 
 void compute_regularizers(double *reg_param, double *reg_value, double* image, double* prior_image, unsigned short* initial_x, unsigned short* initial_y, unsigned short* element_x,  unsigned short* element_y, int nwavr, unsigned short axis_len, long nelements, double* cent_xoffset, double* cent_yoffset, double fov, double cent_mult)
 {
-  long w, i, j;
-	for(w=0; w<nwavr; w++)
-	  {
-            if(reg_param[REG_DARKENERGY] > 0)
-	      reg_value[w * NREGULS + REG_DARKENERGY] = den_full(&image[w * axis_len * axis_len], NULL, 0.0 , axis_len, axis_len) ;
-            
-	    if(reg_param[REG_ENTROPY]> 0.0)
-	      reg_value[w * NREGULS + REG_ENTROPY]= entropy_full(&image[w * axis_len * axis_len], NULL, 0.0 , axis_len, axis_len) ;
-            
-	    if(reg_param[REG_SPOT]> 0.0)
-	      reg_value[w * NREGULS + REG_SPOT]   = UDreg(&image[w * axis_len * axis_len], NULL, 0.0 , axis_len, axis_len) / (double) nelements;
-            
-	    if(reg_param[REG_TV]> 0.0)
-	      reg_value[w * NREGULS + REG_TV]     =    TV(&image[w * axis_len * axis_len], NULL, 0.0 , axis_len, axis_len) / (double) nelements;
-            
-	    if(reg_param[REG_LAP]> 0.0)
-	      reg_value[w * NREGULS + REG_LAP]    =   LAP(&image[w * axis_len * axis_len], NULL, 0.0 , axis_len, axis_len) / (double) nelements;
-            
-	    if(reg_param[REG_L0]> 0.0)
-	      reg_value[w * NREGULS + REG_L0]     =    L0(&image[w * axis_len * axis_len], NULL, 0.0 , axis_len, axis_len) / (double) nelements;
-	    
-	    reg_value[w * NREGULS + REG_PRIORIMAGE] = 0;
-	     if(reg_param[REG_PRIORIMAGE] > 0)
-	      for(i = 0; i < nelements; i++)
-		reg_value[w * NREGULS + REG_PRIORIMAGE] += prior_image[element_y[w * nelements + i] * axis_len + element_x[w * nelements + i]];
-	    
-	    reg_value[w * NREGULS + REG_CENTERING] = 0;
-	    if(reg_param[REG_CENTERING] > 0)
-	      for(i = 0; i < nelements; i++)
-		reg_value[w * NREGULS + REG_CENTERING] += cent_change(w, cent_xoffset, cent_yoffset, initial_x[i], initial_y[i], axis_len / 2, axis_len / 2, axis_len, fov, cent_mult); 
-	    
-	    if(reg_param[REG_MODELPARAM] > 0)
-	      reg_value[w * NREGULS + REG_MODELPARAM] = 0.;
-          }
+    long w, i;
+    for(w=0; w<nwavr; w++)
+    {
+        if(reg_param[REG_DARKENERGY] > 0)
+            reg_value[w * NREGULS + REG_DARKENERGY] = den_full(&image[w * axis_len * axis_len], NULL, 0.0 , axis_len, axis_len) ;
 
-	if(reg_param[REG_TRANSPECL2] > 0.0) 
-	    reg_value[REG_TRANSPECL2] = transpec(nwavr, axis_len, image) / (double) nelements;
+        if(reg_param[REG_ENTROPY]> 0.0)
+            reg_value[w * NREGULS + REG_ENTROPY]= entropy_full(&image[w * axis_len * axis_len], NULL, 0.0 , axis_len, axis_len) ;
+
+        if(reg_param[REG_SPOT]> 0.0)
+            reg_value[w * NREGULS + REG_SPOT]   = UDreg(&image[w * axis_len * axis_len], NULL, 0.0 , axis_len, axis_len) / (double) nelements;
+
+        if(reg_param[REG_TV]> 0.0)
+            reg_value[w * NREGULS + REG_TV]     =    TV(&image[w * axis_len * axis_len], NULL, 0.0 , axis_len, axis_len) / (double) nelements;
+
+        if(reg_param[REG_LAP]> 0.0)
+            reg_value[w * NREGULS + REG_LAP]    =   LAP(&image[w * axis_len * axis_len], NULL, 0.0 , axis_len, axis_len) / (double) nelements;
+
+        if(reg_param[REG_L0]> 0.0)
+            reg_value[w * NREGULS + REG_L0]     =    L0(&image[w * axis_len * axis_len], NULL, 0.0 , axis_len, axis_len) / (double) nelements;
+
+        reg_value[w * NREGULS + REG_PRIORIMAGE] = 0;
+        if(reg_param[REG_PRIORIMAGE] > 0)
+            for(i = 0; i < nelements; i++)
+                reg_value[w * NREGULS + REG_PRIORIMAGE] += prior_image[element_y[w * nelements + i] * axis_len + element_x[w * nelements + i]];
+
+        reg_value[w * NREGULS + REG_CENTERING] = 0;
+        if(reg_param[REG_CENTERING] > 0)
+            for(i = 0; i < nelements; i++)
+                reg_value[w * NREGULS + REG_CENTERING] += cent_change(w, cent_xoffset, cent_yoffset, initial_x[i], initial_y[i], axis_len / 2, axis_len / 2, axis_len, fov, cent_mult);
+
+        if(reg_param[REG_MODELPARAM] > 0)
+            reg_value[w * NREGULS + REG_MODELPARAM] = 0.;
+    }
+
+    if(reg_param[REG_TRANSPECL2] > 0.0)
+        reg_value[REG_TRANSPECL2] = transpec(nwavr, axis_len, image) / (double) nelements;
 }
 
 
-void compute_model_visibilities(double complex* mod_vis, double complex* im_vis, double complex* param_vis, double* params, double* fluxratio_image, unsigned short* element_x, unsigned short* element_y, double complex* xtransform, double complex* ytransform, double* reg_value, long nparams, long nelements)
+void compute_model_visibilities_fromelements(double complex* mod_vis, double complex* im_vis, double complex* param_vis, double* params, double* fluxratio_image, const unsigned short* element_x, const unsigned short* element_y, const double complex* xtransform, const double complex* ytransform, double* lPriorModel, long nparams, long nelements)
 {
-  long i, j;
-   if(nparams > 0)
-     model_vis(params, param_vis, &reg_value[REG_MODELPARAM], fluxratio_image);
-   else
-     for(j = 0; j < nuv; j++)
-       param_vis[j] = 0.0;
-   
-   // Compute initial visibilities
-   for(j = 0; j < nuv; j++)
-     {
-       im_vis[j] = 0;
-       for(i = 0; i < nelements; i++)
-	 im_vis[j] += xtransform[element_x[ uvwav2chan[j] * nelements + i] * nuv + j]
-	   * ytransform[element_y[ uvwav2chan[j] * nelements + i] * nuv + j] ;
-       im_vis[j] *= fluxratio_image[j] / (double) nelements;   // Will add SED here
-       mod_vis[j] = param_vis[j] + im_vis[j];
-     }
- }
+    long i, j;
+    if(nparams > 0)
+        model_vis(params, param_vis, lPriorModel, fluxratio_image);
+    else
+        for(j = 0; j < nuv; j++)
+            param_vis[j] = 0.0;
+
+    // Compute visibilities from scratch
+    for(j = 0; j < nuv; j++)
+    {
+        im_vis[j] = 0;
+        for(i = 0; i < nelements; i++)
+            im_vis[j] += xtransform[element_x[ uvwav2chan[j] * nelements + i] * nuv + j]
+                         * ytransform[element_y[ uvwav2chan[j] * nelements + i] * nuv + j] ;
+        im_vis[j] *= fluxratio_image[j] / (double) nelements;   // Will add SED here
+        mod_vis[j] = param_vis[j] + im_vis[j];
+    }
+}
+
+void compute_model_visibilities_fromimage(double complex* mod_vis, double complex* im_vis, double complex* param_vis, const double* params, double* fluxratio_image, const double *image, const double complex* xtransform, const double complex* ytransform, double* lPriorModel, long nparams, long nelements, unsigned short axis_len)
+{
+    // Note: input image should be normalized
+
+    long ix, iy, j;
+    if(nparams > 0)
+        model_vis(params, param_vis, lPriorModel, fluxratio_image);
+    else
+        for(j = 0; j < nuv; j++)
+            param_vis[j] = 0.0;
+
+    // Compute image visibilities
+    for(j = 0; j < nuv; j++)
+    {
+        im_vis[j] = 0;
+        for(ix = 0; ix < axis_len; ix++)
+            for(iy = 0; iy < axis_len; iy++)
+                im_vis[j] += image[uvwav2chan[j] * axis_len * axis_len + iy * axis_len + ix] * xtransform[ix * nuv + j] * ytransform[iy * nuv + j] ;
+    }
+
+    for(j = 0; j < nuv; j++)
+    {
+        if(nparams > 0)
+        {
+
+            im_vis[j] *= fluxratio_image[j];
+            mod_vis[j] = param_vis[j] + im_vis[j];
+        }
+        else mod_vis[j] = im_vis[j];
+    }
+}
 
 
 void initialize_image(int iThread, double* image, unsigned short* element_x, unsigned short* element_y, unsigned short* initial_x, unsigned short* initial_y, unsigned short axis_len, int nwavr, long nelements, char* init_filename)
 {
-  long i,k,w;
-  for(i = 0; i < nwavr * axis_len * axis_len; i++)
-    image[i] = 0;
-  
-  // Initial image channels
-  if(! strcmp(init_filename, "randomthr"))
-    k = iThread;
-  else
-    k = 0;
-  for(w = 0; w < nwavr; w++)
+    long i,k,w;
+    for(i = 0; i < nwavr * axis_len * axis_len; i++)
+        image[i] = 0;
+
+    // Initial image channels
+    if(! strcmp(init_filename, "randomthr"))
+        k = iThread;
+    else
+        k = 0;
+    for(w = 0; w < nwavr; w++)
     {
-      for(i = 0; i < nelements; i++)
-	{
-	  element_x[w * nelements + i] = initial_x[k * nelements + i];
-	  element_y[w * nelements + i] = initial_y[k * nelements + i];
-	  image[ w * axis_len * axis_len + initial_y[i] * axis_len + initial_x[i] ]++;
-	}
+        for(i = 0; i < nelements; i++)
+        {
+            element_x[w * nelements + i] = initial_x[k * nelements + i];
+            element_y[w * nelements + i] = initial_y[k * nelements + i];
+            image[ w * axis_len * axis_len + initial_y[i] * axis_len + initial_x[i] ]++;
+        }
     }
 }
 
 bool read_commandline(int* argc, char** argv, bool* benchmark, bool* use_v2, bool* use_t3amp, bool* use_t3phi, bool* use_visamp, bool* use_visphi, bool* use_diffvis, bool* use_threadfits, bool* use_bandwidthsmearing, int* minimization_engine, bool* dumpchain,double* mas_pixel, unsigned short* axis_len, long* depth, long* niter, long* nelements, double* f_anywhere, double* f_copycat, int *nthreads, double* tempschedc, double* fov, double* chi2_temp, double* chi2_target, double* tmin, double* prob_auto, double* uvtol, char* output_filename, char* init_filename, char* prior_filename, double* v2s, double* v2a, double* t3amps, double* t3ampa, double* t3phia, double* t3phis, double* visamps, double* visampa, double* visphis, double* visphia, double* fluxs, double* cvfwhm, double* reg_param, double* init_param, double* wavmin, double* wavmax)
 {
-  long i, j, k;
+    long i, j, k;
 
     /* Read in command line info... */
     if(*argc < 2)
@@ -2544,22 +2507,22 @@ bool read_commandline(int* argc, char** argv, bool* benchmark, bool* use_v2, boo
     }
 
     if( (strcmp(argv[1], "-h") == 0) || (strcmp(argv[1], "-help") == 0)|| (strcmp(argv[1], "--help") == 0))
-        {
-            printhelp();
-	    return 0;
-        }
+    {
+        printhelp();
+        return 0;
+    }
 
     for(i = 2; i < *argc; i++)
     {
         /* First the options without arguments */
-      if( (strcmp(argv[i], "-h") == 0) || (strcmp(argv[i], "-help") == 0)|| (strcmp(argv[i], "--help") == 0))
+        if( (strcmp(argv[i], "-h") == 0) || (strcmp(argv[i], "-help") == 0)|| (strcmp(argv[i], "--help") == 0))
         {
             printhelp();
-	    return 0;
+            return 0;
         }
         else if(strcmp(argv[i], "-benchmark") == 0)
         {
-	  *benchmark = TRUE; // run benchmark
+            *benchmark = TRUE; // run benchmark
         }
         else if(strcmp(argv[i], "-nov2") == 0)
         {
@@ -2601,7 +2564,7 @@ bool read_commandline(int* argc, char** argv, bool* benchmark, bool* use_v2, boo
         }
         else if(strcmp(argv[i], "-nobws") == 0)
         {
-	  *use_bandwidthsmearing = FALSE; // disable bandwidth smearing
+            *use_bandwidthsmearing = FALSE; // disable bandwidth smearing
         }
         else if(strcmp(argv[i], "-tempering") == 0)
         {
@@ -2622,7 +2585,7 @@ bool read_commandline(int* argc, char** argv, bool* benchmark, bool* use_v2, boo
                 sscanf(argv[i + 1], "%ld", nelements);
             else if(strcmp(argv[i], "-n") == 0)
                 sscanf(argv[i + 1], "%ld", niter);
-	    else if(strcmp(argv[i], "-ps") == 0)
+            else if(strcmp(argv[i], "-ps") == 0)
                 sscanf(argv[i + 1], "%lf", &reg_param[REG_PRIORIMAGE]);
             else if(strcmp(argv[i], "-de") == 0)
                 sscanf(argv[i + 1], "%lf", &reg_param[REG_DARKENERGY]);
@@ -2745,7 +2708,7 @@ bool read_commandline(int* argc, char** argv, bool* benchmark, bool* use_v2, boo
             }
             else if(strcmp(argv[i], "-wavchan") == 0)
             {
-	      int wavchaninfo = 0;
+                int wavchaninfo = 0;
                 for(j = i + 1; j < *argc; j++)
                 {
                     /* If the next parameter is "-" followed by a non-numeric character,
@@ -2788,9 +2751,9 @@ bool read_commandline(int* argc, char** argv, bool* benchmark, bool* use_v2, boo
         else
         {
             printf("Command line  -- invalid option. Type squeeze -h for help.\n");
-	    return FALSE;
+            return FALSE;
         }
-    
+
     }
 
 }
@@ -2798,82 +2761,96 @@ bool read_commandline(int* argc, char** argv, bool* benchmark, bool* use_v2, boo
 
 void print_diagnostics(int iThread, long current_iter, long nvis, long nv2, long nt3, long nt3phi, long nt3amp, long nvisamp, long nvisphi, double chi2v2, double chi2t3amp,double chi2t3phi,double chi2visphi,double chi2visamp, double lPosterior, double lPrior, double lLikelihood, const double* reg_param, const double* reg_value, const double* cent_xoffset, const double* cent_yoffset, long nelements, int nwavr, long niter, const double* temperature, double prob_movement, const double* params, const double* stepsize)
 {
-  // Note: current_iter = i / (nwavr * nelements) + 1
+    // Note: current_iter = i / (nwavr * nelements) + 1
 
-  long w, j;
-   char diagnostics[250];
-   int diagnostics_used = 0 ;
+    long w, j;
+    char diagnostics[250];
+    int diagnostics_used = 0 ;
 
-   /* Print output to screen (or wherever stdout is piped to) */
-   
-   // compute reduced chi2
-   if(nv2 > 0)
-     chi2v2 /= (double) nv2;
-   if(nt3amp > 0)
-     chi2t3amp /= (double) nt3amp;
-   if(nt3phi > 0)
-     chi2t3phi /= (double) nt3phi;
-   if(nvisphi > 0)
-     chi2visphi /= (double) nvisphi;
-   if(nvisamp > 0)
-     chi2visamp /= (double) nvisamp;
-   
-   for(w = 0; w < nwavr; w++) // diagnostics
-     {
-       if(nwavr > 1)
-	 diagnostics_used = snprintf(diagnostics , 250 , "Thread: %d Chan: %ld lPost:%8.1f lPrior:%8.1f lLike:%9.1f ",
-				     iThread, w, lPosterior, lPrior, lLikelihood);
-       else
-	 diagnostics_used = snprintf(diagnostics , 250 , "Thread: %d lPost:%8.1f lPrior:%8.1f lLike:%9.1f ",
-				     iThread, lPosterior, lPrior, lLikelihood);
-       
-       if(nv2 > 0)
-	 diagnostics_used += snprintf(diagnostics + diagnostics_used , 250 - diagnostics_used,  TEXT_COLOR_RED "V2:%5.2f " TEXT_COLOR_BLACK, chi2v2);
-       if(nt3amp > 0)
-	 diagnostics_used += snprintf(diagnostics + diagnostics_used , 250 - diagnostics_used , TEXT_COLOR_BLUE "T3A:%5.2f " TEXT_COLOR_BLACK, chi2t3amp);
-       if(nt3phi > 0)
-	 diagnostics_used += snprintf(diagnostics + diagnostics_used , 250 - diagnostics_used , TEXT_COLOR_GREEN "T3P:%5.2f " TEXT_COLOR_BLACK, chi2t3phi);
-       if(nvisamp > 0)
-	 diagnostics_used += snprintf(diagnostics + diagnostics_used , 250 - diagnostics_used , "VA:%5.2f ", chi2visamp);
-       if(nvisphi > 0)
-	 diagnostics_used += snprintf(diagnostics + diagnostics_used , 250 - diagnostics_used , "VP:%5.2f ", chi2visphi);
-       if(reg_param[REG_PRIORIMAGE] > 0)
-	 diagnostics_used += snprintf(diagnostics + diagnostics_used , 250 - diagnostics_used , "PRI:%5.2f ", reg_param[REG_PRIORIMAGE] * reg_value[w * NREGULS + REG_PRIORIMAGE]);
-       if(reg_param[REG_ENTROPY] > 0)
-	 diagnostics_used += snprintf(diagnostics + diagnostics_used , 250 - diagnostics_used , "ENT:%5.2f ", reg_param[REG_ENTROPY] * reg_value[w * NREGULS + REG_ENTROPY]);
-       if(reg_param[REG_DARKENERGY] > 0)
-	 diagnostics_used += snprintf(diagnostics + diagnostics_used , 250 - diagnostics_used , "DEN:%5.2f ", reg_param[REG_DARKENERGY] * reg_value[w * NREGULS + REG_DARKENERGY]);
-       if(reg_param[REG_SPOT] > 0)
-	 diagnostics_used += snprintf(diagnostics + diagnostics_used , 250 - diagnostics_used , "UD:%5.2f ", reg_param[REG_SPOT]       * reg_value[w * NREGULS + REG_SPOT]);
-       if(reg_param[REG_TV] > 0)
-	 diagnostics_used += snprintf(diagnostics + diagnostics_used , 250 - diagnostics_used , "TV:%5.2f ", reg_param[REG_TV]         * reg_value[w * NREGULS + REG_TV]);
-       if(reg_param[REG_LAP] > 0)
-	 diagnostics_used += snprintf(diagnostics + diagnostics_used , 250 - diagnostics_used , "LAP:%5.2f ", reg_param[REG_LAP]       * reg_value[w * NREGULS + REG_LAP]);
-       if(reg_param[REG_L0] > 0)
-	 diagnostics_used += snprintf(diagnostics + diagnostics_used , 250 - diagnostics_used , "L0:%5.2f ", reg_param[REG_L0]       * reg_value[w * NREGULS + REG_L0]);
-       if(reg_param[REG_TRANSPECL2] > 0)
-	 diagnostics_used += snprintf(diagnostics + diagnostics_used , 250 - diagnostics_used , "TS:%5.2f ", reg_param[REG_TRANSPECL2]    * reg_value[REG_TRANSPECL2]);
-       if(reg_param[REG_CENTERING] > 0)
-	 diagnostics_used += snprintf(diagnostics + diagnostics_used , 250 - diagnostics_used , "C:%5.1f XY:(%5.2f,%5.2f) ",
-				      reg_param[REG_CENTERING]  * reg_value[w * NREGULS + REG_CENTERING], cent_xoffset[w] / nelements, cent_yoffset[w] / nelements);
-     
-       diagnostics_used += snprintf(diagnostics + diagnostics_used , 250 - diagnostics_used , "E: %5ld MPr: %4.2f T: %5.2f Iter: %4ld of %4ld",
-				    nelements, prob_movement, temperature[iThread],  current_iter, niter);
-       
-       puts(diagnostics);  
-     }
-   fflush(stdout);
-   
-   if(nparams > 0)
-     {
-       printf("Thread: %d Model Parameters: ", iThread);
-       for(j = 0; j < nparams; j++)
-	 printf("P[%ld]: %7.5g +/- %7.5g  ", j, params[j], stepsize[j]);
-       printf("\n");
-     }
+    /* Print output to screen (or wherever stdout is piped to) */
+
+    // compute reduced chi2
+    if(nv2 > 0)
+        chi2v2 /= (double) nv2;
+    if(nt3amp > 0)
+        chi2t3amp /= (double) nt3amp;
+    if(nt3phi > 0)
+        chi2t3phi /= (double) nt3phi;
+    if(nvisphi > 0)
+        chi2visphi /= (double) nvisphi;
+    if(nvisamp > 0)
+        chi2visamp /= (double) nvisamp;
+
+    for(w = 0; w < nwavr; w++) // diagnostics
+    {
+        if(nwavr > 1)
+            diagnostics_used = snprintf(diagnostics , 250 , "Thread: %d Chan: %ld lPost:%8.1f lPrior:%8.1f lLike:%9.1f ",
+                                        iThread, w, lPosterior, lPrior, lLikelihood);
+        else
+            diagnostics_used = snprintf(diagnostics , 250 , "Thread: %d lPost:%8.1f lPrior:%8.1f lLike:%9.1f ",
+                                        iThread, lPosterior, lPrior, lLikelihood);
+
+        if(nv2 > 0)
+            diagnostics_used += snprintf(diagnostics + diagnostics_used , 250 - diagnostics_used,  TEXT_COLOR_RED "V2:%5.2f " TEXT_COLOR_BLACK, chi2v2);
+        if(nt3amp > 0)
+            diagnostics_used += snprintf(diagnostics + diagnostics_used , 250 - diagnostics_used , TEXT_COLOR_BLUE "T3A:%5.2f " TEXT_COLOR_BLACK, chi2t3amp);
+        if(nt3phi > 0)
+            diagnostics_used += snprintf(diagnostics + diagnostics_used , 250 - diagnostics_used , TEXT_COLOR_GREEN "T3P:%5.2f " TEXT_COLOR_BLACK, chi2t3phi);
+        if(nvisamp > 0)
+            diagnostics_used += snprintf(diagnostics + diagnostics_used , 250 - diagnostics_used , "VA:%5.2f ", chi2visamp);
+        if(nvisphi > 0)
+            diagnostics_used += snprintf(diagnostics + diagnostics_used , 250 - diagnostics_used , "VP:%5.2f ", chi2visphi);
+        if(reg_param[REG_PRIORIMAGE] > 0)
+            diagnostics_used += snprintf(diagnostics + diagnostics_used , 250 - diagnostics_used , "PRI:%5.2f ", reg_param[REG_PRIORIMAGE] * reg_value[w * NREGULS + REG_PRIORIMAGE]);
+        if(reg_param[REG_ENTROPY] > 0)
+            diagnostics_used += snprintf(diagnostics + diagnostics_used , 250 - diagnostics_used , "ENT:%5.2f ", reg_param[REG_ENTROPY] * reg_value[w * NREGULS + REG_ENTROPY]);
+        if(reg_param[REG_DARKENERGY] > 0)
+            diagnostics_used += snprintf(diagnostics + diagnostics_used , 250 - diagnostics_used , "DEN:%5.2f ", reg_param[REG_DARKENERGY] * reg_value[w * NREGULS + REG_DARKENERGY]);
+        if(reg_param[REG_SPOT] > 0)
+            diagnostics_used += snprintf(diagnostics + diagnostics_used , 250 - diagnostics_used , "UD:%5.2f ", reg_param[REG_SPOT]       * reg_value[w * NREGULS + REG_SPOT]);
+        if(reg_param[REG_TV] > 0)
+            diagnostics_used += snprintf(diagnostics + diagnostics_used , 250 - diagnostics_used , "TV:%5.2f ", reg_param[REG_TV]         * reg_value[w * NREGULS + REG_TV]);
+        if(reg_param[REG_LAP] > 0)
+            diagnostics_used += snprintf(diagnostics + diagnostics_used , 250 - diagnostics_used , "LAP:%5.2f ", reg_param[REG_LAP]       * reg_value[w * NREGULS + REG_LAP]);
+        if(reg_param[REG_L0] > 0)
+            diagnostics_used += snprintf(diagnostics + diagnostics_used , 250 - diagnostics_used , "L0:%5.2f ", reg_param[REG_L0]       * reg_value[w * NREGULS + REG_L0]);
+        if(reg_param[REG_TRANSPECL2] > 0)
+            diagnostics_used += snprintf(diagnostics + diagnostics_used , 250 - diagnostics_used , "TS:%5.2f ", reg_param[REG_TRANSPECL2]    * reg_value[REG_TRANSPECL2]);
+        if(reg_param[REG_CENTERING] > 0)
+            diagnostics_used += snprintf(diagnostics + diagnostics_used , 250 - diagnostics_used , "C:%5.1f XY:(%5.2f,%5.2f) ",
+                                         reg_param[REG_CENTERING]  * reg_value[w * NREGULS + REG_CENTERING], cent_xoffset[w] / nelements, cent_yoffset[w] / nelements);
+
+        diagnostics_used += snprintf(diagnostics + diagnostics_used , 250 - diagnostics_used , "E: %5ld MPr: %4.2f T: %5.2f Iter: %4ld of %4ld",
+                                     nelements, prob_movement, temperature[iThread],  current_iter, niter);
+
+        puts(diagnostics);
+    }
+    fflush(stdout);
+
+    if(nparams > 0)
+    {
+        printf("Thread: %d Model Parameters: ", iThread);
+        for(j = 0; j < nparams; j++)
+            printf("P[%ld]: %7.5g +/- %7.5g  ", j, params[j], stepsize[j]);
+        printf("\n");
+    }
 }
 
 
+void compute_lPrior(double* lPrior, const long chan, const double* reg_param, const double* reg_value)
+{
+    *lPrior =       reg_param[REG_PRIORIMAGE]  * reg_value[chan * NREGULS + REG_PRIORIMAGE]
+                    + reg_param[REG_CENTERING]   * reg_value[chan * NREGULS + REG_CENTERING]
+                    + reg_param[REG_ENTROPY]     * reg_value[chan * NREGULS + REG_ENTROPY]
+                    + reg_param[REG_MODELPARAM]  * reg_value[chan * NREGULS + REG_MODELPARAM]
+                    + reg_param[REG_DARKENERGY]  * reg_value[chan * NREGULS + REG_DARKENERGY]
+                    + reg_param[REG_SPOT]        * reg_value[chan * NREGULS + REG_SPOT]
+                    + reg_param[REG_TV]          * reg_value[chan * NREGULS + REG_TV]
+                    + reg_param[REG_LAP]         * reg_value[chan * NREGULS + REG_LAP]
+                    + reg_param[REG_L0]          * reg_value[chan * NREGULS + REG_L0]
+                    + reg_param[REG_TRANSPECL2]  * reg_value[REG_TRANSPECL2];
+
+}
 
 
 

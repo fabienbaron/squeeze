@@ -131,7 +131,9 @@ bool read_commandline(int* argc, char** argv, bool* benchmark, bool* use_v2, boo
 
 void print_diagnostics(int iThread, long current_iter, long nvis, long nv2, long nt3, long nt3phi, long nt3amp, long nvisamp, long nvisphi, double chi2v2, double chi2t3amp,double chi2t3phi,double chi2visphi,double chi2visamp, double lPosterior, double lPrior, double lLikelihood, const double* reg_param, const double* reg_value, const double* cent_xoffset, const double* cent_yoffset, long nelements, int nwavr, long niter, const double* temperature, double prob_movement, const double* params, const double* stepsize);
 
-double compute_chi2(const double complex *mod_vis, double *res, double *mod_obs, double *chi2v2, double *chi2t3amp, double *chi2visamp, double *chi2t3phi, double *chi2visphi) ;
+void compute_lLikelihood(double* likelihood, const double complex * __restrict mod_vis, double* __restrict res, double* __restrict mod_obs, double *chi2v2, double *chi2t3amp, double *chi2visamp, double *chi2t3phi, double *chi2visphi);
+void compute_lPrior(double* lPrior, const long chan, const double* reg_param, const double* reg_value);
+
 void vis_to_obs(const double complex *mod_vis, double *mod_obs);
 void obs_to_res(const double *mod_obs, double *res);
 double residuals_to_chi2(const double *res, double *chi2v2, double *chi2t3amp, double *chi2visamp, double *chi2t3phi, double *chi2visphi) ;
@@ -146,7 +148,7 @@ int find_reg_param(double *regparam, long *iframeburned, long depth, long niter,
 int writeasfits(char *filename, double *image,
                 long depth, long min_elt, double chi2, double temperature, long nelems, double* regpar , double* regval,
                 long niter, unsigned short axis_len, double ndf, double tmin, double chi2_temp, double chi2_target, double mas_pixel, int nthreads, double *saved_params, double logZ, double logZ_err,
-		char* init_filename, char* prior_filename);
+                char* init_filename, char* prior_filename);
 
 void mcmc_annealing_image(char *file, double *image, long *iframeburned, long depth, long nelements,
                           unsigned short axis_len, double complex * __restrict xtransform, double complex * __restrict ytransform,
@@ -162,7 +164,9 @@ void mcmc_fullchain(char* file, long nthreads, long niter, int nchanr, long nele
 
 void compute_regularizers(double *reg_param, double *reg_value, double* image, double* prior_image, unsigned short* initial_x, unsigned short* initial_y, unsigned short* element_x,  unsigned short* element_y, int nwavr, unsigned short axis_len, long nelements, double* cent_xoffset, double* cent_yoffset, double fov, double cent_mult);
 
-void compute_model_visibilities(double complex* mod_vis, double complex* im_vis, double complex* param_vis, double* params, double* fluxratio_image, unsigned short* element_x, unsigned short* element_y, double complex* xtransform, double complex* ytransform, double* reg_value, long nparams, long nelements);
+void compute_model_visibilities_fromelements(double complex* mod_vis, double complex* im_vis, double complex* param_vis, double* params, double* fluxratio_image, const unsigned short* element_x, const unsigned short* element_y, const double complex* xtransform, const double complex* ytransform, double* lPriorModel, long nparams, long nelements);
+
+void compute_model_visibilities_fromimage(double complex* mod_vis, double complex* im_vis, double complex* param_vis, const double* params, double* fluxratio_image, const double *image, const double complex* xtransform, const double complex* ytransform, double* lPriorModel, long nparams, long nelements, unsigned short axis_len);
 
 void initialize_image(int iThread, double* image, unsigned short* element_x, unsigned short* element_y, unsigned short* initial_x, unsigned short* initial_y, unsigned short axis_len, int nwavr, long nelements, char* init_filename);
 
@@ -173,7 +177,7 @@ int extract_oifits(char* filename, bool use_v2, bool use_t3amp, bool use_t3phi, 
 int write_best_oifits(char* filestring, double complex * mod_vis);
 
 /* Function prototype for modelcode.c */
-int model_vis(double *params, double complex *modvis, double *logl, double *flux_frac);
+int model_vis(const double *params, double complex *modvis, double *logl, double *flux_frac);
 
 /* regularizations */
 

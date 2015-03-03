@@ -43,7 +43,7 @@ Notes:
 ------------------------------
 Globals: nparams, nbaselines, u, v*/
 extern double j1(double);
-int model_vis(double *params, double complex *modvis, double *lPriorModel, double *flux_frac_0)
+int model_vis(const double *params, double complex *modvis, double *lPriorModel, double *flux_frac_0)
 {
     int status = 0;
     long i;
@@ -93,14 +93,14 @@ int model_vis(double *params, double complex *modvis, double *lPriorModel, doubl
         lPriorParams[2] = 0;
     else
         lPriorParams[2] = 1e99;
- 
-    
+
+
     if(abs(params[3]) >= 10)
         lPriorParams[3] = 1e99;
     else
         lPriorParams[3] = 0;
-   
-    
+
+
     *lPriorModel = lPriorParams[0] + lPriorParams[1] + lPriorParams[2] +lPriorParams[3] ;
 
     return (status != 0);

@@ -84,7 +84,7 @@ AR = ar
 AUTOCONF = ${SHELL} /home/baron/SOFTWARE/squeeze/lib/rngstreams/missing --run autoconf
 AUTOHEADER = ${SHELL} /home/baron/SOFTWARE/squeeze/lib/rngstreams/missing --run autoheader
 AUTOMAKE = ${SHELL} /home/baron/SOFTWARE/squeeze/lib/rngstreams/missing --run automake-1.10
-AWK = mawk
+AWK = gawk
 CC = gcc
 CCDEPMODE = depmode=gcc3
 CFLAGS = -g -O2
