@@ -145,14 +145,15 @@ static inline double modsq(double complex input)  __attribute__((always_inline))
 
 double fill_iframeburned(long *iframeburned, long depth, long threadnum, long nelements, long niter,  double *saved_lPosterior, double *saved_lLikelihood, double *saved_reg_value);
 int find_reg_param(double *regparam, long *iframeburned, long depth, long niter, long ndf, long nelements);
-int writeasfits(char *filename, double *image,
-                long depth, long min_elt, double chi2, double temperature, long nelems, double* regpar , double* regval,
-                long niter, unsigned short axis_len, double ndf, double tmin, double chi2_temp, double chi2_target, double mas_pixel, int nthreads, double *saved_params, double logZ, double logZ_err,
-                char* init_filename, char* prior_filename);
 
-void mcmc_annealing_results(char *file, double *image, long *iframeburned, long depth, long nelements,
-                          unsigned short axis_len, double complex * __restrict xtransform, double complex * __restrict ytransform,
-                          double *mn_chi2, unsigned short *saved_x, unsigned short *saved_y, double *saved_params, long niter, int nchanr);
+int writeasfits(char *file, double *image, long depth, long min_elt, double chi2, double temperature, long nelems, double* regpar , double* regval,
+                long niter, unsigned short axis_len, double ndf, double tmin, double chi2_temp, double chi2_target, double mas_pixel, int nthreads, double *saved_params, double logZ, double logZ_err,
+                char *init_filename, char *prior_filename, const double* annealed_params, const double* annealed_params_std);
+
+void mcmc_annealing_results(char *file, double *image, long *iframeburned, long depth, long nelements, unsigned short axis_len,
+                            double complex * __restrict xtransform, double complex * __restrict ytransform, double *annealed_chi2,
+                            unsigned short *saved_x, unsigned short *saved_y, double *saved_params, long niter, int nwavr, double* annealed_params, double* annealed_params_std);
+
 
 void mcmc_tempering_results(char *file, double *image, long lowtempthread, long depth, long nelements,
                           unsigned short axis_len, double complex * __restrict xtransform, double complex * __restrict ytransform,
