@@ -2017,7 +2017,7 @@ int writeasfits( char *file,  double *image,  long depth,  long min_elt,
 		{
 			for (i = 0; i < NREGULS; i++)
 			{
-			  printf("w: %d i: %d reg = %lf\n",w, i, regval[w * NREGULS + i]);
+			  //printf("w: %d i: %d reg = %lf\n",w, i, regval[w * NREGULS + i]);
 			  sprintf(param_string, "REGUL%1dW%1d", i, w);
 				fits_write_key_dbl(fptr, param_string, regval[w * NREGULS + i],
 						3, "Regularizer value", &status);
@@ -2600,8 +2600,8 @@ void compute_regularizers(const double *reg_param, double *reg_value, const doub
   
 	long w, i;
 
-	for(i=0;i<NREGULS;i++)
-	  printf("CRi: %lf %lf\n", reg_param[i], reg_value[i]);
+	//	for(i=0;i<NREGULS;i++)
+	//  printf("CRi: %lf %lf\n", reg_param[i], reg_value[i]);
 	
 	for (w = 0; w < nwavr; w++)
 	{
@@ -2641,8 +2641,8 @@ void compute_regularizers(const double *reg_param, double *reg_value, const doub
 	if (reg_param[REG_TRANSPECL2] > 0.0)
 	  reg_value[REG_TRANSPECL2] = transpec(nwavr, axis_len, image, fluxscaling);
 
-	for(i=0;i<NREGULS;i++)
-	  printf("CRo: %lf %lf\n", reg_param[i], reg_value[i]);
+	//	for(i=0;i<NREGULS;i++)
+	//  printf("CRo: %lf %lf\n", reg_param[i], reg_value[i]);
 
 
 }
