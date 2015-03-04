@@ -3,13 +3,14 @@
 /***************************************************************/
 /* Change the centroid statistic                               */
 /***************************************************************/
-double cent_change(int channel, double* cent_xoffset, double *cent_yoffset, long new_x, long new_y, long old_x, long old_y, unsigned short axis_len, double fov, double cent_mult)
+double cent_change(const int channel, double* centroid_image_x, double *centroid_image_y, 
+		   const long new_x, const long new_y, const long old_x, const long old_y, const unsigned short axis_len, const double fov, const double cent_mult)
 {
     double old_sumsqr, new_sumsqr;
-    old_sumsqr = (cent_xoffset[channel] * cent_xoffset[channel] + cent_yoffset[channel] * cent_yoffset[channel]);
-    cent_xoffset[channel] += (double)(new_x - old_x);
-    cent_yoffset[channel] += (double)(new_y - old_y);
-    new_sumsqr = cent_xoffset[channel] * cent_xoffset[channel] + cent_yoffset[channel] * cent_yoffset[channel];
+    old_sumsqr = (centroid_image_x[channel] * centroid_image_x[channel] + centroid_image_y[channel] * centroid_image_y[channel]);
+    centroid_image_x[channel] += (double)(new_x - old_x);
+    centroid_image_y[channel] += (double)(new_y - old_y);
+    new_sumsqr = centroid_image_x[channel] * centroid_image_x[channel] + centroid_image_y[channel] * centroid_image_y[channel];
     return ((new_sumsqr - old_sumsqr) * cent_mult
             + ((double)(new_x - axis_len / 2) * (double)(new_x - axis_len / 2) - (double)(old_x - axis_len / 2) * (double)(old_x - axis_len / 2)
                + (double)(new_y - axis_len / 2) * (double)(new_y - axis_len / 2) - (double)(old_y - axis_len / 2) * (double)(old_y - axis_len / 2)) * fov * fov)
@@ -20,7 +21,7 @@ double cent_change(int channel, double* cent_xoffset, double *cent_yoffset, long
 /***********************/
 /* The MEM functional. */
 /***********************/
-double entropy(unsigned long s)
+double entropy(const unsigned long s)
 {
 
 double ds;
@@ -45,7 +46,7 @@ double ds;
 // note: this whole function could be replaced by lgamma(ds) but it seems buggy
 }
 
-double entropy_full(const double* x, const double* pr, const double eps, const int nx, const int ny)
+double entropy_full(const double* x, const double* pr, const double eps, const int nx, const int ny, const double flux)
 {
     register int i;
     double reg = 0;
@@ -57,7 +58,7 @@ double entropy_full(const double* x, const double* pr, const double eps, const i
     return reg;
 }
 
-double den_full(const double* x, const double* pr, const double eps, const int nx, const int ny)
+double den_full(const double* x, const double* pr, const double eps, const int nx, const int ny, const double flux)
 {
     register int i,j;
     double reg = 0;
@@ -103,7 +104,7 @@ double den_change(const double *image, const unsigned short i, const unsigned sh
 }
 
 
-double transpec(int nchan, long imwidth, double *image)
+double transpec(const int nchan, const long imwidth, const double *image, const double flux)
 {
     long i, w;
     double temp1, temp2;
@@ -124,7 +125,7 @@ double transpec(int nchan, long imwidth, double *image)
 }
 
 
-double TV(const double* x, const double* pr, const double eps, const int nx, const int ny)
+double TV(const double* x, const double* pr, const double eps, const int nx, const int ny, const double flux)
 {
     // This regularizer is the TOTVAR (p=1.0) on the local gradient
     // the gradient is evaluated by backward difference, e is the threshold
@@ -178,10 +179,10 @@ double TV(const double* x, const double* pr, const double eps, const int nx, con
 
                 }
         }
-    return L1g;
+    return L1g/flux;
 }
 
-double UDreg(const double* x, const double* pr, const double eps, const int nx, const int ny)
+double UDreg(const double* x, const double* pr, const double eps, const int nx, const int ny, const double flux)
 {
     // This regularizer is the Lp norm (p=0.5) on the local gradient
     // It is somehow similar to the total variation, which is the L1 norm
@@ -231,11 +232,11 @@ double UDreg(const double* x, const double* pr, const double eps, const int nx, 
         }
 //   return L05g;
 
-    return L05g * L05g ;
+    return L05g * L05g / flux;
 }
 
 
-double L0(const double* x, const double* pr, const double eps, const int nx, const int ny)
+double L0(const double* x, const double* pr, const double eps, const int nx, const int ny, const double flux)
 {
     register int i;
     double L0l = 0;
@@ -244,11 +245,11 @@ double L0(const double* x, const double* pr, const double eps, const int nx, con
             if(x[i] > 0)
                 L0l += 1.;
         }
-    return L0l;
+    return L0l/flux;
 }
 
 
-double L2(const double* x, const double* pr, const double eps, const int nx, const int ny)
+double L2(const double* x, const double* pr, const double eps, const int nx, const int ny, const double flux)
 {
     register int i;
     double L2l = 0;
@@ -256,26 +257,17 @@ double L2(const double* x, const double* pr, const double eps, const int nx, con
         {
             L2l += x[i] * x[i];
         }
-    return L2l;
+    return sqrt(L2l)/flux;
 }
 
-
-
-
-
-
-
-
-
-
-double LAP(const double* x, const double* pr, const double eps, const int nx, const int ny)
+double LAP(const double* x, const double* pr, const double eps, const int nx, const int ny, const double flux)
 {
     // L1 norm of the Laplacian
     // Contrary to totvar, allows slope (good for stellar contours)
     // Laplacian via 5 point stencil  L = x[ i - 1, j] + x[i+1, j] + x[i, j-1] + x[i, j+1] - 4 * x[i,j]
 
     register int i, j, off;
-    float L1l = 0;
+    double L1l = 0;
 
     // for boundaries, we assume zeroes outside of the image
     for(j = 1; j < ny - 1; j++)
@@ -300,8 +292,21 @@ double LAP(const double* x, const double* pr, const double eps, const int nx, co
 
         }
 
-    return L1l;
+    return L1l/flux;
 }
 
+double reg_prior_image(const double* x, const double* pr, const double eps, const int nx, const int ny, const double flux)
+{
+  register int i;
+  double rpi=0;
+  
+  for(i=0;i<nx*ny;i++)
+    if(x[i]>0)
+      rpi+= pr[i];
 
+  // For ref, initial methods was:
+  //			for (i = 0; i < nelements; i++)
+  //		reg_value[w * NREGULS + REG_PRIORIMAGE] += prior_image[element_y[w * nelements + i] * axis_len + element_x[w * nelements + i]];
 
+  return rpi;
+}

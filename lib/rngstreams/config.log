@@ -27,6 +27,11 @@ uname -v = #39-Ubuntu SMP Mon Dec 15 22:27:29 UTC 2014
 /usr/bin/oslevel       = unknown
 /bin/universe          = unknown
 
+PATH: /opt/intel/composer_xe_2013.3.163/bin/intel64
+PATH: /opt/intel/composer_xe_2013.3.163/mpirt/bin/intel64
+PATH: /opt/intel/composer_xe_2013.3.163/bin/intel64
+PATH: /opt/intel/composer_xe_2013.3.163/bin/intel64_mic
+PATH: /opt/intel/composer_xe_2013.3.163/debugger/gui/intel64
 PATH: /usr/local/sbin
 PATH: /usr/local/bin
 PATH: /usr/sbin
@@ -745,7 +750,7 @@ lt_cv_sys_global_symbol_pipe='sed -n -e '\''s/^.*[ 	]\([ABCDGIRSTW][ABCDGIRSTW]*
 lt_cv_sys_global_symbol_to_c_name_address='sed -n -e '\''s/^: \([^ ]*\) $/  {\"\1\", (lt_ptr) 0},/p'\'' -e '\''s/^[BCDEGRST] \([^ ]*\) \([^ ]*\)$/  {"\2", (lt_ptr) \&\2},/p'\'''
 lt_cv_sys_global_symbol_to_cdecl='sed -n -e '\''s/^. .* \(.*\)$/extern int \1;/p'\'''
 lt_cv_sys_lib_dlsearch_path_spec='/lib /usr/lib /usr/lib/x86_64-linux-gnu/libfakeroot /lib/i386-linux-gnu /usr/lib/i386-linux-gnu /lib/i686-linux-gnu /usr/lib/i686-linux-gnu /usr/local/lib /lib/x86_64-linux-gnu /usr/lib/x86_64-linux-gnu /usr/lib/x86_64-linux-gnu/mesa-egl /usr/lib/nvidia-346 /usr/lib32/nvidia-346 /usr/lib/x86_64-linux-gnu/mir/client8driver/mesa /lib32 /usr/lib32 /libx32 /usr/libx32 '
-lt_cv_sys_lib_search_path_spec='/usr/lib/gcc/x86_64-linux-gnu/4.9 /usr/lib/x86_64-linux-gnu /usr/lib /lib/x86_64-linux-gnu /lib'
+lt_cv_sys_lib_search_path_spec='/usr/lib/gcc/x86_64-linux-gnu/4.9 /usr/lib/x86_64-linux-gnu /usr/lib /lib/x86_64-linux-gnu /lib /opt/intel/composer_xe_2013.3.163/compiler/lib/intel64 /opt/intel/composer_xe_2013.3.163/ipp/lib/intel64 /opt/intel/composer_xe_2013.3.163/mkl/lib/intel64 /opt/intel/composer_xe_2013.3.163/tbb/lib/intel64/gcc4.4'
 lt_cv_sys_max_cmd_len=1572864
 lt_lt_cv_prog_compiler_c_o='"yes"'
 lt_lt_cv_prog_compiler_c_o_CXX='"yes"'
