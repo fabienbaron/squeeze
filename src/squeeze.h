@@ -149,9 +149,9 @@ int writeasfits( char *file,  double *image,  long depth,  long min_elt,
 		 double chi2,  double temperature,  long nelems,  double* regpar,
 		 double* regval,  long niter,  unsigned short axis_len,  double ndf,
 		 double tmin,  double chi2_temp,  double chi2_target, double mas_pixel,
-		 int nthreads,  double *saved_params,  double logZ,  double logZ_err,
-		 char *init_filename,  char *prior_filename,  double* final_params,
-		 double* final_params_std);
+		 int nthreads,  double logZ,  double logZ_err,
+		 char *init_filename,  char *prior_filename,  double* params,
+		 double* params_std);
 void mcmc_annealing_results(const char *file, double *image, const long *iframeburned, const long depth, const long nelements, const unsigned short axis_len,
 			    const double complex * __restrict xtransform, const double complex * __restrict ytransform, double *final_chi2,
 			    const unsigned short *saved_x, const unsigned short *saved_y, const double *saved_params, const long niter, const int nwavr, double* final_params, double* final_params_std, 

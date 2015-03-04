@@ -592,9 +592,7 @@ int main(int argc, char** argv)
 	printf("Reconst setup -- Depth of final image:\t%ld\n", depth);
 
 	for (i = 0; i < nparams; i++)
-		printf(
-				"Reconst setup -- Parametric model: parameter %2ld: %le, with stepsize: %lf \n",
-				i, init_params[i], init_stepsize[i]);
+		printf(	"Reconst setup -- Parametric model: parameter %2ld: %le, with stepsize: %lf \n", i, init_params[i], init_stepsize[i]);
 	fflush(stdout);
 
 	/* Now make big matrix - we'll just make this a big chunk of
@@ -871,9 +869,7 @@ int main(int argc, char** argv)
 							lPosterior;
 
 					for (j = 0; j < nparams; j++)
-						saved_params[thread1 * nparams * niter
-								+ i / (nwavr * nelements) * nparams + j] =
-								params[j];
+						saved_params[thread1 * nparams * niter	+ i / (nwavr * nelements) * nparams + j] = params[j];
 
 					for (j = 0; j < NREGULS; j++)
 						saved_reg_value[thread1 * NREGULS * niter
@@ -1034,9 +1030,7 @@ int main(int argc, char** argv)
 							2.0 * lLikelihood / ndf, temperature[iThread],
 							nelements, &reg_param[0], &reg_value[0], niter,
 							axis_len, ndf, tmin, chi2_temp, chi2_target,
-							mas_pixel, nthreads,
-							&saved_params[iThreadtoStorage[iThread] * nparams
-								      * niter], 0, 0, "", "", NULL, NULL);
+							mas_pixel, nthreads, 0, 0, "", "", &saved_params[iThreadtoStorage[iThread] * nparams * niter], NULL);
 
 				// PRINT DIAGNOSTICS
 				print_diagnostics(iThread, (i / (nwavr * nelements) + 1), nvis,
@@ -1403,8 +1397,7 @@ int main(int argc, char** argv)
 						2.0 * lLikelihood / ndf, temperature[iThread],
 						nelements, &reg_param[0], &reg_value[0], niter,
 						axis_len, ndf, tmin, chi2_temp, chi2_target, mas_pixel,
-						nthreads, &saved_params[iThread * niter * nparams], 0,
-					        0, "", "", NULL, NULL);
+						nthreads, 0, 0, "", "", &saved_params[iThread * niter * nparams], NULL);
 		}
 
 		RngStream_DeleteStream(&rng);
@@ -1513,9 +1506,7 @@ int main(int argc, char** argv)
 			writeasfits(output_filename, final_image, k,
 					niter - burn_in_times[0] - 1, chi2 / ndf, -1, nelements,
 					reg_param, final_reg_value, niter, axis_len, ndf, tmin, chi2_temp,
-					chi2_target, mas_pixel, nthreads, &saved_params[0], 0, 0,
-					init_filename, prior_filename, final_params,
-				        final_params_std);
+					chi2_target, mas_pixel, nthreads, 0, 0,	init_filename, prior_filename, final_params, final_params_std);
 
 		
 
@@ -1543,9 +1534,7 @@ int main(int argc, char** argv)
 			writeasfits(output_filename, final_image, k,
 					niter - burn_in_times[0] - 1, chi2 / ndf, -1, nelements,
 					&reg_param[0], NULL, niter, axis_len, ndf, tmin, chi2_temp,
-					chi2_target, mas_pixel, nthreads, &saved_params[0],
-					logZ_final, logZ_final_err, init_filename, prior_filename,
-				        final_params, final_params_std);
+					chi2_target, mas_pixel, nthreads, logZ_final, logZ_final_err, init_filename, prior_filename, final_params, final_params_std);
 		}
 
 		printf("Output -- Total number of realizations in final image: %ld\n",
@@ -1918,9 +1907,9 @@ int writeasfits( char *file,  double *image,  long depth,  long min_elt,
 		 double chi2,  double temperature,  long nelems,  double* regpar,
 		 double* regval,  long niter,  unsigned short axis_len,  double ndf,
 		 double tmin,  double chi2_temp,  double chi2_target, double mas_pixel,
-		 int nthreads,  double *saved_params,  double logZ,  double logZ_err,
-		 char *init_filename,  char *prior_filename,  double* final_params,
-		 double* final_params_std)
+		 int nthreads, double logZ,  double logZ_err,
+		 char *init_filename,  char *prior_filename,  double* params,
+		 double* params_std)
 {
 	int status = 0;
 	int i, j, w;
@@ -2032,23 +2021,31 @@ int writeasfits( char *file,  double *image,  long depth,  long min_elt,
 	/* if ( fits_write_key_str ( fptr, "CUNIT2", "mas", "Unit of Y-coordinate",
 	 *    &status ) ) */
 	/*   printerror ( status ); */
-
+	//	getchar();
 	/* Write model parameters */
 	if ((min_elt >= 0) && (nparams > 0))
 	{
 
-		for (i = 0; i < nparams; i++)
-		{
-			sprintf(param_string, "MNPARAM%1d", i + 1);
-			if (fits_write_key_dbl(fptr, param_string, final_params[i], 3,
-					"Mean parameter for model", &status))
-				printerror(status);
+	  if(params !=NULL)
+	    {
 
-			sprintf(param_string, "SDPARAM%1d", i + 1);
-			if (fits_write_key_dbl(fptr, param_string, final_params_std[i], 3,
-					"Stdev of parameter for model", &status))
-				printerror(status);
+	      for (i = 0; i < nparams; i++)
+		{
+		  sprintf(param_string, "MNPARAM%1d", i + 1);
+		  if (fits_write_key_dbl(fptr, param_string, params[i], 3, "Mean parameter for model", &status))
+		    printerror(status);
 		}
+	
+	      if(params_std != NULL)
+		{
+		  for (i = 0; i < nparams; i++)
+		    {
+		      sprintf(param_string, "SDPARAM%1d", i + 1);
+		      if (fits_write_key_dbl(fptr, param_string, params_std[i], 3,"Stdev of parameter for model", &status))
+			printerror(status);
+		    }
+		}
+	    }
 	}
 
 	if (temperature >= 0)
