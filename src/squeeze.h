@@ -23,6 +23,9 @@
  *
  */
 
+
+#define SQUEEZE_VERSION 2.5
+
 // Minimization engines
 #define ENGINE_SIMULATED_ANNEALING 1
 #define ENGINE_PARALLEL_TEMPERING 2
@@ -127,9 +130,9 @@ void printerror(int status);
 void intHandler(int signum);
 void printhelp(void);
 
-bool read_commandline(int* argc, char** argv, bool* benchmark, bool* use_v2, bool* use_t3amp, bool* use_t3phi, bool* use_visamp, bool* use_visphi, bool* use_diffvis, bool* use_threadfits, bool* use_bandwidthsmearing, int* minimization_engine, bool* dumpchain,double* mas_pixel, unsigned short* axis_len, long* depth, long* niter, long* nelements, double* f_anywhere, double* f_copycat, int *nthreads, double* tempschedc, double* fov, double* chi2_temp, double* chi2_target, double* tmin, double* prob_auto, double* uvtol, char* output_filename, char* init_filename, char* prior_filename, double* v2s, double* v2a, double* t3amps, double* t3ampa, double* t3phia, double* t3phis, double* visamps, double* visampa, double* visphis, double* visphia, double* fluxs, double* cvfwhm, double* reg_param, double* init_param, double* wavmin, double* wavmax);
+bool read_commandline(int* argc, char** argv, bool* benchmark, bool* use_v2, bool* use_t3amp, bool* use_t3phi, bool* use_visamp, bool* use_visphi, bool* use_diffvis, bool* use_tempfitswriting, bool* use_bandwidthsmearing, int* minimization_engine, bool* dumpchain,double* mas_pixel, unsigned short* axis_len, long* depth, long* niter, long* nelements, double* f_anywhere, double* f_copycat, int *nchains, int* nthreads, double* tempschedc, double* fov, double* chi2_temp, double* chi2_target, double* tmin, double* prob_auto, double* uvtol, char* output_filename, char* init_filename, char* prior_filename, double* v2s, double* v2a, double* t3amps, double* t3ampa, double* t3phia, double* t3phis, double* visamps, double* visampa, double* visphis, double* visphia, double* fluxs, double* cvfwhm, double* reg_param, double* init_param, double* wavmin, double* wavmax);
 
-void print_diagnostics(int iThread, long current_iter, long nvis, long nv2, long nt3, long nt3phi, long nt3amp, long nvisamp, long nvisphi, double chi2v2, double chi2t3amp,double chi2t3phi,double chi2visphi,double chi2visamp, double lPosterior, double lPrior, double lLikelihood, const double* reg_param, const double* reg_value, const double* centroid_image_x, const double* centroid_image_y, long nelements, int nwavr, long niter, const double* temperature, double prob_movement, const double* params, const double* stepsize);
+void print_diagnostics(int iChain, long current_iter, long nvis, long nv2, long nt3, long nt3phi, long nt3amp, long nvisamp, long nvisphi, double chi2v2, double chi2t3amp,double chi2t3phi,double chi2visphi,double chi2visamp, double lPosterior, double lPrior, double lLikelihood, const double* reg_param, const double* reg_value, const double* centroid_image_x, const double* centroid_image_y, long nelements, int nwavr, long niter, const double* temperature, double prob_movement, const double* params, const double* stepsize);
 
 void compute_lLikelihood(double* likelihood, const double complex * __restrict mod_vis, double* __restrict res, double* __restrict mod_obs, double *chi2v2, double *chi2t3amp, double *chi2visamp, double *chi2t3phi, double *chi2visphi);
 void compute_lPrior(double* lPrior, const long chan, const double* reg_param, const double* reg_value);
@@ -149,7 +152,7 @@ int writeasfits( char *file,  double *image,  long depth,  long min_elt,
 		 double chi2,  double temperature,  long nelems,  double* regpar,
 		 double* regval,  long niter,  unsigned short axis_len,  double ndf,
 		 double tmin,  double chi2_temp,  double chi2_target, double mas_pixel,
-		 int nthreads,  double logZ,  double logZ_err,
+		 int nchains,  double logZ,  double logZ_err,
 		 char *init_filename,  char *prior_filename,  double* params,
 		 double* params_std);
 void mcmc_annealing_results(const char *file, double *image, const long *iframeburned, const long depth, const long nelements, const unsigned short axis_len,
@@ -161,9 +164,9 @@ void mcmc_tempering_results(char *file, double *image, long lowtempthread, long 
                           unsigned short axis_len, double complex * __restrict xtransform, double complex * __restrict ytransform,
                           double *mn_chi2, unsigned short *saved_x, unsigned short *saved_y, double *saved_params, long niter, int nchanr);
 
-void compute_logZ(const double* temperature , const unsigned short* iStoragetoThread, const double* lLikelihood_expectation, const double *lLikelihood_deviation, int nthreads, double* logZ, double* logZ_err);
+void compute_logZ(const double* temperature , const unsigned short* iStoragetoThread, const double* lLikelihood_expectation, const double *lLikelihood_deviation, int nchains, double* logZ, double* logZ_err);
 
-void mcmc_fullchain(char* file, long nthreads, long niter, int nchanr, long nelements, unsigned short axis_len, unsigned short *saved_x, unsigned short *saved_y, double *saved_params, double *saved_lLikelihood, double *saved_lPrior, double *saved_lPosterior, double *temperature, unsigned short* iThreadtoStorage);
+void mcmc_fullchain(char* file, long nchains, long niter, int nchanr, long nelements, unsigned short axis_len, unsigned short *saved_x, unsigned short *saved_y, double *saved_params, double *saved_lLikelihood, double *saved_lPrior, double *saved_lPosterior, double *temperature, unsigned short* iChaintoStorage);
 
 void compute_regularizers(const double *reg_param, double *reg_value, const double* image,
 			  const double* prior_image, const double regflux, const unsigned short* initial_x,
@@ -175,7 +178,7 @@ void compute_model_visibilities_fromelements(double complex* mod_vis, double com
 
 void compute_model_visibilities_fromimage(double complex* mod_vis, double complex* im_vis, double complex* param_vis, const double* params, double* fluxratio_image, const double *image, const double complex* xtransform, const double complex* ytransform, double* lPriorModel, long nparams, long nelements, unsigned short axis_len);
 
-void initialize_image(int iThread, double* image, unsigned short* element_x, unsigned short* element_y, unsigned short* initial_x, unsigned short* initial_y, unsigned short axis_len, int nwavr, long nelements, char* init_filename);
+void initialize_image(int iChain, double* image, unsigned short* element_x, unsigned short* element_y, unsigned short* initial_x, unsigned short* initial_y, unsigned short axis_len, int nwavr, long nelements, char* init_filename);
 
 /* Function prototype for extract_oifits.c*/
 int extract_oifits(char* filename, bool use_v2, bool use_t3amp, bool use_t3phi, bool use_visamp, bool use_visphi,
