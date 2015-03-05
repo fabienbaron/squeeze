@@ -131,7 +131,7 @@ int main(int argc, char** argv)
 
     bool use_v2 = TRUE, use_t3amp = TRUE, use_t3phi = TRUE, use_visamp = TRUE,
          use_visphi = TRUE;
-    bool use_tempfitswriting = TRUE, use_bandwidthsmearing = TRUE;
+    bool use_tempfitswriting = FALSE, use_bandwidthsmearing = TRUE;
     double v2a = 0., t3ampa = 0., t3phia = 0., visampa = 0., visphia = 0.;
     double v2s = 1., t3amps = 1., t3phis = 1., visamps = 1., visphis = 1.;
     double cvfwhm = 0., uvtol = 1e3, fluxs = 1.;
@@ -176,11 +176,18 @@ int main(int argc, char** argv)
 
     // First check if nchains and nthreads have been set
     if(nchains == 0) nchains = 1;
-   
+#ifdef _OPENMP
     nmaxthreads = omp_get_max_threads();
+#else 
+    nmaxthreads = 1;
+#endif
+
     if(nthreads == 0) 
       nthreads = nmaxthreads; //use max available threads if not set
-
+   
+    // if(nthreads < nchains) nthreads = nchains;
+    
+  
     if(nthreads > nmaxthreads)
       {
 	nthreads = nmaxthreads;
@@ -193,8 +200,8 @@ int main(int argc, char** argv)
       nthreadsperchain = 1;
 
     printf("Threading    -- Number of Chains: %d\n", nchains);
-    printf("Threading    -- Number of Threads: %d out of %d maximum detected\n", nthreads, nmaxthreads);
-    printf("Threading    -- Number of Threads per chain: %d\n", nthreadsperchain);
+    printf("Threading    -- Number of OS threads: %d out of %d possible maximum\n", nthreads, nmaxthreads);
+    printf("Threading    -- Number of OS threads per chain that may be used: %d\n", nthreadsperchain);
 
     // If we want to use parallel tempering but no threads are defined,
     if ((minimization_engine == ENGINE_PARALLEL_TEMPERING) && ( (nchains == 1) || (nthreads == 1)) )
@@ -678,8 +685,8 @@ int main(int argc, char** argv)
         burn_in_times[i] = niter; // for ENGINE_SIMULATED_ANNEALING, unless T gets to tmin, burn-in is never achieved
 
 #ifdef _OPENMP
-    omp_set_dynamic(0);
-    omp_set_nested(1); // we allow nested parallelism, typical application is if you have a low number of chains and lots of CPU
+    //    omp_set_dynamic(0);
+    omp_set_nested(1); // we allow nested parallelism, typical application is if you have a low number of chains and lots of CPU cores
     omp_set_num_threads(nthreads);
 #endif
     //
@@ -1190,12 +1197,12 @@ int main(int argc, char** argv)
                         new_reg_value[REG_MODELPARAM] = reg_value[REG_MODELPARAM];
 
                     /* Modify the visibilities */
+		    //#pragma omp parallel for simd
                     for (j = 0; j < nuv; j++)
                     {
                         if (uvwav2chan[j] == chan)
                         {
-                            new_im_vis[j] = im_vis[j] + (xtransform[new_x * nuv + j] * ytransform[new_y * nuv + j]	- xtransform[old_x * nuv + j] * ytransform[old_y * nuv + j])
-                                            * fluxratio_image[j] / (double) nelements;
+                            new_im_vis[j] = im_vis[j] + (xtransform[new_x * nuv + j] * ytransform[new_y * nuv + j] - xtransform[old_x * nuv + j] * ytransform[old_y * nuv + j]) * fluxratio_image[j] / (double) nelements;
                         }
                         else
                             new_im_vis[j] = im_vis[j];
@@ -1657,9 +1664,9 @@ void printhelp(void)
     printf("  -nobws         : Do not compute bandwidth smearing factors when computing visibilities.\n");
 
     printf("\n***** OUTPUT SETTINGS ***** \n");
-    printf("  -o filename       : Squeeze outputs as a FITS image file.\n");
-    printf("  -fullchain        : Output the full MCMC chain into the file output.fullchain .\n");
-    printf("  -notemporaryfits  : Disable continuous writing of threadxx.fits to accelerate execution.\n");
+    printf("  -o filename     : Squeeze outputs as a FITS image file.\n");
+    printf("  -fullchain      : Output the full MCMC chain into the file output.fullchain .\n");
+    printf("  -temporaryfits  : Enable continuous writing of threadxx.fits to monitor execution.\n");
 
     printf("\n***** SIMULTANEOUS MODEL FITTING SETTINGS ***** \n");
     printf("  -P p0 p1...    : Initial parameter input.\n");
@@ -1748,11 +1755,11 @@ void vis_to_obs(const double complex * __restrict mod_vis, double* __restrict mo
     const long t3phioffset = nv2 + nt3amp + nvisamp;
     const long visphioffset = nv2 + nt3amp + nvisamp + nt3phi;
 
-    // #pragma omp for simd
+    #pragma omp for simd
     for(i = 0; i < nv2; i++)
         mod_obs[i] = modsq(mod_vis[v2in[i]]);
 
-    // #pragma omp for simd
+    #pragma omp for simd
     for(i = 0; i < nt3; i++)
     {
         modt3 = mod_vis[ t3in1[i] ] * mod_vis[ t3in2[i] ] * conj(mod_vis[ t3in3[i] ]);
@@ -1767,12 +1774,15 @@ void vis_to_obs(const double complex * __restrict mod_vis, double* __restrict mo
                 mod_obs[t3phioffset + i] = carg(modt3);
     }
 
+    
     if(nvisamp > 0)
+ #pragma omp for simd
         for(i = 0; i < nvis; i++)
             if(data_err[visampoffset + i] > 0)
                 mod_obs[visampoffset + i] = cabs(mod_vis[ visin[i] ]);
 
     if(nvisphi > 0)
+ #pragma omp for simd
         for(i = 0; i < nvis; i++)
             if(data_err[visphioffset + i] > 0)
                 mod_obs[visphioffset + i] = carg(mod_vis[ visin[i] ]);
@@ -1782,13 +1792,13 @@ void vis_to_obs(const double complex * __restrict mod_vis, double* __restrict mo
 void obs_to_res(const double* __restrict mod_obs, double* __restrict res)
 {
     long i;
-    //#pragma omp simd
+    // #pragma omp parallel for simd
     for (i = 0; i < nv2 + nt3amp + nvisamp; i++)
     {
         res[i] = (mod_obs[i] - data[i]) * data_err[i];
     }
 
-    //#pragma omp simd
+    // #pragma omp parallel for simd
     for (i = nv2 + nt3amp + nvisamp;
             i < nv2 + nt3amp + nvisamp + nt3phi + nvisphi; i++)
         res[i] = dewrap(mod_obs[i] - data[i]) * data_err[i]; // TBD: improve wrapping
@@ -1800,14 +1810,14 @@ double residuals_to_chi2(const double *res, double *chi2v2, double *chi2t3amp,
     long i;
     double temp1 = 0, temp2 = 0, temp3 = 0, temp4 = 0, temp5 = 0; // local accumulator (faster than using chi2)
 
-    //#pragma omp simd reduction(+:temp1)
+      #pragma omp simd reduction(+:temp1)
     for (i = 0; i < nv2; i++)
     {
         temp1 += res[i] * res[i];
     }
     *chi2v2 = temp1;
 
-    // #pragma omp simd reduction(+:temp2)
+     #pragma omp simd reduction(+:temp2)
     for (i = nv2; i < nv2 + nt3amp; i++)
     {
         temp2 += res[i] * res[i];
@@ -1815,7 +1825,7 @@ double residuals_to_chi2(const double *res, double *chi2v2, double *chi2t3amp,
 
     *chi2t3amp = temp2;
 
-    // #pragma omp simd reduction(+:temp3)
+      #pragma omp simd reduction(+:temp3)
     for (i = nv2 + nt3amp; i < nv2 + nt3amp + nvisamp; i++)
     {
         temp3 += res[i] * res[i];
@@ -1823,7 +1833,7 @@ double residuals_to_chi2(const double *res, double *chi2v2, double *chi2t3amp,
 
     *chi2visamp = temp3;
 
-    //#pragma omp simd reduction(+:temp4)
+     #pragma omp simd reduction(+:temp4)
     for (i = nv2 + nt3amp + nvisamp + nt3phi;
             i < nv2 + nt3amp + nvisamp + nt3phi + nvisphi; i++)
     {
@@ -1832,7 +1842,7 @@ double residuals_to_chi2(const double *res, double *chi2v2, double *chi2t3amp,
 
     *chi2visphi = temp4;
 
-    // #pragma omp simd reduction(+:temp5)
+     #pragma omp simd reduction(+:temp5)
     for (i = nv2 + nt3amp + nvisamp; i < nv2 + nt3amp + nvisamp + nt3phi; i++)
     {
         temp5 += res[i] * res[i];
@@ -2815,9 +2825,9 @@ bool read_commandline(int* argc, char** argv, bool* benchmark, bool* use_v2,
         {
             *use_diffvis = TRUE; // interpret VIS tables as differential visibilities, not complex visibilities
         }
-        else if (strcmp(argv[i], "-notemporaryfits") == 0)
+        else if (strcmp(argv[i], "-temporaryfits") == 0)
         {
-            *use_tempfitswriting = FALSE; // disable writing threadxx.fits to disc
+            *use_tempfitswriting = TRUE; // enable writing threadxx.fits to disc
         }
         else if (strcmp(argv[i], "-nobws") == 0)
         {

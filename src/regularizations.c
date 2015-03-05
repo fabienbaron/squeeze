@@ -142,9 +142,10 @@ double TV(const double* x, const double* pr, const double eps, const int nx, con
     double L1g = - sqrt(eps) * (double)(nx * ny) ;
 
 //pr_threshold=-1e9; // turn off.
-
+    //  printf("Max available here is : %d %d", omp_get_max_threads(), omp_get_num_threads());
 //printf("nx ny %i %i\n",nx,ny);
     // Compute the norm of the local image gradient on each point
+    //#pragma omp for
     for(j = 1; j < ny; j++)
         {
             off = nx * j;
