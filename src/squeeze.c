@@ -2266,8 +2266,8 @@ void compute_regularizers(const double *reg_param, double *reg_value, const doub
 	if (reg_param[REG_TRANSPECL2] > 0.0)
 		reg_value[REG_TRANSPECL2] = transpec(nwavr, axis_len, image, fluxscaling);
 
-	//	for(i=0;i<NREGULS;i++)
-	//  printf("CRo: %lf %lf\n", reg_param[i], reg_value[i]);
+	for(i=0;i<NREGULS;i++)
+	  printf("CRo: %lf %lf\n", reg_param[i], reg_value[i]);
 
 }
 

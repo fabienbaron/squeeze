@@ -18,32 +18,12 @@ double cent_change(const int channel, double* centroid_image_x, double *centroid
 }
 
 
-/***********************/
-/* The MEM functional. */
-/***********************/
-double entropy(const unsigned long s)
+double entropy(const double s)
 {
-
-double ds;
-    if(s < 2)
-        return 0.0;
-    else if(s < 8)
-        {
-            if(s == 2)
-                return 0.69315;
-            if(s == 3)
-                return 1.79176;
-            if(s == 4)
-                return 3.17805;
-            if(s == 5)
-                return 4.78749;
-            if(s == 6)
-                return 6.57925;
-            return 8.52516;
-        }
-    ds = (double) s;
-    return ds * log(ds) - ds + 1.969;
-// note: this whole function could be replaced by lgamma(ds) but it seems buggy
+  if(s < 1e-7)
+   return 0.0;
+  else 
+  return lgamma(s);
 }
 
 double entropy_full(const double* x, const double* pr, const double eps, const int nx, const int ny, const double flux)
@@ -52,7 +32,7 @@ double entropy_full(const double* x, const double* pr, const double eps, const i
     double reg = 0;
     for(i = 0; i < nx * ny; i++)
         {
-            if(x[i] > 1)
+            if(x[i] > 0)
 	      reg += entropy(x[i]);
         }
     return reg;
@@ -61,7 +41,7 @@ double entropy_full(const double* x, const double* pr, const double eps, const i
 double den_full(const double* x, const double* pr, const double eps, const int nx, const int ny, const double flux)
 {
     register int i,j;
-    double reg = 0;
+    double reg = 0;//2.*(nx+ny);
     for(i = 0; i < nx; i++)
             for(j = 0; j < ny; j++)
                 reg += den_change(x, i, j, DEN_INIT, nx);
@@ -78,26 +58,32 @@ double den_change(const double *image, const unsigned short i, const unsigned sh
 {
     double delta_den = 0.0;
     double edge_amount = 1.0;
-    if(direction == DEN_INIT)
-        edge_amount = 2.0;
 
-    if((image[j * axis_len + i] == direction) || ((image[j * axis_len + i] == 0) && (direction == DEN_INIT)))
+     if(direction == DEN_INIT)
+       edge_amount = 2.0;
+
+    const int pos = j * axis_len + i;
+
+    if((image[pos] == direction) || ((image[pos] == 0) && (direction == DEN_INIT)))
         {
             if(i == 0)
                 delta_den += edge_amount;
-            else if(image[axis_len * j + i - 1] == 0)
+            else if(image[pos - 1] == 0)
                 delta_den += 1.0;
-            if(j == 0)
+            
+	    if(j == 0)
                 delta_den += edge_amount;
-            else if(image[axis_len * (j - 1) + i] == 0)
+            else if(image[pos-axis_len] == 0)
                 delta_den += 1.0;
-            if(i == axis_len - 1)
+            
+	    if(i == axis_len - 1)
                 delta_den += edge_amount;
-            else if(image[axis_len * j + i + 1] == 0)
+            else if(image[pos + 1] == 0)
                 delta_den += 1.0;
-            if(j == axis_len - 1)
+            
+	    if(j == axis_len - 1)
                 delta_den += edge_amount;
-            else if(image[axis_len * (j + 1) + i] == 0)
+            else if(image[pos+axis_len] == 0)
                 delta_den += 1.0;
         }
     return delta_den;

@@ -191,7 +191,7 @@ int model_vis(const double *params, double complex *modvis, double *logl, double
 
 /* regularizations */
 
-double entropy(const unsigned long s);
+double entropy(const double s);
 double den_full(const double* x, const double* pr, const double eps, const int nx, const int ny, const double flux);
 double den_change(const double *image, const unsigned short i, const unsigned short j, const unsigned short direction, const unsigned short axis_len);
 double UDreg(const double* x, const double* pr, const double eps, const int nx, const int ny, const double flux);
