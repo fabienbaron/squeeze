@@ -41,7 +41,7 @@ double entropy_full(const double* x, const double* pr, const double eps, const i
 double den_full(const double* x, const double* pr, const double eps, const int nx, const int ny, const double flux)
 {
     register int i,j;
-    double reg = 0;//2.*(nx+ny);
+    double reg = 2.*(nx+ny);
     for(i = 0; i < nx; i++)
             for(j = 0; j < ny; j++)
                 reg += den_change(x, i, j, DEN_INIT, nx);
@@ -59,12 +59,9 @@ double den_change(const double *image, const unsigned short i, const unsigned sh
     double delta_den = 0.0;
     double edge_amount = 1.0;
 
-     if(direction == DEN_INIT)
-       edge_amount = 2.0;
-
     const int pos = j * axis_len + i;
 
-    if((image[pos] == direction) || ((image[pos] == 0) && (direction == DEN_INIT)))
+    if((image[pos] == direction) || ( (image[pos] == 0) && (direction == DEN_INIT) ) )
         {
             if(i == 0)
                 delta_den += edge_amount;
