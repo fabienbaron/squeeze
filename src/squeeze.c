@@ -494,7 +494,7 @@ int main(int argc, char** argv) {
 						if (prior_image[i + axis_len * j + axis_len * axis_len * w] > 0)
 							prior_image[i + axis_len * j + axis_len * axis_len * w] = -log(prior_image[i + axis_len * j + axis_len * axis_len * w]);
 						else
-							prior_image[i + axis_len * j + axis_len * axis_len * w] = 1e8;
+							prior_image[i + axis_len * j + axis_len * axis_len * w] = 1e12;
 			if (reg_param[REG_PRIORIMAGE] == 0.)
 				reg_param[REG_PRIORIMAGE] = 1.;
 		}
@@ -619,7 +619,7 @@ int main(int argc, char** argv) {
 		long old_pos = 0, new_pos = 0;
 		long current_elt;
 
-		double lPosterior = 0, lPrior = 0, new_lPrior, transition_test;
+		double lPosterior = 0, new_lPosterior, lPrior = 0, new_lPrior, transition_test;
 		double lLikelihood = 0, new_lLikelihood;
 		//double change_UDreg, change_TV;
 
@@ -1058,7 +1058,7 @@ int main(int argc, char** argv) {
 			compute_lLikelihood(&new_lLikelihood, new_mod_vis, res, mod_obs, &chi2v2, &chi2t3amp, &chi2visamp, &chi2t3phi, &chi2visphi);
 			compute_lPrior(&lPrior, chan, reg_param, reg_value);
 			compute_lPrior(&new_lPrior, chan, reg_param, new_reg_value);
-			lPosterior = new_lLikelihood + new_lPrior;
+			new_lPosterior = new_lLikelihood + new_lPrior;
 
 			// BUG: think how to rescale priors with fluxratio_image ?
 			transition_test = (new_lLikelihood - lLikelihood) / temperature[iChain] + new_lPrior - lPrior;
@@ -1067,6 +1067,8 @@ int main(int argc, char** argv) {
 				// We accept the new state
 
 				lLikelihood = new_lLikelihood;
+				lPosterior = new_lPosterior;
+				lPrior = new_lPrior;
 				reg_value[chan * NREGULS + REG_CENTERING] = new_reg_value[chan * NREGULS + REG_CENTERING];
 
 				/* Swap mod_vis and new_mod_vis*/
@@ -1292,7 +1294,8 @@ int main(int argc, char** argv) {
 			// Recompute all the regularizers, likelihood, prior & posterior probability
 			writeasfits(output_filename, final_image, k, niter - burn_in_times[0] - 1,
                         final_chi2/ndf, final_chi2v2, final_chi2t3amp, final_chi2t3phi, final_chi2visamp, final_chi2visphi,
-                        -1, nelements, reg_param, final_reg_value, niter, axis_len, ndf, tmin, chi2_temp, chi2_target, mas_pixel, nchains, 0, 0, init_filename, prior_filename, final_params, final_params_std);
+                        -1, nelements, reg_param, final_reg_value, niter, axis_len, ndf, tmin, chi2_temp, chi2_target,
+                        mas_pixel, nchains, 0, 0, init_filename, prior_filename, final_params, final_params_std);
 
 
 		} else // (minimization_engine == ENGINE_PARALLEL_TEMPERING)
@@ -1302,8 +1305,7 @@ int main(int argc, char** argv) {
 			//         printf("Chain: %ld\t temperature: %lf\t ChaintoStorage: %d Storage(%ld)toChain: %d\n", i, temperature[i], iChaintoStorage[i], i, iStoragetoChain[i]);
 			//     }
 
-			mcmc_tempering_results(output_filename, final_image, iStoragetoChain[0], nburned, nelements, axis_len, xtransform, ytransform, &final_chi2, saved_x,
-					saved_y, saved_params, niter, nwavr);
+			mcmc_tempering_results(output_filename, final_image, iStoragetoChain[0], nburned, nelements, axis_len, xtransform, ytransform, &final_chi2, saved_x, saved_y, saved_params, niter, nwavr);
 
 			double logZ_final = 0, logZ_final_err = 0.;
 
@@ -1318,17 +1320,17 @@ int main(int argc, char** argv) {
 		}
 
 		printf("Output -- Total number of realizations in final image: %ld\n", nburned);
-		printf("Output -- Global chi2r of final image: %lf \n", final_chi2/ndf);
+		printf("Output -- Global chi2r of final image:\t %lf \n", final_chi2/ndf);
         if(nv2 > 0)
-            printf("Output -- chi2r V2     of final image:\t %lf \n", final_chi2v2);
+            printf("Output -- chi2r V2   of final image:\t %lf \n", final_chi2v2);
         if(nt3amp > 0)
-            printf("Output -- chi2r T3AMP  of final image:\t %lf \n", final_chi2t3amp);
+            printf("Output -- chi2r T3A  of final image:\t %lf \n", final_chi2t3amp);
         if(nt3phi>0)
-            printf("Output -- chi2r T3PHI  of final image:\t %lf \n", final_chi2t3phi);
+            printf("Output -- chi2r T3P  of final image:\t %lf \n", final_chi2t3phi);
         if(nvisamp>0)
-            printf("Output -- chi2r VISAMP of final image:\t %lf \n", final_chi2visamp);
+            printf("Output -- chi2r VISA of final image:\t %lf \n", final_chi2visamp);
 		if(nvisphi>0)
-            printf("Output -- chi2r VISPHI of final image:\t %lf \n", final_chi2visphi);
+            printf("Output -- chi2r VISP of final image:\t %lf \n", final_chi2visphi);
 
 
 		if (lowest_lLikelihood < 1e99)
@@ -1400,11 +1402,13 @@ int main(int argc, char** argv) {
 /*****************************************************/
 /* Print out cfitsio error messages and exit program */
 /*****************************************************/
-void printerror(int status) {
-	if (status) {
+void printerror(int status)
+{
+	if (status)
+        {
 		fits_report_error(stderr, status); /* print error report */
 		exit(status); /* terminate the program, returning error status */
-	}
+	    }
 	return;
 }
 
@@ -1821,25 +1825,25 @@ int writeasfits(char *file, double *image, long depth, long min_elt, double chi2
 		printerror(status);
 	if (fits_update_key(fptr, TLONG, "NITER", &niter, "Number of iterations per chain per element.", &status))
 		printerror(status);
-	if (fits_update_key(fptr, TINT, "nwavR", &nwavr, "Number of spectral channels.", &status))
+	if (fits_update_key(fptr, TINT, "NWAVR", &nwavr, "Number of spectral channels.", &status))
 		printerror(status);
-	if (fits_update_key(fptr, TLONG, "DEPTH", &depth, "Number of realisations in image", &status))
+	if (fits_update_key(fptr, TLONG,    "DEPTH", &depth, "Number of realisations in image", &status))
 		printerror(status);
-	if (fits_update_key(fptr, TLONG, "ELEMENTS", &nelems, "Number of elements per realisation", &status))
+	if (fits_update_key(fptr, TLONG,    "ELEMENTS", &nelems, "Number of elements per realisation", &status))
 		printerror(status);
-	if (fits_update_key(fptr, TINT, "NCHAINS", &nchains, "Number of chains", &status))
+	if (fits_update_key(fptr, TINT,    "NCHAINS", &nchains, "Number of chains", &status))
 		printerror(status);
 	if (fits_update_key(fptr, TDOUBLE, "NDF", &ndf, "Number of degrees of freedom", &status))
 		printerror(status);
-	if (fits_update_key(fptr, TLONG, "NV2", &nv2, "Number of V2", &status))
+	if (fits_update_key(fptr, TLONG,   "NV2", &nv2, "Number of V2", &status))
 		printerror(status);
-	if (fits_update_key(fptr, TLONG, "NT3AMP", &nt3amp, "Number of T3AMP", &status))
+	if (fits_update_key(fptr, TLONG,   "NT3AMP", &nt3amp, "Number of T3AMP", &status))
 		printerror(status);
-	if (fits_update_key(fptr, TLONG, "NT3PHI", &nt3phi, "Number of T3PHI", &status))
+	if (fits_update_key(fptr, TLONG,   "NT3PHI", &nt3phi, "Number of T3PHI", &status))
 		printerror(status);
-	if (fits_update_key(fptr, TLONG, "NVISAMP", &nvisamp, "Number of VISAMP", &status))
+	if (fits_update_key(fptr, TLONG,   "NVISAMP", &nvisamp, "Number of VISAMP", &status))
 		printerror(status);
-	if (fits_update_key(fptr, TLONG, "NVISPHI", &nvisphi, "Number of VISPHI", &status))
+	if (fits_update_key(fptr, TLONG,   "NVISPHI", &nvisphi, "Number of VISPHI", &status))
 		printerror(status);
 
 	if (fits_close_file(fptr, &status)) /* close the file */
@@ -1991,7 +1995,7 @@ void mcmc_fullchain(char *file, long nchains, long niter, int nwavr, long neleme
 			printerror(status);
 		if (fits_update_key(fptr, TINT, "nwavR", &nwavr, "Number of spectral channels.", &status))
 			printerror(status);
-		if (fits_update_key(fptr, TLONG, "ELEMENTS", &nelements, "Number of elements per realisation", &status))
+		if (fits_update_key(fptr, TLONG, "ELEMENTS", &nelements, "Number of elements per realization", &status))
 			printerror(status);
 
 		if (fits_close_file(fptr, &status))
