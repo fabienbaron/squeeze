@@ -16,7 +16,7 @@
 ;
 pro squeeze_display, dir
 if not(keyword_set(dir)) then dir ='../' else dir = dir +'/'
-print, 'Monitoring thread00.fits in '+dir
+print, 'Monitoring chain00.fits in '+dir
 device,retain=2, decompose=0
 nreguls = 9
 reg_names = ['PARAM', 'CENT', 'IMPRIOR', 'ENT', 'DEN', 'TV', 'SPOT', 'LAP', 'L0', 'TRANSPEC']
@@ -24,12 +24,12 @@ loadct,3
 ltime =  systime(1)
 mtime =  ltime
 chi2 = -1
-restart:                        ;restart from here if severe file read failure for thread.fits
+restart:                        ;restart from here if severe file read failure for chain.fits
 while (1) do begin
 
 ; monitor file changes
  while(1) do begin 
- openr, 1,  dir+'thread00.fits',  error = err
+ openr, 1,  dir+'chain00.fits',  error = err
   if (err eq 0) then begin
    stat =  fstat(1)
    close,  1
@@ -39,7 +39,7 @@ while (1) do begin
   if (mtime GT ltime) then break else wait, 0.3
  endwhile
  ltime = mtime		
- tab_im =  readfits(dir+'thread00.fits',  head, /silent)
+ tab_im =  readfits(dir+'chain00.fits',  head, /silent)
  sz = size(tab_im)
 
  if(sz[0] LT 2) then goto, restart

@@ -107,7 +107,8 @@ int main(int argc, char** argv) {
 	double* initial_image = NULL;
 	char dummy_char[MAX_STRINGS], param_string[MAX_STRINGS];
 	/* Variables needed for file i/o and creation of transform */
-	double multx = 0, multy = 0, dtemp, ftot, chi2;
+	double multx = 0, multy = 0, dtemp, ftot;
+    double final_chi2, final_chi2v2, final_chi2t3amp, final_chi2t3phi, final_chi2visamp, final_chi2visphi;
 
 	/* Stuff for fits file output */
 	fitsfile *fptr; /* pointer to the FITS file, defined in fitsio.h */
@@ -170,7 +171,7 @@ int main(int argc, char** argv) {
 		nchains = 1;
 #ifdef _OPENMP
 	nmaxthreads = omp_get_max_threads()/2;
-#else 
+#else
 	nmaxthreads = 1;
 #endif
 
@@ -194,19 +195,21 @@ int main(int argc, char** argv) {
 	printf("Threading    -- Number of OS threads per chain that may be used: %d\n", nthreadsperchain);
 
 	// If we want to use parallel tempering but no threads are defined,
-	if ((minimization_engine == ENGINE_PARALLEL_TEMPERING) && ((nchains == 1) || (nthreads == 1))) {
-		printf("Threading    -- Parallel tempering requested but the requested number of chains is %d\n", nchains);
-		printf("Threading    -- Please restart SQUEEZE and set this number accordingly.\n");
-		return 0;
-	}
+	if ((minimization_engine == ENGINE_PARALLEL_TEMPERING) && ((nchains == 1) || (nthreads == 1)))
+	  {
+	    printf("Threading    -- Parallel tempering requested but the requested number of chains is %d\n", nchains);
+	    printf("Threading    -- Please restart SQUEEZE and set this number accordingly.\n");
+	    return 0;
+	  }
 
 	// If no wavelength info was given, then we are in monochromatic mode
-	if ((wavmin == NULL) || (wavmax == NULL)) {
-		printf("Command line -- Monochromatic reconstruction\n");
-		nwavr = 1;
-		wavmin = malloc(sizeof(double));
-		wavmax = malloc(sizeof(double));
-	}
+	if ((wavmin == NULL) || (wavmax == NULL))
+	  {
+	    printf("Command line -- Monochromatic reconstruction\n");
+	    nwavr = 1;
+	    wavmin = malloc(sizeof(double));
+	    wavmax = malloc(sizeof(double));
+	  }
 
 	fflush (stdout);
 
@@ -873,8 +876,9 @@ int main(int argc, char** argv) {
 			//
 			if ((i % (STEPS_PER_OUTPUT * nwavr * nelements)) == 0) {
 				if (use_tempfitswriting == TRUE)
-					writeasfits(temp_filename, image, 1, (iChain) * niter + i / (nelements * nwavr), 2.0 * lLikelihood / ndf, temperature[iChain], nelements,
-							&reg_param[0], &reg_value[0], niter, axis_len, ndf, tmin, chi2_temp, chi2_target, mas_pixel, nchains, 0, 0, "", "",
+				  writeasfits(temp_filename, image, 1, (iChain) * niter + i / (nelements * nwavr), 2.0 * lLikelihood / ndf, chi2v2, chi2t3amp, chi2t3phi, chi2visamp, chi2visphi,
+					                temperature[iChain], nelements,	&reg_param[0], &reg_value[0], niter, axis_len, ndf, tmin,
+					                chi2_temp, chi2_target, mas_pixel, nchains, 0, 0, "", "",
 							&saved_params[iChaintoStorage[iChain] * nparams * niter], NULL);
 
 				// PRINT DIAGNOSTICS
@@ -1189,8 +1193,8 @@ int main(int argc, char** argv) {
 		/* Write the fits file */
 		if (ctrlcpressed == FALSE) {
 			if (use_tempfitswriting == TRUE)
-				writeasfits(temp_filename, image, 1, (iChain) * niter + i / (nelements * nwavr), 2.0 * lLikelihood / ndf, temperature[iChain], nelements,
-						&reg_param[0], &reg_value[0], niter, axis_len, ndf, tmin, chi2_temp, chi2_target, mas_pixel, nchains, 0, 0, "", "",
+				writeasfits(temp_filename, image, 1, iChain * niter + i / (nelements * nwavr), 2.0 * lLikelihood / ndf,  chi2v2, chi2t3amp, chi2t3phi, chi2visamp, chi2visphi,
+					    temperature[iChain], nelements, &reg_param[0], &reg_value[0], niter, axis_len, ndf, tmin, chi2_temp, chi2_target, mas_pixel, nchains, 0, 0, "", "",
 						&saved_params[iChain * niter * nparams], NULL);
 		}
 
@@ -1280,13 +1284,16 @@ int main(int argc, char** argv) {
 					}
 			}
 
-			mcmc_annealing_results(output_filename, final_image, iframeburned, nburned, nelements, axis_len, xtransform, ytransform, &chi2, saved_x, saved_y,
-					saved_params, niter, nwavr, final_params, final_params_std, reg_param, final_reg_value, prior_image, initial_x, initial_y, centroid_image_x,
-					centroid_image_y, fov, cent_mult);
+			mcmc_annealing_results(output_filename, final_image, iframeburned, nburned, nelements, axis_len, xtransform, ytransform,
+					       &final_chi2, &final_chi2v2, &final_chi2t3amp, &final_chi2t3phi, &final_chi2visamp, &final_chi2visphi, saved_x, saved_y,
+					       saved_params, niter, nwavr, final_params, final_params_std, reg_param, final_reg_value, prior_image, initial_x, initial_y, centroid_image_x,
+					       centroid_image_y, fov, cent_mult);
 
 			// Recompute all the regularizers, likelihood, prior & posterior probability
-			writeasfits(output_filename, final_image, k, niter - burn_in_times[0] - 1, chi2 / ndf, -1, nelements, reg_param, final_reg_value, niter, axis_len,
-					ndf, tmin, chi2_temp, chi2_target, mas_pixel, nchains, 0, 0, init_filename, prior_filename, final_params, final_params_std);
+			writeasfits(output_filename, final_image, k, niter - burn_in_times[0] - 1,
+                        final_chi2/ndf, final_chi2v2, final_chi2t3amp, final_chi2t3phi, final_chi2visamp, final_chi2visphi,
+                        -1, nelements, reg_param, final_reg_value, niter, axis_len, ndf, tmin, chi2_temp, chi2_target, mas_pixel, nchains, 0, 0, init_filename, prior_filename, final_params, final_params_std);
+
 
 		} else // (minimization_engine == ENGINE_PARALLEL_TEMPERING)
 		{
@@ -1295,7 +1302,7 @@ int main(int argc, char** argv) {
 			//         printf("Chain: %ld\t temperature: %lf\t ChaintoStorage: %d Storage(%ld)toChain: %d\n", i, temperature[i], iChaintoStorage[i], i, iStoragetoChain[i]);
 			//     }
 
-			mcmc_tempering_results(output_filename, final_image, iStoragetoChain[0], nburned, nelements, axis_len, xtransform, ytransform, &chi2, saved_x,
+			mcmc_tempering_results(output_filename, final_image, iStoragetoChain[0], nburned, nelements, axis_len, xtransform, ytransform, &final_chi2, saved_x,
 					saved_y, saved_params, niter, nwavr);
 
 			double logZ_final = 0, logZ_final_err = 0.;
@@ -1303,13 +1310,27 @@ int main(int argc, char** argv) {
 			compute_logZ(temperature, iStoragetoChain, lLikelihood_expectation, lLikelihood_deviation, nchains, &logZ_final, &logZ_final_err);
 			printf("Output -- Final logZ: %f +/- %f\n", logZ_final, logZ_final_err);
 
-			writeasfits(output_filename, final_image, k, niter - burn_in_times[0] - 1, chi2 / ndf, -1, nelements, &reg_param[0], NULL, niter, axis_len, ndf,
+			writeasfits(output_filename, final_image, k, niter - burn_in_times[0] - 1,
+                    final_chi2/ndf, final_chi2v2, final_chi2t3amp, final_chi2t3phi, final_chi2visamp, final_chi2visphi,
+                    -1, nelements, &reg_param[0], NULL, niter, axis_len, ndf,
 					tmin, chi2_temp, chi2_target, mas_pixel, nchains, logZ_final, logZ_final_err, init_filename, prior_filename, final_params,
 					final_params_std);
 		}
 
 		printf("Output -- Total number of realizations in final image: %ld\n", nburned);
-		printf("Output -- Chi2 of final image: %lf \n", chi2 / ndf);
+		printf("Output -- Global chi2r of final image: %lf \n", final_chi2);
+        if(nv2 > 0)
+            printf("Output -- chi2r V2 of final image: %lf \n", final_chi2v2);
+        if(nt3amp > 0)
+            printf("Output -- chi2r T3AMP of final image: %lf \n", final_chi2t3amp);
+        if(nt3phi>0)
+            printf("Output -- chi2r T3PHI of final image: %lf \n", final_chi2t3phi);
+        if(nvisamp>0)
+            printf("Output -- chi2r VISAMP of final image: %lf \n", final_chi2visamp);
+		if(nvisphi>0)
+            printf("Output -- chi2r VISPHI of final image: %lf \n", final_chi2visphi);
+
+
 		if (lowest_lLikelihood < 1e99)
 			printf("Output -- Best single-frame chi2: %f obtained at iteration: %ld chain: %ld.\n", 2.0 * lowest_lLikelihood / ndf,
 					lowest_lLikelihood_indx % niter, lowest_lLikelihood_indx / niter);
@@ -1645,9 +1666,11 @@ double get_flat_chi2(bool benchmark) {
 /***********************************/
 /* Write fits image cube           */
 /***********************************/
-int writeasfits(char *file, double *image, long depth, long min_elt, double chi2, double temperature, long nelems, double* regpar, double* regval, long niter,
+int writeasfits(char *file, double *image, long depth, long min_elt, double chi2, double chi2v2, double chi2t3amp, double chi2t3phi, double chi2visamp, double chi2visphi,
+		double temperature, long nelems, double* regpar, double* regval, long niter,
 		unsigned short axis_len, double ndf, double tmin, double chi2_temp, double chi2_target, double mas_pixel, int nchains, double logZ, double logZ_err,
-		char *init_filename, char *prior_filename, double* params, double* params_std) {
+		char *init_filename, char *prior_filename, double* params, double* params_std)
+ {
 	int status = 0;
 	int i, j, w;
 	fitsfile *fptr; /* pointer to the FITS file, defined in fitsio.h */
@@ -1768,13 +1791,23 @@ int writeasfits(char *file, double *image, long depth, long min_elt, double chi2
 			printerror(status);
 	}
 
-	if (fits_update_key(fptr, TDOUBLE, "CHISQR", &chi2, "Chi-squared per degree of freedom", &status))
+	if (fits_update_key(fptr, TDOUBLE, "CHI2", &chi2, "Chi-squared per degree of freedom", &status))
+		printerror(status);
+	if (fits_update_key(fptr, TDOUBLE, "CHI2V2", &chi2v2, "Chi-squared per degree of freedom", &status))
+		printerror(status);
+	if (fits_update_key(fptr, TDOUBLE, "CHI2T3A", &chi2t3amp, "Chi-squared per degree of freedom", &status))
+		printerror(status);
+	if (fits_update_key(fptr, TDOUBLE, "CHI2T3P", &chi2t3phi, "Chi-squared per degree of freedom", &status))
+		printerror(status);
+	if (fits_update_key(fptr, TDOUBLE, "CHI2VA", &chi2visamp, "Chi-squared per degree of freedom", &status))
+		printerror(status);
+	if (fits_update_key(fptr, TDOUBLE, "CHI2VP", &chi2visphi, "Chi-squared per degree of freedom", &status))
 		printerror(status);
 	if (fits_update_key(fptr, TDOUBLE, "TMIN", &tmin, "Setting for minimum temperature", &status))
 		printerror(status);
-	if (fits_update_key(fptr, TDOUBLE, "CHISQRT", &chi2_temp, "Setting for chi-squared divided by temperature (convergence rate)", &status))
+	if (fits_update_key(fptr, TDOUBLE, "CHI2T", &chi2_temp, "Setting for chi-squared divided by temperature (convergence rate)", &status))
 		printerror(status);
-	if (fits_update_key(fptr, TDOUBLE, "CHISQRTG", &chi2_target, "Setting for target chi-squared", &status))
+	if (fits_update_key(fptr, TDOUBLE, "CHI2TG", &chi2_target, "Setting for target chi-squared", &status))
 		printerror(status);
 	if (fits_update_key(fptr, TDOUBLE, "LOGZ", &logZ, "Marginal likelihood", &status))
 		printerror(status);
@@ -1975,11 +2008,12 @@ void mcmc_fullchain(char *file, long nchains, long niter, int nwavr, long neleme
 /* Fill an image from the saved_x and y, and a iframeburned vector */
 /****************************************************************/
 void mcmc_annealing_results(const char *file, double *final_image, const long *iframeburned, const long depth, const long nelements, const unsigned short axis_len,
-		const double complex * __restrict xtransform, const double complex * __restrict ytransform, double *final_chi2,
-		const unsigned short *saved_x, const unsigned short *saved_y, const double *saved_params, const long niter,
-		const int nwavr, double* final_params, double* final_params_std,
-		const double* reg_param, double* final_reg_value, const double* prior_image, const unsigned short* initial_x, const unsigned short* initial_y,
-		double* centroid_image_x, double* centroid_image_y, const double fov, const double cent_mult)
+			    const double complex * __restrict xtransform, const double complex * __restrict ytransform, double *final_chi2,
+			    double *chi2v2, double *chi2t3amp, double *chi2t3phi, double *chi2visamp, double *chi2visphi,
+			    const unsigned short *saved_x, const unsigned short *saved_y, const double *saved_params, const long niter,
+			    const int nwavr, double* final_params, double* final_params_std,
+			    const double* reg_param, double* final_reg_value, const double* prior_image, const unsigned short* initial_x, const unsigned short* initial_y,
+			    double* centroid_image_x, double* centroid_image_y, const double fov, const double cent_mult)
 // This averages the image obtained by MCMC over the iterations and chains
 // the depth input should be the actual available depth, not the requested one
 {
@@ -2040,9 +2074,8 @@ void mcmc_annealing_results(const char *file, double *final_image, const long *i
 	double *final_fluxratio_image = malloc(nuv * sizeof(double));
 	double lPriorModel = 0;
 	compute_model_visibilities_fromimage(mod_vis, im_vis, param_vis, final_params,
-			final_fluxratio_image, final_image, xtransform, ytransform, &lPriorModel, nparams, nelements, axis_len);
+		                             final_fluxratio_image, final_image, xtransform, ytransform, &lPriorModel, nparams, nelements, axis_len);
 
-	double chi2v2, chi2t3amp, chi2visamp, chi2t3phi, chi2visphi;
 	double *res = malloc((nv2 + nt3amp + nt3phi + nvisamp + nvisphi) * sizeof(double)); // current residuals
 	double *mod_obs = malloc((nv2 + nt3amp + nt3phi + nvisamp + nvisphi) * sizeof(double));// current observables
 	for(i = 0; i < (nv2 + nt3amp + nt3phi + nvisamp + nvisphi); i++)
@@ -2051,8 +2084,18 @@ void mcmc_annealing_results(const char *file, double *final_image, const long *i
 		mod_obs[i] = 0;
 	}
 	// compute chi2s on final image
-	compute_lLikelihood(final_chi2, mod_vis, res, mod_obs, &chi2v2, &chi2t3amp, &chi2visamp, &chi2t3phi, &chi2visphi);
+	compute_lLikelihood(final_chi2, mod_vis, res, mod_obs, chi2v2, chi2t3amp, chi2visamp, chi2t3phi, chi2visphi);
 	*final_chi2 *= 2.;
+    if(nv2>0)
+        *chi2v2 /= (double) nv2;
+    if(nt3amp>0)
+        *chi2t3amp /= (double) nt3amp;
+    if(nt3phi>0)
+        *chi2t3phi /= (double) nt3phi;
+    if(nvisamp>0)
+        *chi2visamp /= (double) nvisamp;
+    if(nvisphi>0)
+        *chi2visphi /= (double) nvisphi;
 
 	// recompute regularizers on final image
 	compute_regularizers(reg_param, final_reg_value, final_image, prior_image, 1., initial_x, initial_y, nwavr, axis_len, nelements, centroid_image_x, centroid_image_y, fov, cent_mult);
@@ -2132,8 +2175,8 @@ void mcmc_tempering_results(char* file, double *image, long lowtempchain, long d
 	{
 		im_vis[j] = 0;
 		for(ix = 0; ix < axis_len; ix++)
-		for(iy = 0; iy < axis_len; iy++)
-		im_vis[j] += image[uvwav2chan[j] * axis_len * axis_len + iy * axis_len + ix] * xtransform[ix * nuv + j] * ytransform[iy * nuv + j];
+		  for(iy = 0; iy < axis_len; iy++)
+		    im_vis[j] += image[uvwav2chan[j] * axis_len * axis_len + iy * axis_len + ix] * xtransform[ix * nuv + j] * ytransform[iy * nuv + j];
 	}
 
 	// Compute model visibilities
@@ -2266,9 +2309,6 @@ void compute_regularizers(const double *reg_param, double *reg_value, const doub
 	if (reg_param[REG_TRANSPECL2] > 0.0)
 		reg_value[REG_TRANSPECL2] = transpec(nwavr, axis_len, image, fluxscaling);
 
-	for(i=0;i<NREGULS;i++)
-	  printf("CRo: %lf %lf\n", reg_param[i], reg_value[i]);
-
 }
 
 void compute_model_visibilities_fromelements(double complex* mod_vis, double complex* im_vis, double complex* param_vis,
@@ -2287,8 +2327,7 @@ void compute_model_visibilities_fromelements(double complex* mod_vis, double com
 	{
 		im_vis[j] = 0;
 		for(i = 0; i < nelements; i++)
-		im_vis[j] += xtransform[element_x[ uvwav2chan[j] * nelements + i] * nuv + j]
-		* ytransform[element_y[ uvwav2chan[j] * nelements + i] * nuv + j];
+		  im_vis[j] += xtransform[element_x[ uvwav2chan[j] * nelements + i] * nuv + j] * ytransform[element_y[ uvwav2chan[j] * nelements + i] * nuv + j];
 		im_vis[j] *= fluxratio_image[j] / (double) nelements; // Will add SED here
 		mod_vis[j] = param_vis[j] + im_vis[j];
 	}
@@ -2635,11 +2674,16 @@ void print_diagnostics(int iChain, long current_iter, long nvis, long nv2, long 
 }
 
 void compute_lPrior(double* lPrior, const long chan, const double* reg_param, const double* reg_value) {
-	*lPrior = reg_param[REG_PRIORIMAGE] * reg_value[chan * NREGULS + REG_PRIORIMAGE] + reg_param[REG_CENTERING] * reg_value[chan * NREGULS + REG_CENTERING]
-			+ reg_param[REG_ENTROPY] * reg_value[chan * NREGULS + REG_ENTROPY] + reg_param[REG_MODELPARAM] * reg_value[chan * NREGULS + REG_MODELPARAM]
-			+ reg_param[REG_DARKENERGY] * reg_value[chan * NREGULS + REG_DARKENERGY] + reg_param[REG_SPOT] * reg_value[chan * NREGULS + REG_SPOT]
-			+ reg_param[REG_TV] * reg_value[chan * NREGULS + REG_TV] + reg_param[REG_LAP] * reg_value[chan * NREGULS + REG_LAP]
-			+ reg_param[REG_L0] * reg_value[chan * NREGULS + REG_L0] + reg_param[REG_TRANSPECL2] * reg_value[REG_TRANSPECL2];
+	*lPrior = reg_param[REG_PRIORIMAGE] * reg_value[chan * NREGULS + REG_PRIORIMAGE]
+	        + reg_param[REG_CENTERING]  * reg_value[chan * NREGULS + REG_CENTERING]
+		+ reg_param[REG_ENTROPY]    * reg_value[chan * NREGULS + REG_ENTROPY]
+                + reg_param[REG_MODELPARAM] * reg_value[chan * NREGULS + REG_MODELPARAM]
+		+ reg_param[REG_DARKENERGY] * reg_value[chan * NREGULS + REG_DARKENERGY]
+                + reg_param[REG_SPOT]       * reg_value[chan * NREGULS + REG_SPOT]
+		+ reg_param[REG_TV]         * reg_value[chan * NREGULS + REG_TV]
+                + reg_param[REG_LAP]        * reg_value[chan * NREGULS + REG_LAP]
+		+ reg_param[REG_L0]         * reg_value[chan * NREGULS + REG_L0]
+                + reg_param[REG_TRANSPECL2] * reg_value[REG_TRANSPECL2];
 
 }
 

@@ -148,17 +148,17 @@ static inline double modsq(double complex input)  __attribute__((always_inline))
 
 double fill_iframeburned(long *iframeburned, long depth, long threadnum, long nelements, long niter,  double *saved_lPosterior, double *saved_lLikelihood, double *saved_reg_value);
 int find_reg_param(double *regparam, long *iframeburned, long depth, long niter, long ndf, long nelements);
-int writeasfits( char *file,  double *image,  long depth,  long min_elt,
-		 double chi2,  double temperature,  long nelems,  double* regpar,
-		 double* regval,  long niter,  unsigned short axis_len,  double ndf,
-		 double tmin,  double chi2_temp,  double chi2_target, double mas_pixel,
-		 int nchains,  double logZ,  double logZ_err,
-		 char *init_filename,  char *prior_filename,  double* params,
-		 double* params_std);
-void mcmc_annealing_results(const char *file, double *image, const long *iframeburned, const long depth, const long nelements, const unsigned short axis_len,
+int writeasfits(char *file, double *image, long depth, long min_elt, double chi2, double chi2v2, double chi2t3amp, double chi2t3phi, double chi2visamp, double chi2visphi,
+		double temperature, long nelems, double* regpar, double* regval, long niter,
+		unsigned short axis_len, double ndf, double tmin, double chi2_temp, double chi2_target, double mas_pixel, int nchains, double logZ, double logZ_err,
+		char *init_filename, char *prior_filename, double* params, double* params_std);
+void mcmc_annealing_results(const char *file, double *final_image, const long *iframeburned, const long depth, const long nelements, const unsigned short axis_len,
 			    const double complex * __restrict xtransform, const double complex * __restrict ytransform, double *final_chi2,
-			    const unsigned short *saved_x, const unsigned short *saved_y, const double *saved_params, const long niter, const int nwavr, double* final_params, double* final_params_std, 
-                            const double* reg_param, double* reg_value, const double* prior_image, const unsigned short* initial_x, const unsigned short* initial_y, double* centroid_image_x, double* centroid_image_y, const double fov, const double cent_mult);
+			    double *chi2v2, double *chi2t3amp, double *chi2t3phi, double *chi2visamp, double *chi2visphi, 
+			    const unsigned short *saved_x, const unsigned short *saved_y, const double *saved_params, const long niter,
+			    const int nwavr, double* final_params, double* final_params_std,
+			    const double* reg_param, double* final_reg_value, const double* prior_image, const unsigned short* initial_x, const unsigned short* initial_y,
+			    double* centroid_image_x, double* centroid_image_y, const double fov, const double cent_mult);
 
 void mcmc_tempering_results(char *file, double *image, long lowtempthread, long depth, long nelements,
                           unsigned short axis_len, double complex * __restrict xtransform, double complex * __restrict ytransform,
