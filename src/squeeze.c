@@ -1318,17 +1318,17 @@ int main(int argc, char** argv) {
 		}
 
 		printf("Output -- Total number of realizations in final image: %ld\n", nburned);
-		printf("Output -- Global chi2r of final image: %lf \n", final_chi2);
+		printf("Output -- Global chi2r of final image: %lf \n", final_chi2/ndf);
         if(nv2 > 0)
-            printf("Output -- chi2r V2 of final image: %lf \n", final_chi2v2);
+            printf("Output -- chi2r V2     of final image:\t %lf \n", final_chi2v2);
         if(nt3amp > 0)
-            printf("Output -- chi2r T3AMP of final image: %lf \n", final_chi2t3amp);
+            printf("Output -- chi2r T3AMP  of final image:\t %lf \n", final_chi2t3amp);
         if(nt3phi>0)
-            printf("Output -- chi2r T3PHI of final image: %lf \n", final_chi2t3phi);
+            printf("Output -- chi2r T3PHI  of final image:\t %lf \n", final_chi2t3phi);
         if(nvisamp>0)
-            printf("Output -- chi2r VISAMP of final image: %lf \n", final_chi2visamp);
+            printf("Output -- chi2r VISAMP of final image:\t %lf \n", final_chi2visamp);
 		if(nvisphi>0)
-            printf("Output -- chi2r VISPHI of final image: %lf \n", final_chi2visphi);
+            printf("Output -- chi2r VISPHI of final image:\t %lf \n", final_chi2visphi);
 
 
 		if (lowest_lLikelihood < 1e99)
