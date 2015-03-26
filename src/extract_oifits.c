@@ -538,7 +538,6 @@ int import_single_epoch_oifits(char* filename, bool use_v2, bool use_t3amp, bool
         }
 
 
-    printf("-----------------------------------------\n");
     printf("OIFITS import -- SUMMARY for %s\n", filename);
     if(nv2 > 0)
         {

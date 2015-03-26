@@ -2400,11 +2400,29 @@ bool read_commandline(int* argc, char** argv, bool* benchmark, bool* use_v2, boo
 		double* wavmax) {
 	long i, j, k;
 
+	
 	/* Read in command line info... */
-	if (*argc < 2) {
-		printhelp();
-		return 0;
-	}
+	if (*argc < 2) // need at least a filename to do something
+	  {
+	    printhelp();
+	    return 0;
+	  }
+
+	// Determine the number of oifits files to use 
+	// For this we determine the position of the first option
+	int nfiles = 1;
+	for(i=1;i<*argc;i++)
+	  {
+	    if(argv[i][0] == '-')
+	    {
+	      nfiles = i-1;
+	      break;
+	    }
+	    if(i==(*argc-1)) 
+	      nfiles = i;
+	  }
+
+	printf("Command line -- %d oifits to read\n", nfiles); 
 
 	if ((strcmp(argv[1], "-h") == 0 || strcmp(argv[1], "-help") == 0 || strcmp(argv[1], "--help") == 0) || (strcmp(argv[1], "--help") == 0)) {
 		printhelp();
