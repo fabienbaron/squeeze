@@ -215,7 +215,7 @@ int main(int argc, char** argv) {
 
 	/* Read in oifits file */
 
-	if (extract_oifits(argv[1], use_v2, use_t3amp, use_t3phi, use_visamp, use_visphi, v2a, v2s, t3ampa, t3amps, t3phia, t3phis, visampa, visamps, visphia,
+	if (import_single_epoch_oifits(argv[1], use_v2, use_t3amp, use_t3phi, use_visamp, use_visphi, v2a, v2s, t3ampa, t3amps, t3phia, t3phis, visampa, visamps, visphia,
 			visphis, fluxs, cvfwhm, uvtol, wavmin, wavmax, timemin, timemax)) {
 		printf("Error opening %s. \n", argv[1]);
 		return 0;

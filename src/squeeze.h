@@ -181,7 +181,7 @@ void compute_model_visibilities_fromimage(double complex* mod_vis, double comple
 void initialize_image(int iChain, double* image, unsigned short* element_x, unsigned short* element_y, unsigned short* initial_x, unsigned short* initial_y, unsigned short axis_len, int nwavr, long nelements, char* init_filename);
 
 /* Function prototype for extract_oifits.c*/
-int extract_oifits(char* filename, bool use_v2, bool use_t3amp, bool use_t3phi, bool use_visamp, bool use_visphi,
+int import_single_epoch_oifits(char* filename, bool use_v2, bool use_t3amp, bool use_t3phi, bool use_visamp, bool use_visphi,
                    double v2a, double v2s, double t3ampa, double t3amps, double t3phia, double t3phis,
                    double visampa, double visamps, double visphia, double visphis, double fluxs, double cwhm, double uvtol, double* wavmin, double *wavmax, double *timemin, double *timemax);
 int write_best_oifits(char* filestring, double complex * mod_vis);

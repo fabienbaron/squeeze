@@ -35,38 +35,52 @@
 
 void add_new_uv(long *obs_index, long *uvindex, double new_u, double new_v, double new_uv_lambda, double new_uv_dlambda, double new_uv_time, double *table_u, double *table_v, double *table_uv_lambda, double *table_uv_dlambda, double *table_uv_time, double uvtol);
 
-int extract_oifits(char* filename, bool use_v2, bool use_t3amp, bool use_t3phi, bool use_visamp, bool use_visphi,
+
+
+//int import_multiple_epochs_oifits(int nfiles, char** filenames, bool use_v2, bool use_t3amp, bool use_t3phi, bool use_visamp, bool use_visphi,
+//                   double v2a, double v2s, double t3ampa, double t3amps, double t3phia, double t3phis,
+//                   double visampa, double visamps, double visphia, double visphis, double fluxs, double cwhm, double uvtol, double* wavmin, double *wavmax, double *timemin, double *timemax)
+//
+//{
+//
+//import_single_epoch_oifits(filename, use_v2, use_t3amp, use_t3phi, use_visamp, use_visphi, v2a, v2s, t3ampa, t3amps, t3phia, t3phis,
+//                           visampa, visamps, visphia, visphis, fluxs, cwhm, uvtol, wavmin, wavmax, timemin, timemax);
+//}
+
+
+int import_single_epoch_oifits(char* filename, bool use_v2, bool use_t3amp, bool use_t3phi, bool use_visamp, bool use_visphi,
                    double v2a, double v2s, double t3ampa, double t3amps, double t3phia, double t3phis,
                    double visampa, double visamps, double visphia, double visphis, double fluxs, double cwhm, double uvtol, double* wavmin, double *wavmax, double *timemin, double *timemax)
 {
-    //oi_array array;
-    oi_target targets;
-    oi_wavelength wave;
-    oi_vis vis_table;
-    oi_vis2 vis2_table;
-    oi_t3 t3_table;
-    int nvis_tables, nv2_tables, nt3_tables;
-    double *v2, *v2_sig, *t3phi, *t3phi_sig, *t3amp, *t3amp_sig, *visamp, *visamp_sig, *visphi, *visphi_sig ;
-    double temp;
-    double *time_t3, *time_vis, *time_v2;
-    float *lambda_t3, *lambda_vis, *lambda_v2;
-    float *dlambda_t3, *dlambda_vis, *dlambda_v2;
-    char *flag_t3, *flag_vis, *flag_v2;
-    long uvindex = 0, uvindex0;
-    long tempindex, tempindex0;
-    bool valid_v2, valid_t3amp, valid_t3phi, valid_visamp, valid_visphi;
-    long i, j, k, w;
-    int status, status2;
-    fitsfile *fptr;
-    fitsfile *fptr2;
+  //oi_array array;
+  oi_target targets;
+  oi_wavelength wave;
+  oi_vis vis_table;
+  oi_vis2 vis2_table;
+  oi_t3 t3_table;
+  int nvis_tables, nv2_tables, nt3_tables;
+  double *v2, *v2_sig, *t3phi, *t3phi_sig, *t3amp, *t3amp_sig, *visamp, *visamp_sig, *visphi, *visphi_sig ;
+  double temp;
+  double *time_t3, *time_vis, *time_v2;
+  float *lambda_t3, *lambda_vis, *lambda_v2;
+  float *dlambda_t3, *dlambda_vis, *dlambda_v2;
+  char *flag_t3, *flag_vis, *flag_v2;
+  long uvindex = 0, uvindex0;
+  long tempindex, tempindex0;
+  bool valid_v2, valid_t3amp, valid_t3phi, valid_visamp, valid_visphi;
+  long i, j, k, w;
+  int status, status2;
 
-    /* Read new FITS file */
-    status = 0;
-    printf("OIFITS import -- Enumerating tables for: %s...\n", filename);
-    fflush(stdout);
-    fits_open_file(&fptr, filename, READONLY, &status);
-
-    if(status)
+  fitsfile *fptr;
+  fitsfile *fptr2;
+  
+  /* Read new FITS file */
+  status = 0;
+  printf("OIFITS import -- Enumerating tables for: %s...\n", filename);
+  fflush(stdout);
+  fits_open_file(&fptr, filename, READONLY, &status);
+  
+  if(status)
         {
             fits_report_error(stderr, status);
             exit(1);
@@ -154,11 +168,6 @@ int extract_oifits(char* filename, bool use_v2, bool use_t3amp, bool use_t3phi, 
             printf("OIFITS import -- OI_T3   \tTables %i\t Entries %ld\n", nt3_tables, nt3);
             fflush(stdout);
         }
-
-    // nwavd = number of spectral channels in the data
-    // nwavr = number of spectral channels in the reconstruction
-    // data[ichan][...]  data as a function of channel
-    // wav2chan() : function that returns the reconstruction channel as a function of data channel (or something else)
 
     // Allocate memory
     nuv = nt3 * 3 + nvis + nv2; // maximum number of unique uv points defined in the OIFITS
@@ -528,8 +537,9 @@ int extract_oifits(char* filename, bool use_v2, bool use_t3amp, bool use_t3phi, 
 
         }
 
-    printf("OIFITS import -- SUMMARY:\n");
 
+    printf("-----------------------------------------\n");
+    printf("OIFITS import -- SUMMARY for %s\n", filename);
     if(nv2 > 0)
         {
             printf("OIFITS import -- V2: %ld powerspectrum imported\n", nv2);
@@ -570,6 +580,12 @@ int extract_oifits(char* filename, bool use_v2, bool use_t3amp, bool use_t3phi, 
     printf("OIFITS import --                  \t(using uvtol=%lf)\n", uvtol);
     nuv = uvindex;
 
+
+
+
+
+
+
     //
     // Check for smallest/largest wavelength
     //
@@ -609,11 +625,11 @@ int extract_oifits(char* filename, bool use_v2, bool use_t3amp, bool use_t3phi, 
             timemax[0] = maxtime;
         }
 
-   //
+    //
     // Assign uv points to reconstruction channels for polychromatic reconstruction
     //
 
-    long* nuv_chan = malloc(nwavr * sizeof(long));
+    long* nuv_chan = malloc(nwavr * sizeof(long)); // will store number of uv points in each wavelength channel
     for(w = 0; w < nwavr; w++) nuv_chan[w] = 0;
     uvwav2chan = malloc(nuv * sizeof(double)) ;
     for(i = 0; i < nuv; i++)
