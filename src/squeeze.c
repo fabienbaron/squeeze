@@ -53,7 +53,6 @@ char *oifits_file;
 long nvis, nv2, nt3, nt3phi, nt3amp, nt3amp_orphans, nt3phi_orphans, nvisamp, nvisphi, nvisamp_orphans, nvisphi_orphans;
 long *visin, *v2in, *t3in1, *t3in2, *t3in3;
 double *u, *v;
-int nwavr;
 int ntimer;
 bool use_diffvis = FALSE; // default for VIS tables = complex vis, not differential vis
 long *dvisnwav;
@@ -108,7 +107,7 @@ int main(int argc, char** argv) {
 	char dummy_char[MAX_STRINGS], param_string[MAX_STRINGS];
 	/* Variables needed for file i/o and creation of transform */
 	double multx = 0, multy = 0, dtemp, ftot;
-    double final_chi2, final_chi2v2, final_chi2t3amp, final_chi2t3phi, final_chi2visamp, final_chi2visphi;
+	double final_chi2, final_chi2v2, final_chi2t3amp, final_chi2t3phi, final_chi2visamp, final_chi2visphi;
 
 	/* Stuff for fits file output */
 	fitsfile *fptr; /* pointer to the FITS file, defined in fitsio.h */
@@ -127,6 +126,7 @@ int main(int argc, char** argv) {
 	long nwavi = 1, nwavp = 1;
 	long* in_naxes;
 
+	int nwavr;
 	bool use_v2 = TRUE, use_t3amp = TRUE, use_t3phi = TRUE, use_visamp = TRUE, use_visphi = TRUE;
 	bool use_tempfitswriting = FALSE, use_bandwidthsmearing = TRUE;
 	double v2a = 0., t3ampa = 0., t3phia = 0., visampa = 0., visphia = 0.;
@@ -161,7 +161,7 @@ int main(int argc, char** argv) {
 	if (read_commandline(&argc, argv, &benchmark, &use_v2, &use_t3amp, &use_t3phi, &use_visamp, &use_visphi, &use_diffvis, &use_tempfitswriting,
 			&use_bandwidthsmearing, &minimization_engine, &dumpchain, &mas_pixel, &axis_len, &depth, &niter, &nelements, &f_anywhere, &f_copycat, &nchains,
 			&nthreads, &tempschedc, &fov, &chi2_temp, &chi2_target, &tmin, &prob_auto, &uvtol, &output_filename[0], &init_filename[0], &prior_filename[0], &v2s,
-			&v2a, &t3amps, &t3ampa, &t3phia, &t3phis, &visamps, &visampa, &visphis, &visphia, &fluxs, &cvfwhm, reg_param, init_params, wavmin, wavmax) == FALSE)
+			     &v2a, &t3amps, &t3ampa, &t3phia, &t3phis, &visamps, &visampa, &visphis, &visphia, &fluxs, &cvfwhm, reg_param, init_params, wavmin, wavmax, &nwavr) == FALSE)
 		return 0;
 
 	// Check nchains and nthreads are consistent, and if not overwrite them
@@ -203,7 +203,7 @@ int main(int argc, char** argv) {
 	  }
 
 	// If no wavelength info was given, then we are in monochromatic mode
-	if ((wavmin == NULL) || (wavmax == NULL))
+	if((wavmin == NULL) || (wavmax == NULL))
 	  {
 	    printf("Command line -- Monochromatic reconstruction\n");
 	    nwavr = 1;
@@ -216,7 +216,7 @@ int main(int argc, char** argv) {
 	/* Read in oifits file */
 
 	if (import_single_epoch_oifits(argv[1], use_v2, use_t3amp, use_t3phi, use_visamp, use_visphi, v2a, v2s, t3ampa, t3amps, t3phia, t3phis, visampa, visamps, visphia,
-			visphis, fluxs, cvfwhm, uvtol, wavmin, wavmax, timemin, timemax)) {
+				       visphis, fluxs, cvfwhm, uvtol, nwavr, wavmin, wavmax, timemin, timemax)) {
 		printf("Error opening %s. \n", argv[1]);
 		return 0;
 	}
@@ -876,7 +876,7 @@ int main(int argc, char** argv) {
 			//
 			if ((i % (STEPS_PER_OUTPUT * nwavr * nelements)) == 0) {
 				if (use_tempfitswriting == TRUE)
-				  writeasfits(temp_filename, image, 1, (iChain) * niter + i / (nelements * nwavr), 2.0 * lLikelihood / ndf, chi2v2, chi2t3amp, chi2t3phi, chi2visamp, chi2visphi,
+				  writeasfits(temp_filename, image, nwavr, 1, (iChain) * niter + i / (nelements * nwavr), 2.0 * lLikelihood / ndf, chi2v2, chi2t3amp, chi2t3phi, chi2visamp, chi2visphi,
 					                temperature[iChain], nelements,	&reg_param[0], &reg_value[0], niter, axis_len, ndf, tmin,
 					                chi2_temp, chi2_target, mas_pixel, nchains, 0, 0, "", "",
 							&saved_params[iChaintoStorage[iChain] * nparams * niter], NULL);
@@ -1195,7 +1195,7 @@ int main(int argc, char** argv) {
 		/* Write the fits file */
 		if (ctrlcpressed == FALSE) {
 			if (use_tempfitswriting == TRUE)
-				writeasfits(temp_filename, image, 1, iChain * niter + i / (nelements * nwavr), 2.0 * lLikelihood / ndf,  chi2v2, chi2t3amp, chi2t3phi, chi2visamp, chi2visphi,
+			  writeasfits(temp_filename, image, nwavr, 1, iChain * niter + i / (nelements * nwavr), 2.0 * lLikelihood / ndf,  chi2v2, chi2t3amp, chi2t3phi, chi2visamp, chi2visphi,
 					    temperature[iChain], nelements, &reg_param[0], &reg_value[0], niter, axis_len, ndf, tmin, chi2_temp, chi2_target, mas_pixel, nchains, 0, 0, "", "",
 						&saved_params[iChain * niter * nparams], NULL);
 		}
@@ -1292,7 +1292,7 @@ int main(int argc, char** argv) {
 					       centroid_image_y, fov, cent_mult);
 
 			// Recompute all the regularizers, likelihood, prior & posterior probability
-			writeasfits(output_filename, final_image, k, niter - burn_in_times[0] - 1,
+			writeasfits(output_filename, final_image, nwavr, k, niter - burn_in_times[0] - 1,
                         final_chi2/ndf, final_chi2v2, final_chi2t3amp, final_chi2t3phi, final_chi2visamp, final_chi2visphi,
                         -1, nelements, reg_param, final_reg_value, niter, axis_len, ndf, tmin, chi2_temp, chi2_target,
                         mas_pixel, nchains, 0, 0, init_filename, prior_filename, final_params, final_params_std);
@@ -1312,7 +1312,7 @@ int main(int argc, char** argv) {
 			compute_logZ(temperature, iStoragetoChain, lLikelihood_expectation, lLikelihood_deviation, nchains, &logZ_final, &logZ_final_err);
 			printf("Output -- Final logZ: %f +/- %f\n", logZ_final, logZ_final_err);
 
-			writeasfits(output_filename, final_image, k, niter - burn_in_times[0] - 1,
+			writeasfits(output_filename, final_image, nwavr, k, niter - burn_in_times[0] - 1,
                     final_chi2/ndf, final_chi2v2, final_chi2t3amp, final_chi2t3phi, final_chi2visamp, final_chi2visphi,
                     -1, nelements, &reg_param[0], NULL, niter, axis_len, ndf,
 					tmin, chi2_temp, chi2_target, mas_pixel, nchains, logZ_final, logZ_final_err, init_filename, prior_filename, final_params,
@@ -1670,7 +1670,7 @@ double get_flat_chi2(bool benchmark) {
 /***********************************/
 /* Write fits image cube           */
 /***********************************/
-int writeasfits(char *file, double *image, long depth, long min_elt, double chi2, double chi2v2, double chi2t3amp, double chi2t3phi, double chi2visamp, double chi2visphi,
+int writeasfits(char *file, double *image, int nwavr, long depth, long min_elt, double chi2, double chi2v2, double chi2t3amp, double chi2t3phi, double chi2visamp, double chi2visphi,
 		double temperature, long nelems, double* regpar, double* regval, long niter,
 		unsigned short axis_len, double ndf, double tmin, double chi2_temp, double chi2_target, double mas_pixel, int nchains, double logZ, double logZ_err,
 		char *init_filename, char *prior_filename, double* params, double* params_std)
@@ -2397,7 +2397,7 @@ bool read_commandline(int* argc, char** argv, bool* benchmark, bool* use_v2, boo
 		double* tempschedc, double* fov, double* chi2_temp, double* chi2_target, double* tmin, double* prob_auto, double* uvtol, char* output_filename,
 		char* init_filename, char* prior_filename, double* v2s, double* v2a, double* t3amps, double* t3ampa, double* t3phia, double* t3phis, double* visamps,
 		double* visampa, double* visphis, double* visphia, double* fluxs, double* cvfwhm, double* reg_param, double* init_param, double* wavmin,
-		double* wavmax) {
+		      double* wavmax, int* nwavr) {
 	long i, j, k;
 
 	
@@ -2564,7 +2564,8 @@ bool read_commandline(int* argc, char** argv, bool* benchmark, bool* use_v2, boo
 				for (j = 0; j < nparams; j++)
 					sscanf(argv[i + 1 + j], "%lf", &(init_stepsize[j]));
 				i += nparams - 1;
-			} else if (strcmp(argv[i], "-wavchan") == 0) {
+			} else if (strcmp(argv[i], "-wavchan") == 0) 
+			  {
 				int wavchaninfo = 0;
 				for (j = i + 1; j < *argc; j++) {
 					/* If the next parameter is "-" followed by a non-numeric character,
@@ -2576,10 +2577,10 @@ bool read_commandline(int* argc, char** argv, bool* benchmark, bool* use_v2, boo
 				}
 				printf("Command line  -- set to polychromatic reconstruction\n");
 
-				nwavr = wavchaninfo / 3;
-				wavmin = malloc(nwavr * sizeof(double));
-				wavmax = malloc(nwavr * sizeof(double));
-				for (j = 0; j < nwavr; j++) {
+				*nwavr = wavchaninfo / 3;
+				wavmin = malloc(*nwavr * sizeof(double));
+				wavmax = malloc(*nwavr * sizeof(double));
+				for (j = 0; j < *nwavr; j++) {
 					sscanf(argv[i + 1 + 3 * j], "%ld", &k);
 					sscanf(argv[i + 1 + 3 * j + 1], "%lf", &wavmin[k]);
 					sscanf(argv[i + 1 + 3 * j + 2], "%lf", &wavmax[k]);
