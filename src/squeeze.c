@@ -164,7 +164,7 @@ int main(int argc, char** argv) {
 			     &v2a, &t3amps, &t3ampa, &t3phia, &t3phis, &visamps, &visampa, &visphis, &visphia, &fluxs, &cvfwhm, reg_param, init_params, wavmin, wavmax, &nwavr) == FALSE)
 		return 0;
 
-	printf("DEBUG wavmin pointer: %p \n", &wavmin[0]);
+	printf("DEBUG wavmin pointer: %p \n", wavmin);
 
 	// Check nchains and nthreads are consistent, and if not overwrite them
 	// First check if nchains and nthreads have been set
@@ -2584,7 +2584,7 @@ bool read_commandline(int* argc, char** argv, bool* benchmark, bool* use_v2, boo
 				printf("DEBUG nwavr = %d\n", *nwavr);
 				wavmin = malloc( *nwavr * sizeof(double));
 				wavmax = malloc( *nwavr * sizeof(double));
-				printf("DEBUG wavmin pointer: %p \n", &wavmin[0]);
+				printf("DEBUG wavmin pointer: %p \n", wavmin);
 				for (j = 0; j < *nwavr; j++) {
 					sscanf(argv[i + 1 + 3 * j], "%ld", &k);
 					sscanf(argv[i + 1 + 3 * j + 1], "%lf", &wavmin[k]);
