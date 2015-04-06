@@ -82,13 +82,13 @@ AR="ar"
 AR_FLAGS="cru"
 
 # A C compiler.
-LTCC="gcc"
+LTCC="clang"
 
 # LTCC compiler flags.
 LTCFLAGS="-g -O2"
 
 # A language-specific compiler.
-CC="gcc"
+CC="clang"
 
 # Is the compiler the GNU C compiler?
 with_gcc=yes
@@ -174,7 +174,7 @@ dlopen_self_static=unknown
 link_static_flag="-static"
 
 # Compiler flag to turn off builtin functions.
-no_builtin_flag=" -fno-builtin"
+no_builtin_flag=" -fno-builtin -fno-rtti -fno-exceptions"
 
 # Compiler flag to allow reflexive dlopens.
 export_dynamic_flag_spec="\${wl}--export-dynamic"
@@ -329,7 +329,7 @@ variables_saved_for_relink="PATH LD_LIBRARY_PATH LD_RUN_PATH GCC_EXEC_PREFIX COM
 link_all_deplibs=unknown
 
 # Compile-time system search path for libraries
-sys_lib_search_path_spec="/usr/lib/gcc/x86_64-linux-gnu/4.9 /usr/lib/x86_64-linux-gnu /usr/lib /lib/x86_64-linux-gnu /lib /opt/intel/composer_xe_2013.3.163/compiler/lib/intel64 /opt/intel/composer_xe_2013.3.163/ipp/lib/intel64 /opt/intel/composer_xe_2013.3.163/mkl/lib/intel64 /opt/intel/composer_xe_2013.3.163/tbb/lib/intel64/gcc4.4"
+sys_lib_search_path_spec="/usr/lib/llvm-3.5/lib/clang/3.5.0 /usr/lib/gcc/x86_64-linux-gnu/4.9 /usr/lib/x86_64-linux-gnu /lib/x86_64-linux-gnu /lib64 /usr/lib /usr/lib/llvm-3.5/lib /lib"
 
 # Run-time system search path for libraries
 sys_lib_dlsearch_path_spec="/lib /usr/lib /usr/lib/x86_64-linux-gnu/libfakeroot /lib/i386-linux-gnu /usr/lib/i386-linux-gnu /lib/i686-linux-gnu /usr/lib/i686-linux-gnu /usr/local/lib /lib/x86_64-linux-gnu /usr/lib/x86_64-linux-gnu /usr/lib/x86_64-linux-gnu/mesa-egl /usr/lib/nvidia-346 /usr/lib32/nvidia-346 /usr/lib/x86_64-linux-gnu/mir/client8driver/mesa /lib32 /usr/lib32 /libx32 /usr/libx32 "
@@ -7369,7 +7369,7 @@ AR="ar"
 AR_FLAGS="cru"
 
 # A C compiler.
-LTCC="gcc"
+LTCC="clang"
 
 # LTCC compiler flags.
 LTCFLAGS="-g -O2"
@@ -7613,7 +7613,7 @@ variables_saved_for_relink="PATH LD_LIBRARY_PATH LD_RUN_PATH GCC_EXEC_PREFIX COM
 link_all_deplibs=unknown
 
 # Compile-time system search path for libraries
-sys_lib_search_path_spec="/usr/lib/gcc/x86_64-linux-gnu/4.9 /usr/lib/x86_64-linux-gnu /usr/lib /lib/x86_64-linux-gnu /lib /opt/intel/composer_xe_2013.3.163/compiler/lib/intel64 /opt/intel/composer_xe_2013.3.163/ipp/lib/intel64 /opt/intel/composer_xe_2013.3.163/mkl/lib/intel64 /opt/intel/composer_xe_2013.3.163/tbb/lib/intel64/gcc4.4"
+sys_lib_search_path_spec="/usr/lib/llvm-3.5/lib/clang/3.5.0 /usr/lib/gcc/x86_64-linux-gnu/4.9 /usr/lib/x86_64-linux-gnu /lib/x86_64-linux-gnu /lib64 /usr/lib /usr/lib/llvm-3.5/lib /lib"
 
 # Run-time system search path for libraries
 sys_lib_dlsearch_path_spec="/lib /usr/lib /usr/lib/x86_64-linux-gnu/libfakeroot /lib/i386-linux-gnu /usr/lib/i386-linux-gnu /lib/i686-linux-gnu /usr/lib/i686-linux-gnu /usr/local/lib /lib/x86_64-linux-gnu /usr/lib/x86_64-linux-gnu /usr/lib/x86_64-linux-gnu/mesa-egl /usr/lib/nvidia-346 /usr/lib32/nvidia-346 /usr/lib/x86_64-linux-gnu/mir/client8driver/mesa /lib32 /usr/lib32 /libx32 /usr/libx32 "
@@ -7678,7 +7678,7 @@ AR="ar"
 AR_FLAGS="cru"
 
 # A C compiler.
-LTCC="gcc"
+LTCC="clang"
 
 # LTCC compiler flags.
 LTCFLAGS="-g -O2"
@@ -7925,7 +7925,7 @@ variables_saved_for_relink="PATH LD_LIBRARY_PATH LD_RUN_PATH GCC_EXEC_PREFIX COM
 link_all_deplibs=unknown
 
 # Compile-time system search path for libraries
-sys_lib_search_path_spec="/usr/lib/gcc/x86_64-linux-gnu/4.9 /usr/lib/x86_64-linux-gnu /usr/lib /lib/x86_64-linux-gnu /lib /opt/intel/composer_xe_2013.3.163/compiler/lib/intel64 /opt/intel/composer_xe_2013.3.163/ipp/lib/intel64 /opt/intel/composer_xe_2013.3.163/mkl/lib/intel64 /opt/intel/composer_xe_2013.3.163/tbb/lib/intel64/gcc4.4"
+sys_lib_search_path_spec="/usr/lib/llvm-3.5/lib/clang/3.5.0 /usr/lib/gcc/x86_64-linux-gnu/4.9 /usr/lib/x86_64-linux-gnu /lib/x86_64-linux-gnu /lib64 /usr/lib /usr/lib/llvm-3.5/lib /lib"
 
 # Run-time system search path for libraries
 sys_lib_dlsearch_path_spec="/lib /usr/lib /usr/lib/x86_64-linux-gnu/libfakeroot /lib/i386-linux-gnu /usr/lib/i386-linux-gnu /lib/i686-linux-gnu /usr/lib/i686-linux-gnu /usr/local/lib /lib/x86_64-linux-gnu /usr/lib/x86_64-linux-gnu /usr/lib/x86_64-linux-gnu/mesa-egl /usr/lib/nvidia-346 /usr/lib32/nvidia-346 /usr/lib/x86_64-linux-gnu/mir/client8driver/mesa /lib32 /usr/lib32 /libx32 /usr/libx32 "

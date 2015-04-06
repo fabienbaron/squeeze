@@ -35,19 +35,6 @@
 
 void add_new_uv(long *obs_index, long *uvindex, double new_u, double new_v, double new_uv_lambda, double new_uv_dlambda, double new_uv_time, double *table_u, double *table_v, double *table_uv_lambda, double *table_uv_dlambda, double *table_uv_time, double uvtol);
 
-
-
-//int import_multiple_epochs_oifits(int nfiles, char** filenames, bool use_v2, bool use_t3amp, bool use_t3phi, bool use_visamp, bool use_visphi,
-//                   double v2a, double v2s, double t3ampa, double t3amps, double t3phia, double t3phis,
-//                   double visampa, double visamps, double visphia, double visphis, double fluxs, double cwhm, double uvtol, double* wavmin, double *wavmax, double *timemin, double *timemax)
-//
-//{
-//
-//import_single_epoch_oifits(filename, use_v2, use_t3amp, use_t3phi, use_visamp, use_visphi, v2a, v2s, t3ampa, t3amps, t3phia, t3phis,
-//                           visampa, visamps, visphia, visphis, fluxs, cwhm, uvtol, wavmin, wavmax, timemin, timemax);
-//}
-
-
 int import_single_epoch_oifits(char* filename, bool use_v2, bool use_t3amp, bool use_t3phi, bool use_visamp, bool use_visphi,
                    double v2a, double v2s, double t3ampa, double t3amps, double t3phia, double t3phis,
 			       double visampa, double visamps, double visphia, double visphis, double fluxs, double cwhm, double uvtol, int nwavr, double* wavmin, double *wavmax, double *timemin, double *timemax)
@@ -551,12 +538,12 @@ int import_single_epoch_oifits(char* filename, bool use_v2, bool use_t3amp, bool
             if(nt3amp_orphans > 0)
                 printf(" -- %ld orphans (without corresponding T3PHI)\n", nt3amp_orphans) ;
             else
-                printf(" -- no orphan points\n");
+	      printf(" -- no orphan points\n");
             printf("OIFITS import --     T3PHI : %ld", nt3phi);
             if(nt3phi_orphans > 0)
                 printf(" -- %ld orphans (without corresponding T3AMP)\n", nt3phi_orphans);
             else
-                printf(" -- no orphan points\n");
+              printf(" -- no orphan points\n");
         }
 
     if(nvis > 0)
@@ -578,12 +565,6 @@ int import_single_epoch_oifits(char* filename, bool use_v2, bool use_t3amp, bool
     printf("OIFITS import -- Unique uv points:\t%ld (out of %ld)\n", uvindex, nuv);
     printf("OIFITS import --                  \t(using uvtol=%lf)\n", uvtol);
     nuv = uvindex;
-
-
-
-
-
-
 
     //
     // Check for smallest/largest wavelength

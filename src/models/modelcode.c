@@ -95,7 +95,7 @@ int model_vis(const double *params, double complex *modvis, double *lPriorModel,
         lPriorParams[2] = 1e99;
 
 
-    if(abs(params[3]) >= 10)
+    if(fabs(params[3]) >= 10)
         lPriorParams[3] = 1e99;
     else
         lPriorParams[3] = 0;

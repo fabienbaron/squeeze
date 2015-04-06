@@ -136,7 +136,7 @@ int main(int argc, char** argv) {
 
 	double *timemin = NULL;
 	double *timemax = NULL;
-	double *wavmin = NULL;
+	double *wavmin = NULL ;
 	double *wavmax = NULL;
 
 	printf(TEXT_COLOR_RED"SQUEEZE - Version %1.1f\n"TEXT_COLOR_BLACK, SQUEEZE_VERSION);
@@ -164,8 +164,9 @@ int main(int argc, char** argv) {
 			     &v2a, &t3amps, &t3ampa, &t3phia, &t3phis, &visamps, &visampa, &visphis, &visphia, &fluxs, &cvfwhm, reg_param, init_params, wavmin, wavmax, &nwavr) == FALSE)
 		return 0;
 
-	// Check nchains and nthreads are consistent, and if not overwrite them
+	printf("DEBUG wavmin pointer: %p \n", &wavmin[0]);
 
+	// Check nchains and nthreads are consistent, and if not overwrite them
 	// First check if nchains and nthreads have been set
 	if (nchains == 0)
 		nchains = 1;
@@ -177,8 +178,6 @@ int main(int argc, char** argv) {
 
 	if (nthreads == 0)
 		nthreads = nmaxthreads; //use max available threads if not set
-
-	// if(nthreads < nchains) nthreads = nchains;
 
 	if (nthreads > nmaxthreads) {
 		nthreads = nmaxthreads;
@@ -216,10 +215,13 @@ int main(int argc, char** argv) {
 	/* Read in oifits file */
 
 	if (import_single_epoch_oifits(argv[1], use_v2, use_t3amp, use_t3phi, use_visamp, use_visphi, v2a, v2s, t3ampa, t3amps, t3phia, t3phis, visampa, visamps, visphia,
-				       visphis, fluxs, cvfwhm, uvtol, nwavr, wavmin, wavmax, timemin, timemax)) {
+				       visphis, fluxs, cvfwhm, uvtol, nwavr, wavmin, wavmax, timemin, timemax))
+	  {
 		printf("Error opening %s. \n", argv[1]);
 		return 0;
-	}
+	  }
+
+
 
 	oifits_file = argv[1];
 
@@ -2397,7 +2399,8 @@ bool read_commandline(int* argc, char** argv, bool* benchmark, bool* use_v2, boo
 		double* tempschedc, double* fov, double* chi2_temp, double* chi2_target, double* tmin, double* prob_auto, double* uvtol, char* output_filename,
 		char* init_filename, char* prior_filename, double* v2s, double* v2a, double* t3amps, double* t3ampa, double* t3phia, double* t3phis, double* visamps,
 		double* visampa, double* visphis, double* visphia, double* fluxs, double* cvfwhm, double* reg_param, double* init_param, double* wavmin,
-		      double* wavmax, int* nwavr) {
+	        double* wavmax, int* nwavr) 
+{
 	long i, j, k;
 
 	
@@ -2578,8 +2581,10 @@ bool read_commandline(int* argc, char** argv, bool* benchmark, bool* use_v2, boo
 				printf("Command line  -- set to polychromatic reconstruction\n");
 
 				*nwavr = wavchaninfo / 3;
-				wavmin = malloc(*nwavr * sizeof(double));
-				wavmax = malloc(*nwavr * sizeof(double));
+				printf("DEBUG nwavr = %d\n", *nwavr);
+				wavmin = malloc( *nwavr * sizeof(double));
+				wavmax = malloc( *nwavr * sizeof(double));
+				printf("DEBUG wavmin pointer: %p \n", &wavmin[0]);
 				for (j = 0; j < *nwavr; j++) {
 					sscanf(argv[i + 1 + 3 * j], "%ld", &k);
 					sscanf(argv[i + 1 + 3 * j + 1], "%lf", &wavmin[k]);
@@ -2604,7 +2609,7 @@ bool read_commandline(int* argc, char** argv, bool* benchmark, bool* use_v2, boo
 		}
 
 	}
-
+	return TRUE;
 }
 
 void print_diagnostics(int iChain, long current_iter, long nvis, long nv2, long nt3, long nt3phi, long nt3amp, long nvisamp, long nvisphi, double chi2v2,

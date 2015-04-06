@@ -31,7 +31,7 @@ endif()
 
 # We need to compile the following libraries
 
-if(OPENMP_FOUND AND COMPILER_SUPPORTS_C11) 
+if(COMPILER_SUPPORTS_C11) 
 		#compile libraries
 		# rngstreams
 include(ExternalProject)
