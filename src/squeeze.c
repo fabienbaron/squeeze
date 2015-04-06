@@ -136,7 +136,7 @@ int main(int argc, char** argv) {
 
 	double *timemin = NULL;
 	double *timemax = NULL;
-	double *wavmin = NULL ;
+	double *wavmin = NULL;
 	double *wavmax = NULL;
 
 	printf(TEXT_COLOR_RED"SQUEEZE - Version %1.1f\n"TEXT_COLOR_BLACK, SQUEEZE_VERSION);
@@ -161,10 +161,8 @@ int main(int argc, char** argv) {
 	if (read_commandline(&argc, argv, &benchmark, &use_v2, &use_t3amp, &use_t3phi, &use_visamp, &use_visphi, &use_diffvis, &use_tempfitswriting,
 			&use_bandwidthsmearing, &minimization_engine, &dumpchain, &mas_pixel, &axis_len, &depth, &niter, &nelements, &f_anywhere, &f_copycat, &nchains,
 			&nthreads, &tempschedc, &fov, &chi2_temp, &chi2_target, &tmin, &prob_auto, &uvtol, &output_filename[0], &init_filename[0], &prior_filename[0], &v2s,
-			     &v2a, &t3amps, &t3ampa, &t3phia, &t3phis, &visamps, &visampa, &visphis, &visphia, &fluxs, &cvfwhm, reg_param, init_params, wavmin, wavmax, &nwavr) == FALSE)
+			     &v2a, &t3amps, &t3ampa, &t3phia, &t3phis, &visamps, &visampa, &visphis, &visphia, &fluxs, &cvfwhm, reg_param, init_params, &wavmin, &wavmax, &nwavr) == FALSE)
 		return 0;
-
-	printf("DEBUG wavmin pointer: %p \n", wavmin);
 
 	// Check nchains and nthreads are consistent, and if not overwrite them
 	// First check if nchains and nthreads have been set
@@ -199,15 +197,6 @@ int main(int argc, char** argv) {
 	    printf("Threading    -- Parallel tempering requested but the requested number of chains is %d\n", nchains);
 	    printf("Threading    -- Please restart SQUEEZE and set this number accordingly.\n");
 	    return 0;
-	  }
-
-	// If no wavelength info was given, then we are in monochromatic mode
-	if((wavmin == NULL) || (wavmax == NULL))
-	  {
-	    printf("Command line -- Monochromatic reconstruction\n");
-	    nwavr = 1;
-	    wavmin = malloc(sizeof(double));
-	    wavmax = malloc(sizeof(double));
 	  }
 
 	fflush (stdout);
@@ -2398,12 +2387,12 @@ bool read_commandline(int* argc, char** argv, bool* benchmark, bool* use_v2, boo
 		unsigned short* axis_len, long* depth, long* niter, long* nelements, double* f_anywhere, double* f_copycat, int *nchains, int* nthreads,
 		double* tempschedc, double* fov, double* chi2_temp, double* chi2_target, double* tmin, double* prob_auto, double* uvtol, char* output_filename,
 		char* init_filename, char* prior_filename, double* v2s, double* v2a, double* t3amps, double* t3ampa, double* t3phia, double* t3phis, double* visamps,
-		double* visampa, double* visphis, double* visphia, double* fluxs, double* cvfwhm, double* reg_param, double* init_param, double* wavmin,
-	        double* wavmax, int* nwavr) 
+		double* visampa, double* visphis, double* visphia, double* fluxs, double* cvfwhm, double* reg_param, double* init_param, double** pwavmin,
+	        double** pwavmax, int* nwavr)
 {
 	long i, j, k;
+	double *wavmin, *wavmax;
 
-	
 	/* Read in command line info... */
 	if (*argc < 2) // need at least a filename to do something
 	  {
@@ -2411,7 +2400,7 @@ bool read_commandline(int* argc, char** argv, bool* benchmark, bool* use_v2, boo
 	    return 0;
 	  }
 
-	// Determine the number of oifits files to use 
+	// Determine the number of oifits files to use
 	// For this we determine the position of the first option
 	int nfiles = 1;
 	for(i=1;i<*argc;i++)
@@ -2421,22 +2410,24 @@ bool read_commandline(int* argc, char** argv, bool* benchmark, bool* use_v2, boo
 	      nfiles = i-1;
 	      break;
 	    }
-	    if(i==(*argc-1)) 
+	    if(i==(*argc-1))
 	      nfiles = i;
 	  }
 
-	printf("Command line -- %d oifits to read\n", nfiles); 
+	printf("Command line -- %d oifits to read\n", nfiles);
 
 	if ((strcmp(argv[1], "-h") == 0 || strcmp(argv[1], "-help") == 0 || strcmp(argv[1], "--help") == 0) || (strcmp(argv[1], "--help") == 0)) {
 		printhelp();
 		return 0;
 	}
 
-	for (i = 2; i < *argc; i++) {
+	for (i = 2; i < *argc; i++)
+	  {
 		/* First the options without arguments */
-		if ((strcmp(argv[i], "-h") == 0) || (strcmp(argv[i], "-help") == 0) || (strcmp(argv[i], "--help") == 0)) {
-			printhelp();
-			return 0;
+		if ((strcmp(argv[i], "-h") == 0) || (strcmp(argv[i], "-help") == 0) || (strcmp(argv[i], "--help") == 0))
+		  {
+		    printhelp();
+		    return 0;
 		} else if (strcmp(argv[i], "-benchmark") == 0) {
 			*benchmark = TRUE; // run benchmark
 		} else if (strcmp(argv[i], "-nov2") == 0) {
@@ -2562,12 +2553,15 @@ bool read_commandline(int* argc, char** argv, bool* benchmark, bool* use_v2, boo
 				for (j = 0; j < nparams; j++)
 					sscanf(argv[i + 1 + j], "%lf", &(init_params[j]));
 				i += nparams - 1;
-			} else if (strcmp(argv[i], "-S") == 0) {
+			}
+			else if (strcmp(argv[i], "-S") == 0)
+			  {
 				/* NB the way this is set up, the -P option must come before a -S option */
 				for (j = 0; j < nparams; j++)
 					sscanf(argv[i + 1 + j], "%lf", &(init_stepsize[j]));
 				i += nparams - 1;
-			} else if (strcmp(argv[i], "-wavchan") == 0) 
+			}
+			else if (strcmp(argv[i], "-wavchan") == 0)
 			  {
 				int wavchaninfo = 0;
 				for (j = i + 1; j < *argc; j++) {
@@ -2581,10 +2575,10 @@ bool read_commandline(int* argc, char** argv, bool* benchmark, bool* use_v2, boo
 				printf("Command line  -- set to polychromatic reconstruction\n");
 
 				*nwavr = wavchaninfo / 3;
-				printf("DEBUG nwavr = %d\n", *nwavr);
 				wavmin = malloc( *nwavr * sizeof(double));
 				wavmax = malloc( *nwavr * sizeof(double));
-				printf("DEBUG wavmin pointer: %p \n", wavmin);
+				*pwavmin = wavmin;
+				*pwavmax = wavmax;
 				for (j = 0; j < *nwavr; j++) {
 					sscanf(argv[i + 1 + 3 * j], "%ld", &k);
 					sscanf(argv[i + 1 + 3 * j + 1], "%lf", &wavmin[k]);
@@ -2598,17 +2592,35 @@ bool read_commandline(int* argc, char** argv, bool* benchmark, bool* use_v2, boo
 					}
 				}
 				i += wavchaninfo - 1;
-			} else {
+			}
+			else
+			  {
 				printf("Command line  -- invalid option %s. Type squeeze -h for help.\n", argv[i]);
 				return FALSE;
-			}
+			  }
 			i++;
-		} else {
+		}
+		else
+		  {
 			printf("Command line  -- invalid option. Type squeeze -h for help.\n");
 			return FALSE;
-		}
+		  }
 
-	}
+	  }
+
+	// If no wavelength info was given, then we are in monochromatic mode
+	if((*pwavmin == NULL) || (*pwavmax == NULL))
+	  {
+	    printf("Command line -- Monochromatic reconstruction\n");
+	    *nwavr = 1;
+	    wavmin = malloc(sizeof(double));
+	    wavmax = malloc(sizeof(double));
+	    *pwavmin = wavmin;
+	    *pwavmax = wavmax;  
+	  }
+
+	
+
 	return TRUE;
 }
 
