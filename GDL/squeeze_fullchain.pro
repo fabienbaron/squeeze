@@ -4,18 +4,18 @@
 
 pro squeeze_fullchain, filename
 
-; dimensions are axis_len, axis_len, nchanr, niter, nthreads
+; dimensions are axis_len, axis_len, nchanr, niter, nchains
 device, decomposed = 0
 loadct, 3
 images = readfits(filename, head)
 sz = size(images)
-nthreads = sxpar(head,'nthreads') 
+nchains = sxpar(head,'nchains') 
 niter = sxpar(head,'niter')  
 nchanr   = sxpar(head,'nchanr')  
 nelements = sxpar(head,'elements')  
 axis_len = sz[0]  
 
-print, 'Nthreads: ', nthreads 
+print, 'Nchains: ', nchains 
 print, 'Niter: ', niter
 print, 'Nchanr: ', nchanr
 print, 'Nelements: ', nelements
@@ -23,8 +23,8 @@ print, 'Image width: ', axis_len
 
 snplots = ceil(sqrt(niter))
 
-for t=0, nthreads-1 do begin
-   window, t, xs = 50 * snplots, ys = 50 * snplots, title = 'Thread'+string(t)
+for t=0, nchains-1 do begin
+   window, t, xs = 50 * snplots, ys = 50 * snplots, title = 'Chain'+string(t)
    !p.multi = [0, snplots, snplots]
    !x.margin = 0
    !y.margin = 0

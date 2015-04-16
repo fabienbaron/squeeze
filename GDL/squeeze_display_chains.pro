@@ -12,11 +12,11 @@
 ;    You should have received a copy of the GNU General Public License
 ;    along with Squeeze.  If not, see <http://www.gnu.org/licenses/>.
 
-; This is a GDL viewer for SQUEEZE that constantly monitor the various threads
+; This is a GDL viewer for SQUEEZE that constantly monitor the various chains
 ;
 ;  keyword TEMPSORT: forces sorting by temperatures, useful for parallel tempering
 
-pro squeeze_threads, dir, tempsort = tempsort
+pro squeeze_chains, dir, tempsort = tempsort
 
 dir = dir +'/'
 if not(keyword_set(dir)) then dir ='./'
@@ -27,31 +27,31 @@ restart:
 ltime =  systime(1)
 mtime =  ltime
 while (mtime-ltime le  0) do begin
-   openr,  1,  'thread00.fits',  error = err
+   openr,  1,  'chain00.fits',  error = err
    if (err eq 0) then begin
       stat =  fstat(1)
       close,  1
       mtime =  stat.mtime
-   endif else print,  'Trouble opening thread00.fits (ignore if occasional message only)'
+   endif else print,  'Trouble opening chain00.fits (ignore if occasional message only)'
    wait,  0.3
 endwhile
 ltime = mtime
-tab_im =  readfits('thread00.fits',  head, /silent)
+tab_im =  readfits('chain00.fits',  head, /silent)
 sz = size(tab_im)
 if(sz[0] LT 2) then goto, restart
-nthreads = sxpar(head,  'NTHREADS')
+nchains = sxpar(head,  'NCHAINS')
 
 
-!p.multi=[0,nthreads,1]
-window, 0, xs = 250*nthreads, ys = 250, title = 'Threads', xpos = 0, ypos = 0
+!p.multi=[0,nchains,1]
+window, 0, xs = 250*nchains, ys = 250, title = 'Chains', xpos = 0, ypos = 0
 
 
-temperatures = dblarr(nthreads)
-images = PTRARR(nthreads, /allocate_heap)
+temperatures = dblarr(nchains)
+images = PTRARR(nchains, /allocate_heap)
 while (1) do begin
 
-   for i=0, nthreads-1 do begin
-      filename = 'thread'+strcompress(string(i, FORMAT='(I02)'),/remove_all)+'.fits'
+   for i=0, nchains-1 do begin
+      filename = 'chain'+strcompress(string(i, FORMAT='(I02)'),/remove_all)+'.fits'
       if( FILE_TEST(filename, /read) EQ 1) then begin
          *images[i] = readfits(filename, head, /silent)
          temperatures[i] = sxpar(head,'TEMPER') 
@@ -59,11 +59,11 @@ while (1) do begin
    endfor 
    reorder = sort(temperatures)
 
-   for i=0, nthreads-1 do begin
+   for i=0, nchains-1 do begin
          if(keyword_set(tempsort)) then j = reorder[i] else j = i
          im = *images[j]
          sz = size(im)
-         if(sz[0] GE 2) then image_cont_uv, sqrt(reform(im)),tit="Thread "+strcompress(string(j))+" - temp "+strcompress(string(temperatures[j])),xtit="pixels",ytit="pixels", /asp,/noc else image_cont_uv, dblarr(32, 32), tit="Thread "+strcompress(string(j))+" - temp "+strcompress(string(temperatures[j])),xtit="pixels",ytit="pixels", /asp,/noc     
+         if(sz[0] GE 2) then image_cont_uv, sqrt(reform(im)),tit="Chain "+strcompress(string(j))+" - temp "+strcompress(string(temperatures[j])),xtit="pixels",ytit="pixels", /asp,/noc else image_cont_uv, dblarr(32, 32), tit="Chain "+strcompress(string(j))+" - temp "+strcompress(string(temperatures[j])),xtit="pixels",ytit="pixels", /asp,/noc     
       endfor
 wait, 3
 endwhile
@@ -72,4 +72,4 @@ end
 
 
 ; TESTING EXAMPLES
-;./squeeze ./sample_data/2004-data1.fits -w 128 -s 0.2 -threads 10 -i random -n 2000
+;./squeeze ./sample_data/2004-data1.fits -w 128 -s 0.2 -chains 10 -i random -n 2000 -temporaryfits
