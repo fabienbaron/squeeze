@@ -546,7 +546,7 @@ int main(int argc, char** argv) {
 
 	// Shared OpenMP memory
 
-	unsigned int *burn_in_times = calloc(nchains, sizeof(unsigned short));
+	unsigned int *burn_in_times = calloc(nchains, sizeof(unsigned int));
 	double *lLikelihood_expectation = calloc(nchains, sizeof(double));
 	double *lLikelihood_deviation = calloc(nchains, sizeof(double));
 	double *saved_lLikelihood = calloc(nchains * niter, sizeof(double));
@@ -2029,12 +2029,11 @@ void mcmc_annealing_results(const char *file, double *final_image, const int nch
 	for(i = 0; i < nwavr * axis_len * axis_len; i++)
 	  final_image[i] = 0;
 
-
 	int total_realizations = 0;
 	for(j=0; j<nchains;j++)
 	  total_realizations += niter- burn_in_times[j];
 
-	
+	printf("DEBUG total realizations %d\n", total_realizations);
 	for(j=0; j<nchains;j++)
 	  {
 	    for(k = burn_in_times[j]; k < niter; k++) // iteration number
@@ -2062,22 +2061,23 @@ void mcmc_annealing_results(const char *file, double *final_image, const int nch
 	      final_params_std[i] = 0;
 	    }
 	  
-	  
 	  for(i = 0; i < nparams; i++)
 	    {
+	      // Average parameters over chains and iterations
 	      for(j=0; j<nchains;j++)
 		for(k = burn_in_times[j]; k < niter; k++)
 		  final_params[i] += saved_params[ (j * niter + k) * nparams + i];
 	      
 	      if(total_realizations > 0)
 		final_params[i] /= (double) total_realizations;
-	      
+
+	      // Take variance
 	      for(j=0; j<nchains;j++)
 		for(k = burn_in_times[j]; k < niter; k++)
 		  final_params_std[i] += (saved_params[ (j * niter + k) * nparams + i] - final_params[i])*(saved_params[ (j * niter + k) * nparams + i] - final_params[i]);
 
 	      if(total_realizations > 1)
-		final_params_std[i] /= (double)(total_realizations-1);
+		final_params_std[i] = sqrt(final_params_std[i]/(double)(total_realizations-1));
 	      else
 		final_params_std[i] = -1;
    	    }
