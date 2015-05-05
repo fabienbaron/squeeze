@@ -2062,23 +2062,28 @@ void mcmc_annealing_results(const char *file, double *final_image, const int nch
 	      final_params_std[i] = 0;
 	    }
 	  
-	  int nacc=1;
-	  for(j=0; j<nchains;j++)
-	    for(k = burn_in_times[j]; k < niter; k++)
-	      for(i = 0; i < nparams; i++)
-		final_params[i] += saved_params[ (j * niter + k) * nparams + i];
+	  
+	  for(i = 0; i < nparams; i++)
+	    {
+	      for(j=0; j<nchains;j++)
+		for(k = burn_in_times[j]; k < niter; k++)
+		  final_params[i] += saved_params[ (j * niter + k) * nparams + i];
+	      
+	      if(total_realizations > 0)
+		final_params[i] /= (double) total_realizations;
+	      
+	      for(j=0; j<nchains;j++)
+		for(k = burn_in_times[j]; k < niter; k++)
+		  final_params_std[i] += (saved_params[ (j * niter + k) * nparams + i] - final_params[i])*(saved_params[ (j * niter + k) * nparams + i] - final_params[i]);
 
-	  for(j=0; j<nchains;j++)
-	    for(k = burn_in_times[j]; k < niter; k++)
-	      for(i = 0; i < nparams; i++)
-		final_params_std[i] += (saved_params[ (j * niter + k) * nparams + i] - final_params[i])*(saved_params[ (j * niter + k) * nparams + i] - final_params[i]);
+	      if(total_realizations > 1)
+		final_params_std[i] /= (double)(total_realizations-1);
+	      else
+		final_params_std[i] = -1;
+   	    }
 
-	  if(total_realizations > 1)
-	    final_params_std[i] /= (total_realizations-1);
-	  else
-	    final_params_std[i] = -1;
 	}
-
+	
 	double complex *mod_vis = malloc(nuv * sizeof(double complex));
 	double complex *im_vis = malloc(nuv * sizeof(double complex));
 	double complex *param_vis = malloc(nuv * sizeof(double complex));
