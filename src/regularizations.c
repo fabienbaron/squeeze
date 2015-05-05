@@ -244,6 +244,19 @@ double L2(const double* x, const double* pr, const double eps, const int nx, con
     return sqrt(L2l)/flux;
 }
 
+double L2sq(const double* x, const double* pr, const double eps, const int nx, const int ny, const double flux)
+{
+    register int i;
+    double L2l = 0;
+    for(i = 0; i < nx * ny; i++)
+        {
+            L2l += x[i] * x[i];
+        }
+    return L2l/flux;
+}
+
+
+
 double LAP(const double* x, const double* pr, const double eps, const int nx, const int ny, const double flux)
 {
     // L1 norm of the Laplacian

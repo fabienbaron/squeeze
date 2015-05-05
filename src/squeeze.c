@@ -546,7 +546,7 @@ int main(int argc, char** argv) {
 
 	// Shared OpenMP memory
 
-	unsigned short *burn_in_times = calloc(nchains, sizeof(unsigned short));
+	unsigned int *burn_in_times = calloc(nchains, sizeof(unsigned short));
 	double *lLikelihood_expectation = calloc(nchains, sizeof(double));
 	double *lLikelihood_deviation = calloc(nchains, sizeof(double));
 	double *saved_lLikelihood = calloc(nchains * niter, sizeof(double));
@@ -707,18 +707,20 @@ int main(int argc, char** argv) {
 		compute_lPrior(&lPrior, chan, reg_param, reg_value);
 		lPosterior = lLikelihood + lPrior;
 
-		if (minimization_engine == ENGINE_SIMULATED_ANNEALING) {
-			/* Temperature is based on lLikelihood */
-			temperature[iChain] = 2.0 * lLikelihood / ndf / INITIAL_SCALED_CHI2_MULT / chi2_temp;
-
-			if (temperature[iChain] > FLAT_CHI2_MULT * flat_chi2 / ndf)
-				temperature[iChain] = FLAT_CHI2_MULT * flat_chi2 / ndf;
-
-			if (temperature[iChain] < INITIAL_TMIN) {
-				temperature[iChain] = INITIAL_TMIN;
-				burn_in_times[iChain] = niter / BURN_IN_FRAC;
-			}
-		}
+		if (minimization_engine == ENGINE_SIMULATED_ANNEALING)
+		  {
+		    /* Temperature is based on lLikelihood */
+		    temperature[iChain] = 2.0 * lLikelihood / ndf / INITIAL_SCALED_CHI2_MULT / chi2_temp;
+		    
+		    if (temperature[iChain] > FLAT_CHI2_MULT * flat_chi2 / ndf)
+		      temperature[iChain] = FLAT_CHI2_MULT * flat_chi2 / ndf;
+		    
+		    if (temperature[iChain] < INITIAL_TMIN)
+		      {
+			temperature[iChain] = INITIAL_TMIN;
+			burn_in_times[iChain] = niter / BURN_IN_FRAC;
+		      }
+		  }
 
 		/*--------------------------
 		 *    This is the main loop...
@@ -1250,78 +1252,80 @@ int main(int argc, char** argv) {
 		}
 
 		if (minimization_engine != ENGINE_PARALLEL_TEMPERING) // CASE = (parallel) simulated annealing
-				{
-			for (i = 0; i < nchains; i++) {
-				for (j = burn_in_times[i]; j < niter; j++) {
-					iframeburned[nburned] = i * niter + j; // we note the location of the frame
-					if (saved_lLikelihood[iframeburned[nburned]] < lowest_lLikelihood) {
-						lowest_lLikelihood = saved_lLikelihood[iframeburned[nburned]];
-						lowest_lLikelihood_indx = iframeburned[nburned];
-					}
-					nburned++;
+		 {
+		   for (i = 0; i < nchains; i++)
+		     {
+		       printf("Output -- Burn-in time / burned frames for chain %ld: %d / %ld\n", i, burn_in_times[i], niter - burn_in_times[i]);
+		       // Find the lowest lLikelihood
+		       for (j = burn_in_times[i]; j < niter; j++)
+			 {
+			   if (saved_lLikelihood[i * niter + j] < lowest_lLikelihood)
+			     {
+			       lowest_lLikelihood = saved_lLikelihood[i * niter + j];
+			       lowest_lLikelihood_indx = i * niter + j;
+			     }
+			   nburned++;
+			 }
+		      
+		     }
+		   
+		   // If no chains got beyond their burn-in, then nburned = 0 at this point
+		   // then we go back through and just use the depth number instead.
+		   if (nburned == 0)
+		     {
+		       printf("Output -- DID NOT REACH BURN IN ! Writing final image based on depth parameter anyway\n");
+		       printf("Output -- DID NOT REACH BURN IN ! Be careful when interpreting the final image.\n");
+		       for (i = 0; i < nchains; i++)
+			 for (j = niter - depth; j < niter; j++)
+			    burn_in_times[i] = niter - depth; // note: we previously ensured depth <= niter
+		     }
+		   
+		   mcmc_annealing_results(output_filename, final_image, nchains, burn_in_times, depth, nelements, axis_len, xtransform, ytransform,
+							 &final_chi2, &final_chi2v2, &final_chi2t3amp, &final_chi2t3phi, &final_chi2visamp, &final_chi2visphi, saved_x, saved_y,
+							 saved_params, niter, nwavr, final_params, final_params_std, reg_param, final_reg_value, prior_image, initial_x, initial_y, centroid_image_x,
+							 centroid_image_y, fov, cent_mult);
+				  
+				  // Recompute all the regularizers, likelihood, prior & posterior probability
+				  writeasfits(output_filename, final_image, nwavr, k, niter - burn_in_times[0] - 1,
+					      final_chi2/ndf, final_chi2v2, final_chi2t3amp, final_chi2t3phi, final_chi2visamp, final_chi2visphi,
+					      -1, nelements, reg_param, final_reg_value, niter, axis_len, ndf, tmin, chi2_temp, chi2_target,
+					      mas_pixel, nchains, 0, 0, init_filename, prior_filename, final_params, final_params_std);
+				  
+				  
 				}
-				printf("Output -- Burn-in time / burned frames for chain %ld: %d / %ld\n", i, burn_in_times[i], niter - burn_in_times[i]);
-			}
-
-			// If no chains got beyond their burn-in, then nburned =0 at this point
-			// then we go back through and just use the depth number instead.
-			// BUG - to check
-			if (nburned == 0) {
-				printf("Output -- DID NOT REACH BURN IN ! Writing final image based on depth parameter anyway\n");
-				printf("Output -- DID NOT REACH BURN IN ! Be careful when interpreting the final image.\n");
-				for (i = 0; i < nchains; i++)
-					for (j = niter - depth; j < niter; j++) {
-						burn_in_times[i] = niter - depth; // note: we previously ensured depth <= niter
-						iframeburned[nburned] = i * nchains + j;
-						nburned++;
-					}
-			}
-
-			mcmc_annealing_results(output_filename, final_image, iframeburned, nburned, nelements, axis_len, xtransform, ytransform,
-					       &final_chi2, &final_chi2v2, &final_chi2t3amp, &final_chi2t3phi, &final_chi2visamp, &final_chi2visphi, saved_x, saved_y,
-					       saved_params, niter, nwavr, final_params, final_params_std, reg_param, final_reg_value, prior_image, initial_x, initial_y, centroid_image_x,
-					       centroid_image_y, fov, cent_mult);
-
-			// Recompute all the regularizers, likelihood, prior & posterior probability
-			writeasfits(output_filename, final_image, nwavr, k, niter - burn_in_times[0] - 1,
-                        final_chi2/ndf, final_chi2v2, final_chi2t3amp, final_chi2t3phi, final_chi2visamp, final_chi2visphi,
-                        -1, nelements, reg_param, final_reg_value, niter, axis_len, ndf, tmin, chi2_temp, chi2_target,
-                        mas_pixel, nchains, 0, 0, init_filename, prior_filename, final_params, final_params_std);
-
-
-		} else // (minimization_engine == ENGINE_PARALLEL_TEMPERING)
-		{
-			// for(i = 0; i < nchains; i++)
-			//      {
-			//         printf("Chain: %ld\t temperature: %lf\t ChaintoStorage: %d Storage(%ld)toChain: %d\n", i, temperature[i], iChaintoStorage[i], i, iStoragetoChain[i]);
-			//     }
-
-			mcmc_tempering_results(output_filename, final_image, iStoragetoChain[0], nburned, nelements, axis_len, xtransform, ytransform, &final_chi2, saved_x, saved_y, saved_params, niter, nwavr);
-
-			double logZ_final = 0, logZ_final_err = 0.;
-
-			compute_logZ(temperature, iStoragetoChain, lLikelihood_expectation, lLikelihood_deviation, nchains, &logZ_final, &logZ_final_err);
-			printf("Output -- Final logZ: %f +/- %f\n", logZ_final, logZ_final_err);
-
-			writeasfits(output_filename, final_image, nwavr, k, niter - burn_in_times[0] - 1,
-                    final_chi2/ndf, final_chi2v2, final_chi2t3amp, final_chi2t3phi, final_chi2visamp, final_chi2visphi,
-                    -1, nelements, &reg_param[0], NULL, niter, axis_len, ndf,
-					tmin, chi2_temp, chi2_target, mas_pixel, nchains, logZ_final, logZ_final_err, init_filename, prior_filename, final_params,
-					final_params_std);
-		}
-
+		else // (minimization_engine == ENGINE_PARALLEL_TEMPERING)
+		  {
+		    // for(i = 0; i < nchains; i++)
+		    //      {
+		    //         printf("Chain: %ld\t temperature: %lf\t ChaintoStorage: %d Storage(%ld)toChain: %d\n", i, temperature[i], iChaintoStorage[i], i, iStoragetoChain[i]);
+		    //     }
+		    
+		    mcmc_tempering_results(output_filename, final_image, iStoragetoChain[0], nburned, nelements, axis_len, xtransform, ytransform, &final_chi2, saved_x, saved_y, saved_params, niter, nwavr);
+		    
+		    double logZ_final = 0, logZ_final_err = 0.;
+		    
+		    compute_logZ(temperature, iStoragetoChain, lLikelihood_expectation, lLikelihood_deviation, nchains, &logZ_final, &logZ_final_err);
+		    printf("Output -- Final logZ: %f +/- %f\n", logZ_final, logZ_final_err);
+		    
+		    writeasfits(output_filename, final_image, nwavr, k, niter - burn_in_times[0] - 1,
+				final_chi2/ndf, final_chi2v2, final_chi2t3amp, final_chi2t3phi, final_chi2visamp, final_chi2visphi,
+				-1, nelements, &reg_param[0], NULL, niter, axis_len, ndf,
+				tmin, chi2_temp, chi2_target, mas_pixel, nchains, logZ_final, logZ_final_err, init_filename, prior_filename, final_params,
+				final_params_std);
+		  }
+		
 		printf("Output -- Total number of realizations in final image: %ld\n", nburned);
 		printf("Output -- Global chi2r of final image:\t %lf \n", final_chi2/ndf);
-        if(nv2 > 0)
-            printf("Output -- chi2r V2   of final image:\t %lf \n", final_chi2v2);
-        if(nt3amp > 0)
-            printf("Output -- chi2r T3A  of final image:\t %lf \n", final_chi2t3amp);
-        if(nt3phi>0)
-            printf("Output -- chi2r T3P  of final image:\t %lf \n", final_chi2t3phi);
-        if(nvisamp>0)
-            printf("Output -- chi2r VISA of final image:\t %lf \n", final_chi2visamp);
+		if(nv2 > 0)
+		  printf("Output -- chi2r V2   of final image:\t %lf \n", final_chi2v2);
+		if(nt3amp > 0)
+		  printf("Output -- chi2r T3A  of final image:\t %lf \n", final_chi2t3amp);
+		if(nt3phi>0)
+		  printf("Output -- chi2r T3P  of final image:\t %lf \n", final_chi2t3phi);
+		if(nvisamp>0)
+		  printf("Output -- chi2r VISA of final image:\t %lf \n", final_chi2visamp);
 		if(nvisphi>0)
-            printf("Output -- chi2r VISP of final image:\t %lf \n", final_chi2visphi);
+		  printf("Output -- chi2r VISP of final image:\t %lf \n", final_chi2visphi);
 
 
 		if (lowest_lLikelihood < 1e99)
@@ -2003,7 +2007,7 @@ void mcmc_fullchain(char *file, long nchains, long niter, int nwavr, long neleme
 /***************************************************************/
 /* Fill an image from the saved_x and y, and a iframeburned vector */
 /****************************************************************/
-void mcmc_annealing_results(const char *file, double *final_image, const long *iframeburned, const long depth, const long nelements, const unsigned short axis_len,
+void mcmc_annealing_results(const char *file, double *final_image, const int nchains, const unsigned int *burn_in_times, const long depth, const long nelements, const unsigned short axis_len,
 			    const double complex * __restrict xtransform, const double complex * __restrict ytransform, double *final_chi2,
 			    double *chi2v2, double *chi2t3amp, double *chi2t3phi, double *chi2visamp, double *chi2visphi,
 			    const unsigned short *saved_x, const unsigned short *saved_y, const double *saved_params, const long niter,
@@ -2013,55 +2017,66 @@ void mcmc_annealing_results(const char *file, double *final_image, const long *i
 // This averages the image obtained by MCMC over the iterations and chains
 // the depth input should be the actual available depth, not the requested one
 {
-	int i, j, k, w;
+  int i, j, k, w, isaved;
 
+	//	printf("DEBUG MCMC results %ld\n", depth);
+	
 	//
 	// Compute annealed image
 	//
 
 	// Initialize image and parameters
 	for(i = 0; i < nwavr * axis_len * axis_len; i++)
-	final_image[i] = 0;
+	  final_image[i] = 0;
 
-	// (iframeburned[k] / niter) = chain number
-	// (iframeburned[k] % niter) = iteration number
-	for(k = 0; k < depth; k++)
-	{
+
+	int total_realizations = 0;
+	for(j=0; j<nchains;j++)
+	  total_realizations += niter- burn_in_times[j];
+
+	
+	for(j=0; j<nchains;j++)
+	  {
+	    for(k = burn_in_times[j]; k < niter; k++) // iteration number
+	      {
 		for(w = 0; w < nwavr; w++)
-		{
-			for(i = 0; i < nelements; i++)
-			{
-
-				final_image[w * axis_len * axis_len
-				+ saved_y[(iframeburned[k] / niter) * nwavr * nelements * niter + (iframeburned[k] % niter) * nwavr * nelements + w * nelements + i] * axis_len
-				+ saved_x[(iframeburned[k] / niter) * nwavr * nelements * niter + (iframeburned[k] % niter) * nwavr * nelements + w * nelements + i]] += 1.0 / (nelements * depth);
-
-				//printf("%d ", saved_x[ (iframeburned[k] / niter) * nwavr * nelements * niter + (iframeburned[k] % niter) * nwavr * nelements + w * nelements + i]);
-			}
-		}
-	}
-
+		  {
+		    for(i = 0; i < nelements; i++)
+		      {
+			isaved = j * niter * nwavr * nelements + k * nwavr * nelements + w * nelements + i;
+			final_image[w * axis_len * axis_len + saved_y[isaved] * axis_len + saved_x[isaved]] += 1.0/(nelements*total_realizations);
+		      }
+		  }
+	      }
+	  }
+		
 	//
 	// Compute annealed parametric model and errors
-	//
+	// tbd: MULTICHAINS ?
 
 	if(nparams > 0)
 	{
+	  for(i = 0; i < nparams; i++)
+	    {
+	      final_params[i] = 0;
+	      final_params_std[i] = 0;
+	    }
+	  
+	  int nacc=1;
+	  for(j=0; j<nchains;j++)
+	    for(k = burn_in_times[j]; k < niter; k++)
+	      for(i = 0; i < nparams; i++)
+		final_params[i] += saved_params[ (j * niter + k) * nparams + i];
 
-		for(j = 0; j < nparams; j++)
-		final_params[j] = 0;
+	  for(j=0; j<nchains;j++)
+	    for(k = burn_in_times[j]; k < niter; k++)
+	      for(i = 0; i < nparams; i++)
+		final_params_std[i] += (saved_params[ (j * niter + k) * nparams + i] - final_params[i])*(saved_params[ (j * niter + k) * nparams + i] - final_params[i]);
 
-		for(k = 0; k < depth; k++)
-		{
-			for(j = 0; j < nparams; j++)
-			final_params[j] += saved_params[iframeburned[k] * nparams + j];
-		}
-
-		for(j = 0; j < nparams; j++)
-		{
-			final_params[j] /= (double) depth;
-			final_params_std[j] = -1.;
-		}
+	  if(total_realizations > 1)
+	    final_params_std[i] /= (total_realizations-1);
+	  else
+	    final_params_std[i] = -1;
 	}
 
 	double complex *mod_vis = malloc(nuv * sizeof(double complex));
@@ -2069,11 +2084,10 @@ void mcmc_annealing_results(const char *file, double *final_image, const long *i
 	double complex *param_vis = malloc(nuv * sizeof(double complex));
 	double *final_fluxratio_image = malloc(nuv * sizeof(double));
 	double lPriorModel = 0;
-	compute_model_visibilities_fromimage(mod_vis, im_vis, param_vis, final_params,
-		                             final_fluxratio_image, final_image, xtransform, ytransform, &lPriorModel, nparams, nelements, axis_len);
+	compute_model_visibilities_fromimage(mod_vis, im_vis, param_vis, final_params, final_fluxratio_image, final_image, xtransform, ytransform, &lPriorModel, nparams, nelements, axis_len);
 
-	double *res = malloc((nv2 + nt3amp + nt3phi + nvisamp + nvisphi) * sizeof(double)); // current residuals
-	double *mod_obs = malloc((nv2 + nt3amp + nt3phi + nvisamp + nvisphi) * sizeof(double));// current observables
+	double *res     = malloc((nv2 + nt3amp + nt3phi + nvisamp + nvisphi) * sizeof(double)); // current residuals
+	double *mod_obs = malloc((nv2 + nt3amp + nt3phi + nvisamp + nvisphi) * sizeof(double)); // current observables
 	for(i = 0; i < (nv2 + nt3amp + nt3phi + nvisamp + nvisphi); i++)
 	{
 		res[i] = 0;
@@ -2082,16 +2096,16 @@ void mcmc_annealing_results(const char *file, double *final_image, const long *i
 	// compute chi2s on final image
 	compute_lLikelihood(final_chi2, mod_vis, res, mod_obs, chi2v2, chi2t3amp, chi2visamp, chi2t3phi, chi2visphi);
 	*final_chi2 *= 2.;
-    if(nv2>0)
-        *chi2v2 /= (double) nv2;
-    if(nt3amp>0)
-        *chi2t3amp /= (double) nt3amp;
-    if(nt3phi>0)
-        *chi2t3phi /= (double) nt3phi;
-    if(nvisamp>0)
-        *chi2visamp /= (double) nvisamp;
-    if(nvisphi>0)
-        *chi2visphi /= (double) nvisphi;
+	if(nv2>0)
+	  *chi2v2     /= (double) nv2;
+	if(nt3amp>0)
+	  *chi2t3amp  /= (double) nt3amp;
+	if(nt3phi>0)
+	  *chi2t3phi  /= (double) nt3phi;
+	if(nvisamp>0)
+	  *chi2visamp /= (double) nvisamp;
+	if(nvisphi>0)
+	  *chi2visphi /= (double) nvisphi;
 
 	// recompute regularizers on final image
 	compute_regularizers(reg_param, final_reg_value, final_image, prior_image, 1., initial_x, initial_y, nwavr, axis_len, nelements, centroid_image_x, centroid_image_y, fov, cent_mult);
@@ -2103,11 +2117,11 @@ void mcmc_annealing_results(const char *file, double *final_image, const long *i
 	fprintf(pFile, "%lf %lf %lf %lf\n", (double)nuv, (double)nv2 , (double)nt3amp , (double)nvisamp);
 	fprintf(pFile, "%lf %lf %lf %lf\n", (double)nt3phi , (double)nt3, (double)nvisphi, (double)nwavr);
 	for(i = 0; i < nuv; i++)
-	fprintf(pFile, "%lf %lf %lf %lf\n", u[i], v[i], uv_lambda[i] * 1E6, uv_dlambda[i] * 1E6);
+	  fprintf(pFile, "%lf %lf %lf %lf\n", u[i], v[i], uv_lambda[i] * 1E6, uv_dlambda[i] * 1E6);
 	for(i = 0; i < nt3; i++)
-	fprintf(pFile, "%lf %lf %lf %lf\n", (double)(t3in1[i]), (double)(t3in2[i]), (double)(t3in3[i]), 0.0);
+	  fprintf(pFile, "%lf %lf %lf %lf\n", (double)(t3in1[i]), (double)(t3in2[i]), (double)(t3in3[i]), 0.0);
 	for(i = 0; i < nv2 + nt3amp + nvisamp + nt3phi + nvisphi; i++)
-	fprintf(pFile, "%lf %lf %lf %lf\n", mod_obs[i], data[i], data_err[i], res[i]);
+	  fprintf(pFile, "%lf %lf %lf %lf\n", mod_obs[i], data[i], data_err[i], res[i]);
 	fclose(pFile);
 
 	free(res);
