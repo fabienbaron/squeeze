@@ -471,7 +471,7 @@ int main(int argc, char** argv) {
 			nwavp = 1;
 
 		if ((in_naxes[0] != in_naxes[1]) || (in_naxes[0] != axis_len)) {
-			printf("Prior image -- Dimensions do not match other settings.");
+			printf("Prior image -- Dimensions do not match other settings.\n");
 			reg_param[REG_PRIORIMAGE] = 0;
 		} else {
 			prior_image = malloc(nwavp * axis_len * axis_len * sizeof(double));
@@ -1598,7 +1598,7 @@ double residuals_to_chi2(const double *res, double *chi2v2, double *chi2t3amp, d
 }
 
 static inline double dewrap(double diff) //__attribute__((always_inline))
-		{
+{
 	if (diff < -M_PI)
 		diff += 2. * M_PI;
 	if (diff > M_PI)
@@ -1734,11 +1734,12 @@ int writeasfits(char *file, double *image, int nwavr, long depth, long min_elt, 
 
 	if (regpar != NULL) {
 
-		for (i = 0; i < NREGULS; i++) {
+		for (i = 0; i < NREGULS; i++)
+		  {
 			sprintf(param_string, "HYPER%1d", i);
 			fits_write_key_dbl(fptr, param_string, regpar[i], 3, "Hyperparameter value", &status);
 			printerror(status);
-		}
+		  }
 
 	}
 
@@ -2667,9 +2668,12 @@ void print_diagnostics(int iChain, long current_iter, long nvis, long nv2, long 
 			diagnostics_used += snprintf(diagnostics + diagnostics_used, 250 - diagnostics_used,
 			TEXT_COLOR_GREEN "T3P:%5.2f " TEXT_COLOR_BLACK, chi2t3phi);
 		if (nvisamp > 0)
-			diagnostics_used += snprintf(diagnostics + diagnostics_used, 250 - diagnostics_used, "VA:%5.2f ", chi2visamp);
+			diagnostics_used += snprintf(diagnostics + diagnostics_used, 250 - diagnostics_used,
+			TEXT_COLOR_CYAN "VA:%5.2f " TEXT_COLOR_BLACK, chi2visamp);
 		if (nvisphi > 0)
-			diagnostics_used += snprintf(diagnostics + diagnostics_used, 250 - diagnostics_used, "VP:%5.2f ", chi2visphi);
+			diagnostics_used += snprintf(diagnostics + diagnostics_used, 250 - diagnostics_used,
+			TEXT_COLOR_MAGENTA "VP:%5.2f " TEXT_COLOR_BLACK, chi2visphi);
+
 		if (reg_param[REG_PRIORIMAGE] > 0)
 			diagnostics_used += snprintf(diagnostics + diagnostics_used, 250 - diagnostics_used, "PRI:%5.2f ",
 					reg_param[REG_PRIORIMAGE] * reg_value[w * NREGULS + REG_PRIORIMAGE]);
