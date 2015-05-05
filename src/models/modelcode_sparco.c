@@ -3,11 +3,8 @@
    SQUEEZE 2 - Image reconstruction software for optical interferometry,
    based on Monte-Carlo Markov Chain algorithms.
 
-   Copyright (c) 2006-2013 Fabien Baron, John Monnier, Michael Ireland, Jacques Kluska
-
-   Based on MACIM written by Dr. Michael Ireland (Macquarie University) and
-   Pr. John Monnier (University of Michigan).
-   Also based on SQUEEZE 1.2 written by Pr. Fabien Baron (Georgia State University).
+   Copyright (c) 2006-2015 Fabien Baron, John Monnier, Michael Ireland
+   Copyright (c) 2012-2015 Jacques Kluska for SPARCO
 
    SQUEEZE is free software: you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
