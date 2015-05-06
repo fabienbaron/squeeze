@@ -2,7 +2,7 @@ using FITSIO
 using Tk
 using ImageView
 using Images
-fullchain_filename = "../fullchain.fits.gz"
+fullchain_filename = "../output_fullchain.fits.gz"
 f = FITS(fullchain_filename)
 data=read(f[1])
 

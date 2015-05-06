@@ -2019,7 +2019,6 @@ void mcmc_annealing_results(const char *file, double *final_image, const int nch
 {
   int i, j, k, w, isaved;
 
-	//	printf("DEBUG MCMC results %ld\n", depth);
 	
 	//
 	// Compute annealed image
@@ -2033,7 +2032,7 @@ void mcmc_annealing_results(const char *file, double *final_image, const int nch
 	for(j=0; j<nchains;j++)
 	  total_realizations += niter- burn_in_times[j];
 
-	printf("DEBUG total realizations %d\n", total_realizations);
+
 	for(j=0; j<nchains;j++)
 	  {
 	    for(k = burn_in_times[j]; k < niter; k++) // iteration number
@@ -2080,8 +2079,12 @@ void mcmc_annealing_results(const char *file, double *final_image, const int nch
 		final_params_std[i] = sqrt(final_params_std[i]/(double)(total_realizations-1));
 	      else
 		final_params_std[i] = -1;
-   	    }
 
+	  printf("Output -- Estimated parameter %d =\t%7.3e\t+/-\t%7.3e\n", i, final_params[i],final_params_std[i] );
+	    }
+
+
+	  
 	}
 	
 	double complex *mod_vis = malloc(nuv * sizeof(double complex));
