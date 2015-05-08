@@ -35,7 +35,9 @@ for t=0, nchains-1 do begin
    !x.margin = 0
    !y.margin = 0
    !z.margin = 0
+     
    for i = 0, niter-1 do image_cont_uv, sqrt(reform(images[*,*, 0, i, t])), /asp, /noc
+   
    meanim[t, *,*] = mean(reform(images[*,*, 0, 60:*, t]), dim=3)
    medim[t, *,*]=  median(reform(images[*,*, 0, 60:*, t]), dim=3)
 
@@ -44,15 +46,11 @@ for t=0, nchains-1 do begin
          modim[t, i, j] = mode(reform(images[i,j, 0, 60:*, t]))
       endfor
    endfor
-   
-;writefits, 'test.fits', reform(meanim[t, *,*])
-   ;print, imtochi2('./test.fits', '../eht/fabien_sample_1/data/celestial-01-05.oifits', pixel=0.0015)     
+
 endfor
-
-
-register_int, im1, im2, dx, dy, im3
-
-
+print, 'You can now look at the variables meanim, modim, medim'
+print, 'They contain the average/mode/median over the iterations'
 stop
+
 
 end
