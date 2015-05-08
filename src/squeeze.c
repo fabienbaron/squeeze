@@ -2106,7 +2106,7 @@ void mcmc_writeoutput(char *file_basename, double *image, const int nchains, con
     if(nvisphi>0)
         chi2visphi /= (double) nvisphi;
          
-    printf("Output -- %s Nframes: %d Chi2r: %lf ", file_basename, nrealizations, chi2/ndf);
+    printf("Output -- %s\tNframes: %d Chi2r: %lf ", file_basename, nrealizations, chi2/ndf);
       
      if (nv2 > 0)
       printf(TEXT_COLOR_RED "V2:%5.2f " TEXT_COLOR_BLACK, chi2v2);
@@ -2300,7 +2300,7 @@ char data_filename[200];
     {
         images_median = calloc(nchains * nwavr * axis_len * axis_len, sizeof(double));
         for (t = 0; t < nchains; t++)
-            for(i = 0; i < nwavr * axis_len * axis_len; i++)
+	{    for(i = 0; i < nwavr * axis_len * axis_len; i++)
                 images_median[t * nwavr * axis_len * axis_len + i] = median(&images[t * nwavr * axis_len * axis_len * niter + i*niter + burn_in_times[t]], niter-burn_in_times[t] );
    
 	  normalize_image(&images_median[t * nwavr * axis_len * axis_len], nwavr * axis_len * axis_len);
@@ -2308,6 +2308,8 @@ char data_filename[200];
 	      mcmc_writeoutput(data_filename, &images_median[t * nwavr * axis_len * axis_len], 1, niter-burn_in_times[t], &burn_in_times[t], depth, nelements, axis_len,xtransform,ytransform,
 		saved_x, saved_y, saved_params, niter, nwavr, final_params, final_params_std, reg_param, final_reg_value, prior_image, initial_x, initial_y,
                      centroid_image_x, centroid_image_y, fov, cent_mult, ndf, tmin, chi2_temp, chi2_target, mas_pixel, init_filename, prior_filename);
+    
+	}
     }
 
     // MODE over iterations
@@ -2315,7 +2317,8 @@ char data_filename[200];
     {
         images_mode = calloc(nchains * nwavr * axis_len * axis_len, sizeof(double));
         for (t = 0; t < nchains; t++)
-            for(i = 0; i < nwavr * axis_len * axis_len; i++)
+	{
+	  for(i = 0; i < nwavr * axis_len * axis_len; i++)
                    images_mode[t * nwavr * axis_len * axis_len + i] = mode(&images[t * nwavr * axis_len * axis_len * niter + i*niter + burn_in_times[t]], niter-burn_in_times[t] );
    
 	  normalize_image(&images_mode[t * nwavr * axis_len * axis_len], nwavr * axis_len * axis_len);
@@ -2323,7 +2326,7 @@ char data_filename[200];
 	      mcmc_writeoutput(data_filename, &images_mode[t * nwavr * axis_len * axis_len], 1, niter-burn_in_times[t], &burn_in_times[t], depth, nelements, axis_len,xtransform,ytransform,
 		saved_x, saved_y, saved_params, niter, nwavr, final_params, final_params_std, reg_param, final_reg_value, prior_image, initial_x, initial_y,
                      centroid_image_x, centroid_image_y, fov, cent_mult, ndf, tmin, chi2_temp, chi2_target, mas_pixel, init_filename, prior_filename);
-
+	}
     }
 
     // we dont need the 'images' array anymore
