@@ -2303,9 +2303,9 @@ char data_filename[200];
             for(i = 0; i < nwavr * axis_len * axis_len; i++)
                 images_median[t * nwavr * axis_len * axis_len + i] = median(&images[t * nwavr * axis_len * axis_len * niter + i*niter + burn_in_times[t]], niter-burn_in_times[t] );
    
-	  normalize_image(&images_mean[t * nwavr * axis_len * axis_len], nwavr * axis_len * axis_len);
+	  normalize_image(&images_median[t * nwavr * axis_len * axis_len], nwavr * axis_len * axis_len);
 	  sprintf(data_filename, "%s_MEDIAN_chain%d", file_basename, t);  
-	      mcmc_writeoutput(data_filename, &images_mean[t * nwavr * axis_len * axis_len], 1, niter-burn_in_times[t], &burn_in_times[t], depth, nelements, axis_len,xtransform,ytransform,
+	      mcmc_writeoutput(data_filename, &images_median[t * nwavr * axis_len * axis_len], 1, niter-burn_in_times[t], &burn_in_times[t], depth, nelements, axis_len,xtransform,ytransform,
 		saved_x, saved_y, saved_params, niter, nwavr, final_params, final_params_std, reg_param, final_reg_value, prior_image, initial_x, initial_y,
                      centroid_image_x, centroid_image_y, fov, cent_mult, ndf, tmin, chi2_temp, chi2_target, mas_pixel, init_filename, prior_filename);
     }
@@ -2318,9 +2318,9 @@ char data_filename[200];
             for(i = 0; i < nwavr * axis_len * axis_len; i++)
                    images_mode[t * nwavr * axis_len * axis_len + i] = mode(&images[t * nwavr * axis_len * axis_len * niter + i*niter + burn_in_times[t]], niter-burn_in_times[t] );
    
-	  normalize_image(&images_mean[t * nwavr * axis_len * axis_len], nwavr * axis_len * axis_len);
+	  normalize_image(&images_mode[t * nwavr * axis_len * axis_len], nwavr * axis_len * axis_len);
 	  sprintf(data_filename, "%s_MODE_chain%d", file_basename, t);  
-	      mcmc_writeoutput(data_filename, &images_mean[t * nwavr * axis_len * axis_len], 1, niter-burn_in_times[t], &burn_in_times[t], depth, nelements, axis_len,xtransform,ytransform,
+	      mcmc_writeoutput(data_filename, &images_mode[t * nwavr * axis_len * axis_len], 1, niter-burn_in_times[t], &burn_in_times[t], depth, nelements, axis_len,xtransform,ytransform,
 		saved_x, saved_y, saved_params, niter, nwavr, final_params, final_params_std, reg_param, final_reg_value, prior_image, initial_x, initial_y,
                      centroid_image_x, centroid_image_y, fov, cent_mult, ndf, tmin, chi2_temp, chi2_target, mas_pixel, init_filename, prior_filename);
 
