@@ -668,7 +668,8 @@ int import_single_epoch_oifits(char *filename, bool use_v2, bool use_t3amp, bool
   //
 
   long *nuv_chan = malloc(nwavr * sizeof(long)); // will store number of uv points in each wavelength channel
-  for (w = 0; w < nwavr; w++) nuv_chan[w] = 0;
+  for (w = 0; w < nwavr; w++)
+    nuv_chan[w] = 0;
   uvwav2chan = malloc(nuv * sizeof(double)) ;
   for (i = 0; i < nuv; i++)
   {
@@ -685,9 +686,7 @@ int import_single_epoch_oifits(char *filename, bool use_v2, bool use_t3amp, bool
 
     if (uvwav2chan[i] < 0)
     {
-      printf("Critical Error: uv point out of any waveband channels i:%ld uv_lambda[i]: %lf uvwav2chan[i]: %d\n",
-             i, uv_lambda[i] * 1e6, uvwav2chan[i]);
-      getchar();
+      printf("WARNING -- Discarded uv point outside of waveband channels: %ld at uv_lambda[i]: %le\n", i, uv_lambda[i]);
     }
   }
 

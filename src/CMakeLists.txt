@@ -19,8 +19,8 @@ else()
 endif()
 
 set(CMAKE_BUILD_TYPE release)
-#set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Ofast -march=native -mfpmath=sse -flto -ftree-vectorize -ggdb -fno-omit-frame-pointer")
-set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -g -fno-omit-frame-pointer -O2") #Note: valgrind chokes on march=native for some platforms
+set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Ofast -march=native -mfpmath=sse -flto -ftree-vectorize -ggdb -fno-omit-frame-pointer")
+#set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -g -fno-omit-frame-pointer -O2") #Note: valgrind chokes on march=native for some platforms
 
 file(GLOB SOURCE *.h squeeze.c free_fits.c read_fits.c)
 
