@@ -15,8 +15,10 @@
 #define L2L .28235290563031577122588448175013436025525412068e-12
 #define R_LN2 1.442695040888963407359924681001892137426645954152985934135449406931
 
-static inline int64_t doubleToRawLongBits(double d) {
-  union {
+static inline int64_t doubleToRawLongBits(double d)
+{
+  union
+  {
     double f;
     int64_t i;
   } tmp;
@@ -24,8 +26,10 @@ static inline int64_t doubleToRawLongBits(double d) {
   return tmp.i;
 }
 
-static inline double longBitsToDouble(int64_t i) {
-  union {
+static inline double longBitsToDouble(int64_t i)
+{
+  union
+  {
     double f;
     int64_t i;
   } tmp;
@@ -33,28 +37,53 @@ static inline double longBitsToDouble(int64_t i) {
   return tmp.f;
 }
 
-static inline double xfabs(double x) {
+static inline double xfabs(double x)
+{
   return longBitsToDouble(0x7fffffffffffffffLL & doubleToRawLongBits(x));
 }
 
-static inline double mulsign(double x, double y) {
+static inline double mulsign(double x, double y)
+{
   return longBitsToDouble(doubleToRawLongBits(x) ^ (doubleToRawLongBits(y) & (1LL << 63)));
 }
 
-static inline double sign(double d) { return mulsign(1, d); }
-static inline double mla(double x, double y, double z) { return x * y + z; }
-static inline double xrint(double x) { return x < 0 ? (int)(x - 0.5) : (int)(x + 0.5); }
+static inline double sign(double d)
+{
+  return mulsign(1, d);
+}
+static inline double mla(double x, double y, double z)
+{
+  return x * y + z;
+}
+static inline double xrint(double x)
+{
+  return x < 0 ? (int)(x - 0.5) : (int)(x + 0.5);
+}
 
-static inline int xisnan(double x) { return x != x; }
-static inline int xisinf(double x) { return x == INFINITY || x == -INFINITY; }
-static inline int xisminf(double x) { return x == -INFINITY; }
-static inline int xispinf(double x) { return x == INFINITY; }
+static inline int xisnan(double x)
+{
+  return x != x;
+}
+static inline int xisinf(double x)
+{
+  return x == INFINITY || x == -INFINITY;
+}
+static inline int xisminf(double x)
+{
+  return x == -INFINITY;
+}
+static inline int xispinf(double x)
+{
+  return x == INFINITY;
+}
 
-static inline double pow2i(int q) {
+static inline double pow2i(int q)
+{
   return longBitsToDouble(((int64_t)(q + 0x3ff)) << 52);
 }
 
-static inline double ldexpk(double x, int q) {
+static inline double ldexpk(double x, int q)
+{
   double u;
   int m;
   m = q >> 31;
@@ -71,7 +100,8 @@ static inline double ldexpk(double x, int q) {
 
 
 
-static inline int ilogbp1(double d) {
+static inline int ilogbp1(double d)
+{
   int m = d < 4.9090934652977266E-91;
   d = m ? 2.037035976334486E90 * d : d;
   int q = (doubleToRawLongBits(d) >> 52) & 0x7ff;
@@ -82,28 +112,34 @@ static inline int ilogbp1(double d) {
 
 //
 
-typedef struct {
+typedef struct
+{
   double x, y;
 } double2;
 
 #ifndef NDEBUG
-static int checkfp(double x) {
+static int checkfp(double x)
+{
   if (xisinf(x) || xisnan(x)) return 1;
   return 0;
 }
 #endif
 
-static inline double upper(double d) {
+static inline double upper(double d)
+{
   return longBitsToDouble(doubleToRawLongBits(d) & 0xfffffffff8000000LL);
 }
 
-static inline double2 dd(double h, double l) {
+static inline double2 dd(double h, double l)
+{
   double2 ret;
-  ret.x = h; ret.y = l;
+  ret.x = h;
+  ret.y = l;
   return ret;
 }
 
-static inline double2 ddnormalize_d2_d2(double2 t) {
+static inline double2 ddnormalize_d2_d2(double2 t)
+{
   double2 s;
 
   s.x = t.x + t.y;
@@ -112,7 +148,8 @@ static inline double2 ddnormalize_d2_d2(double2 t) {
   return s;
 }
 
-static inline double2 ddscale_d2_d2_d(double2 d, double s) {
+static inline double2 ddscale_d2_d2_d(double2 d, double s)
+{
   double2 r;
 
   r.x = d.x * s;
@@ -121,7 +158,8 @@ static inline double2 ddscale_d2_d2_d(double2 d, double s) {
   return r;
 }
 
-static inline double2 ddneg_d2_d2(double2 d) {
+static inline double2 ddneg_d2_d2(double2 d)
+{
   double2 r;
 
   r.x = -d.x;
@@ -130,7 +168,8 @@ static inline double2 ddneg_d2_d2(double2 d) {
   return r;
 }
 
-static inline double2 ddadd_d2_d_d(double x, double y) {
+static inline double2 ddadd_d2_d_d(double x, double y)
+{
   // |x| >= |y|
 
   double2 r;
@@ -145,7 +184,8 @@ static inline double2 ddadd_d2_d_d(double x, double y) {
   return r;
 }
 
-static inline double2 ddadd2_d2_d_d(double x, double y) {
+static inline double2 ddadd2_d2_d_d(double x, double y)
+{
   double2 r;
 
   r.x = x + y;
@@ -155,7 +195,8 @@ static inline double2 ddadd2_d2_d_d(double x, double y) {
   return r;
 }
 
-static inline double2 ddadd_d2_d2_d(double2 x, double y) {
+static inline double2 ddadd_d2_d2_d(double2 x, double y)
+{
   // |x| >= |y|
 
   double2 r;
@@ -170,7 +211,8 @@ static inline double2 ddadd_d2_d2_d(double2 x, double y) {
   return r;
 }
 
-static inline double2 ddadd2_d2_d2_d(double2 x, double y) {
+static inline double2 ddadd2_d2_d2_d(double2 x, double y)
+{
   // |x| >= |y|
 
   double2 r;
@@ -183,7 +225,8 @@ static inline double2 ddadd2_d2_d2_d(double2 x, double y) {
   return r;
 }
 
-static inline double2 ddadd_d2_d_d2(double x, double2 y) {
+static inline double2 ddadd_d2_d_d2(double x, double2 y)
+{
   // |x| >= |y|
 
   double2 r;
@@ -198,7 +241,8 @@ static inline double2 ddadd_d2_d_d2(double x, double2 y) {
   return r;
 }
 
-static inline double2 ddadd2_d2_d_d2(double x, double2 y) {
+static inline double2 ddadd2_d2_d_d2(double x, double2 y)
+{
   double2 r;
 
   r.x  = x + y.x;
@@ -208,7 +252,8 @@ static inline double2 ddadd2_d2_d_d2(double x, double2 y) {
   return r;
 }
 
-static inline double2 ddadd_d2_d2_d2(double2 x, double2 y) {
+static inline double2 ddadd_d2_d2_d2(double2 x, double2 y)
+{
   // |x| >= |y|
 
   double2 r;
@@ -223,7 +268,8 @@ static inline double2 ddadd_d2_d2_d2(double2 x, double2 y) {
   return r;
 }
 
-static inline double2 ddadd2_d2_d2_d2(double2 x, double2 y) {
+static inline double2 ddadd2_d2_d2_d2(double2 x, double2 y)
+{
   double2 r;
 
   r.x  = x.x + y.x;
@@ -234,7 +280,8 @@ static inline double2 ddadd2_d2_d2_d2(double2 x, double2 y) {
   return r;
 }
 
-static inline double2 ddsub_d2_d2_d2(double2 x, double2 y) {
+static inline double2 ddsub_d2_d2_d2(double2 x, double2 y)
+{
   // |x| >= |y|
 
   double2 r;
@@ -249,10 +296,11 @@ static inline double2 ddsub_d2_d2_d2(double2 x, double2 y) {
   return r;
 }
 
-static inline double2 dddiv_d2_d2_d2(double2 n, double2 d) {
+static inline double2 dddiv_d2_d2_d2(double2 n, double2 d)
+{
   double t = 1.0 / d.x;
   double dh  = upper(d.x), dl  = d.x - dh;
-  double th  = upper(t  ), tl  = t   - th;
+  double th  = upper(t), tl  = t   - th;
   double nhh = upper(n.x), nhl = n.x - nhh;
 
   double2 q;
@@ -260,14 +308,15 @@ static inline double2 dddiv_d2_d2_d2(double2 n, double2 d) {
   q.x = n.x * t;
 
   double u = -q.x + nhh * th + nhh * tl + nhl * th + nhl * tl +
-    q.x * (1 - dh * th - dh * tl - dl * th - dl * tl);
+             q.x * (1 - dh * th - dh * tl - dl * th - dl * tl);
 
   q.y = t * (n.y - q.x * d.y) + u;
 
   return q;
 }
 
-static inline double2 ddmul_d2_d_d(double x, double y) {
+static inline double2 ddmul_d2_d_d(double x, double y)
+{
   double xh = upper(x), xl = x - xh;
   double yh = upper(y), yl = y - yh;
   double2 r;
@@ -278,9 +327,10 @@ static inline double2 ddmul_d2_d_d(double x, double y) {
   return r;
 }
 
-static inline double2 ddmul_d2_d2_d(double2 x, double y) {
+static inline double2 ddmul_d2_d2_d(double2 x, double y)
+{
   double xh = upper(x.x), xl = x.x - xh;
-  double yh = upper(y  ), yl = y   - yh;
+  double yh = upper(y), yl = y   - yh;
   double2 r;
 
   r.x = x.x * y;
@@ -289,7 +339,8 @@ static inline double2 ddmul_d2_d2_d(double2 x, double y) {
   return r;
 }
 
-static inline double2 ddmul_d2_d2_d2(double2 x, double2 y) {
+static inline double2 ddmul_d2_d2_d2(double2 x, double2 y)
+{
   double xh = upper(x.x), xl = x.x - xh;
   double yh = upper(y.x), yl = y.x - yh;
   double2 r;
@@ -300,7 +351,8 @@ static inline double2 ddmul_d2_d2_d2(double2 x, double2 y) {
   return r;
 }
 
-static inline double2 ddsqu_d2_d2(double2 x) {
+static inline double2 ddsqu_d2_d2(double2 x)
+{
   double xh = upper(x.x), xl = x.x - xh;
   double2 r;
 
@@ -310,7 +362,8 @@ static inline double2 ddsqu_d2_d2(double2 x) {
   return r;
 }
 
-static inline double2 ddrec_d2_d(double d) {
+static inline double2 ddrec_d2_d(double d)
+{
   double t = 1.0 / d;
   double dh = upper(d), dl = d - dh;
   double th = upper(t), tl = t - th;
@@ -322,10 +375,11 @@ static inline double2 ddrec_d2_d(double d) {
   return q;
 }
 
-static inline double2 ddrec_d2_d2(double2 d) {
+static inline double2 ddrec_d2_d2(double2 d)
+{
   double t = 1.0 / d.x;
   double dh = upper(d.x), dl = d.x - dh;
-  double th = upper(t  ), tl = t   - th;
+  double th = upper(t), tl = t   - th;
   double2 q;
 
   q.x = t;
@@ -334,19 +388,31 @@ static inline double2 ddrec_d2_d2(double2 d) {
   return q;
 }
 
-static inline double2 ddsqrt_d2_d2(double2 d) {
+static inline double2 ddsqrt_d2_d2(double2 d)
+{
   double t = sqrt(d.x + d.y);
   return ddscale_d2_d2_d(ddmul_d2_d2_d2(ddadd2_d2_d2_d2(d, ddmul_d2_d_d(t, t)), ddrec_d2_d(t)), 0.5);
 }
 
 //
 
-static inline double atan2k(double y, double x) {
+static inline double atan2k(double y, double x)
+{
   double s, t, u;
   int q = 0;
 
-  if (x < 0) { x = -x; q = -2; }
-  if (y > x) { t = x; x = y; y = -t; q += 1; }
+  if (x < 0)
+  {
+    x = -x;
+    q = -2;
+  }
+  if (y > x)
+  {
+    t = x;
+    x = y;
+    y = -t;
+    q += 1;
+  }
 
   s = y / x;
   t = s * s;
@@ -372,36 +438,48 @@ static inline double atan2k(double y, double x) {
   u = u * t + (-0.333333333333311110369124);
 
   t = u * t * s + s;
-  t = q * (M_PI/2) + t;
+  t = q * (M_PI / 2) + t;
 
   return t;
 }
 
-double xatan2(double y, double x) {
+double xatan2(double y, double x)
+{
   double r = atan2k(xfabs(y), x);
 
   r = mulsign(r, x);
-  if (xisinf(x) || x == 0) r = M_PI/2 - (xisinf(x) ? (sign(x) * (M_PI  /2)) : 0);
-  if (xisinf(y)          ) r = M_PI/2 - (xisinf(x) ? (sign(x) * (M_PI*1/4)) : 0);
-  if (             y == 0) r = (sign(x) == -1 ? M_PI : 0);
+  if (xisinf(x) || x == 0) r = M_PI / 2 - (xisinf(x) ? (sign(x) * (M_PI  / 2)) : 0);
+  if (xisinf(y)) r = M_PI / 2 - (xisinf(x) ? (sign(x) * (M_PI * 1 / 4)) : 0);
+  if (y == 0) r = (sign(x) == -1 ? M_PI : 0);
 
   return xisnan(x) || xisnan(y) ? NAN : mulsign(r, y);
 }
 
-double xasin(double d) {
-  return mulsign(atan2k(xfabs(d), sqrt((1+d)*(1-d))), d);
+double xasin(double d)
+{
+  return mulsign(atan2k(xfabs(d), sqrt((1 + d) * (1 - d))), d);
 }
 
-double xacos(double d) {
-  return mulsign(atan2k(sqrt((1+d)*(1-d)), xfabs(d)), d) + (d < 0 ? M_PI : 0);
+double xacos(double d)
+{
+  return mulsign(atan2k(sqrt((1 + d) * (1 - d)), xfabs(d)), d) + (d < 0 ? M_PI : 0);
 }
 
-double xatan(double s) {
+double xatan(double s)
+{
   double t, u;
   int q = 0;
 
-  if (s < 0) { s = -s; q = 2; }
-  if (s > 1) { s = 1.0 / s; q |= 1; }
+  if (s < 0)
+  {
+    s = -s;
+    q = 2;
+  }
+  if (s > 1)
+  {
+    s = 1.0 / s;
+    q |= 1;
+  }
 
   t = s * s;
 
@@ -433,13 +511,26 @@ double xatan(double s) {
   return t;
 }
 
-static double2 atan2k_u1(double2 y, double2 x) {
+static double2 atan2k_u1(double2 y, double2 x)
+{
   double u;
   double2 s, t;
   int q = 0;
 
-  if (x.x < 0) { x.x = -x.x; x.y = -x.y; q = -2; }
-  if (y.x > x.x) { t = x; x = y; y.x = -t.x; y.y = -t.y; q += 1; }
+  if (x.x < 0)
+  {
+    x.x = -x.x;
+    x.y = -x.y;
+    q = -2;
+  }
+  if (y.x > x.x)
+  {
+    t = x;
+    x = y;
+    y.x = -t.x;
+    y.y = -t.y;
+    q += 1;
+  }
 
   s = dddiv_d2_d2_d2(y, x);
   t = ddsqu_d2_d2(s);
@@ -473,50 +564,55 @@ static double2 atan2k_u1(double2 y, double2 x) {
   return t;
 }
 
-double xatan2_u1(double y, double x) {
+double xatan2_u1(double y, double x)
+{
   double2 d = atan2k_u1(dd(xfabs(y), 0), dd(x, 0));
   double r = d.x + d.y;
 
   r = mulsign(r, x);
-  if (xisinf(x) || x == 0) r = M_PI/2 - (xisinf(x) ? (sign(x) * (M_PI  /2)) : 0);
-  if (xisinf(y)          ) r = M_PI/2 - (xisinf(x) ? (sign(x) * (M_PI*1/4)) : 0);
-  if (             y == 0) r = (sign(x) == -1 ? M_PI : 0);
+  if (xisinf(x) || x == 0) r = M_PI / 2 - (xisinf(x) ? (sign(x) * (M_PI  / 2)) : 0);
+  if (xisinf(y)) r = M_PI / 2 - (xisinf(x) ? (sign(x) * (M_PI * 1 / 4)) : 0);
+  if (y == 0) r = (sign(x) == -1 ? M_PI : 0);
 
   return xisnan(x) || xisnan(y) ? NAN : mulsign(r, y);
 }
 
-double xasin_u1(double d) {
-  double2 d2 = atan2k_u1(dd(xfabs(d), 0), ddsqrt_d2_d2(ddmul_d2_d2_d2(ddadd_d2_d_d(1, d), ddadd_d2_d_d(1,-d))));
+double xasin_u1(double d)
+{
+  double2 d2 = atan2k_u1(dd(xfabs(d), 0), ddsqrt_d2_d2(ddmul_d2_d2_d2(ddadd_d2_d_d(1, d), ddadd_d2_d_d(1, -d))));
   double r = d2.x + d2.y;
   if (xfabs(d) == 1) r = 1.570796326794896557998982;
   return mulsign(r, d);
 }
 
-double xacos_u1(double d) {
-  double2 d2 = atan2k_u1(ddsqrt_d2_d2(ddmul_d2_d2_d2(ddadd_d2_d_d(1, d), ddadd_d2_d_d(1,-d))), dd(xfabs(d), 0));
+double xacos_u1(double d)
+{
+  double2 d2 = atan2k_u1(ddsqrt_d2_d2(ddmul_d2_d2_d2(ddadd_d2_d_d(1, d), ddadd_d2_d_d(1, -d))), dd(xfabs(d), 0));
   d2 = ddscale_d2_d2_d(d2, mulsign(1, d));
   if (xfabs(d) == 1) d2 = dd(0, 0);
   if (d < 0) d2 = ddadd_d2_d2_d2(dd(3.141592653589793116, 1.2246467991473532072e-16), d2);
   return d2.x + d2.y;
 }
 
-double xatan_u1(double d) {
+double xatan_u1(double d)
+{
   double2 d2 = atan2k_u1(dd(xfabs(d), 0), dd(1, 0));
   double r = d2.x + d2.y;
   if (xisinf(d)) r = 1.570796326794896557998982;
   return mulsign(r, d);
 }
 
-double xsin(double d) {
+double xsin(double d)
+{
   int q;
   double u, s;
 
   q = (int)xrint(d * M_1_PI);
 
-  d = mla(q, -PI4_A*4, d);
-  d = mla(q, -PI4_B*4, d);
-  d = mla(q, -PI4_C*4, d);
-  d = mla(q, -PI4_D*4, d);
+  d = mla(q, -PI4_A * 4, d);
+  d = mla(q, -PI4_B * 4, d);
+  d = mla(q, -PI4_C * 4, d);
+  d = mla(q, -PI4_D * 4, d);
 
   s = d * d;
 
@@ -537,17 +633,18 @@ double xsin(double d) {
   return u;
 }
 
-double xsin_u1(double d) {
+double xsin_u1(double d)
+{
   int q;
   double u;
   double2 s, t, x;
 
   q = (int)xrint(d * M_1_PI);
 
-  s = ddadd2_d2_d_d(d, q * (-PI4_A*4));
-  s = ddadd2_d2_d2_d(s, q * (-PI4_B*4));
-  s = ddadd2_d2_d2_d(s, q * (-PI4_C*4));
-  s = ddadd2_d2_d2_d(s, q * (-PI4_D*4));
+  s = ddadd2_d2_d_d(d, q * (-PI4_A * 4));
+  s = ddadd2_d2_d2_d(s, q * (-PI4_B * 4));
+  s = ddadd2_d2_d2_d(s, q * (-PI4_C * 4));
+  s = ddadd2_d2_d2_d(s, q * (-PI4_D * 4));
 
   t = s;
   s = ddsqu_d2_d2(s);
@@ -570,16 +667,17 @@ double xsin_u1(double d) {
   return u;
 }
 
-double xcos(double d) {
+double xcos(double d)
+{
   int q;
   double u, s;
 
-  q = 1 + 2*(int)xrint(d * M_1_PI - 0.5);
+  q = 1 + 2 * (int)xrint(d * M_1_PI - 0.5);
 
-  d = mla(q, -PI4_A*2, d);
-  d = mla(q, -PI4_B*2, d);
-  d = mla(q, -PI4_C*2, d);
-  d = mla(q, -PI4_D*2, d);
+  d = mla(q, -PI4_A * 2, d);
+  d = mla(q, -PI4_B * 2, d);
+  d = mla(q, -PI4_C * 2, d);
+  d = mla(q, -PI4_D * 2, d);
 
   s = d * d;
 
@@ -600,7 +698,8 @@ double xcos(double d) {
   return u;
 }
 
-double xcos_u1(double d) {
+double xcos_u1(double d)
+{
   double u, q;
   double2 s, t, x;
 
@@ -608,10 +707,10 @@ double xcos_u1(double d) {
 
   q = mla(2, xrint(d * M_1_PI - 0.5), 1);
 
-  s = ddadd2_d2_d_d(d, q * (-PI4_A*2));
-  s = ddadd2_d2_d2_d(s, q * (-PI4_B*2));
-  s = ddadd2_d2_d2_d(s, q * (-PI4_C*2));
-  s = ddadd2_d2_d2_d(s, q * (-PI4_D*2));
+  s = ddadd2_d2_d_d(d, q * (-PI4_A * 2));
+  s = ddadd2_d2_d2_d(s, q * (-PI4_B * 2));
+  s = ddadd2_d2_d2_d(s, q * (-PI4_C * 2));
+  s = ddadd2_d2_d2_d(s, q * (-PI4_D * 2));
 
   t = s;
   s = ddsqu_d2_d2(s);
@@ -635,7 +734,8 @@ double xcos_u1(double d) {
   return u;
 }
 
-double2 xsincos(double d) {
+double2 xsincos(double d)
+{
   int q;
   double u, s, t;
   double2 r;
@@ -644,10 +744,10 @@ double2 xsincos(double d) {
 
   s = d;
 
-  s = mla(-q, PI4_A*2, s);
-  s = mla(-q, PI4_B*2, s);
-  s = mla(-q, PI4_C*2, s);
-  s = mla(-q, PI4_D*2, s);
+  s = mla(-q, PI4_A * 2, s);
+  s = mla(-q, PI4_B * 2, s);
+  s = mla(-q, PI4_C * 2, s);
+  s = mla(-q, PI4_D * 2, s);
 
   t = s;
 
@@ -673,26 +773,41 @@ double2 xsincos(double d) {
 
   r.y = u * s + 1;
 
-  if ((q & 1) != 0) { s = r.y; r.y = r.x; r.x = s; }
-  if ((q & 2) != 0) { r.x = -r.x; }
-  if (((q+1) & 2) != 0) { r.y = -r.y; }
+  if ((q & 1) != 0)
+  {
+    s = r.y;
+    r.y = r.x;
+    r.x = s;
+  }
+  if ((q & 2) != 0)
+  {
+    r.x = -r.x;
+  }
+  if (((q + 1) & 2) != 0)
+  {
+    r.y = -r.y;
+  }
 
-  if (xisinf(d)) { r.x = r.y = NAN; }
+  if (xisinf(d))
+  {
+    r.x = r.y = NAN;
+  }
 
   return r;
 }
 
-double2 xsincos_u1(double d) {
+double2 xsincos_u1(double d)
+{
   int q;
   double u;
   double2 r, s, t, x;
 
   q = (int)xrint(d * (2 * M_1_PI));
 
-  s = ddadd2_d2_d_d(d, q * (-PI4_A*2));
-  s = ddadd2_d2_d2_d(s, q * (-PI4_B*2));
-  s = ddadd2_d2_d2_d(s, q * (-PI4_C*2));
-  s = ddadd2_d2_d2_d(s, q * (-PI4_D*2));
+  s = ddadd2_d2_d_d(d, q * (-PI4_A * 2));
+  s = ddadd2_d2_d2_d(s, q * (-PI4_B * 2));
+  s = ddadd2_d2_d2_d(s, q * (-PI4_C * 2));
+  s = ddadd2_d2_d2_d(s, q * (-PI4_D * 2));
 
   t = s;
   s = ddsqu_d2_d2(s);
@@ -721,25 +836,40 @@ double2 xsincos_u1(double d) {
   x = ddadd_d2_d_d2(1, ddmul_d2_d_d(s.x, u));
   r.y = x.x + x.y;
 
-  if ((q & 1) != 0) { u = r.y; r.y = r.x; r.x = u; }
-  if ((q & 2) != 0) { r.x = -r.x; }
-  if (((q+1) & 2) != 0) { r.y = -r.y; }
+  if ((q & 1) != 0)
+  {
+    u = r.y;
+    r.y = r.x;
+    r.x = u;
+  }
+  if ((q & 2) != 0)
+  {
+    r.x = -r.x;
+  }
+  if (((q + 1) & 2) != 0)
+  {
+    r.y = -r.y;
+  }
 
-  if (xisinf(d)) { r.x = r.y = NAN; }
+  if (xisinf(d))
+  {
+    r.x = r.y = NAN;
+  }
 
   return r;
 }
 
-double xtan(double d) {
+double xtan(double d)
+{
   int q;
   double u, s, x;
 
   q = (int)xrint(d * (2 * M_1_PI));
 
-  x = mla(q, -PI4_A*2, d);
-  x = mla(q, -PI4_B*2, x);
-  x = mla(q, -PI4_C*2, x);
-  x = mla(q, -PI4_D*2, x);
+  x = mla(q, -PI4_A * 2, d);
+  x = mla(q, -PI4_B * 2, x);
+  x = mla(q, -PI4_C * 2, x);
+  x = mla(q, -PI4_D * 2, x);
 
   s = x * x;
 
@@ -770,17 +900,18 @@ double xtan(double d) {
   return u;
 }
 
-double xtan_u1(double d) {
+double xtan_u1(double d)
+{
   int q;
   double u;
   double2 s, t, x;
 
   q = (int)xrint(d * M_2_PI);
 
-  s = ddadd2_d2_d_d(d, q * (-PI4_A*2));
-  s = ddadd2_d2_d2_d(s, q * (-PI4_B*2));
-  s = ddadd2_d2_d2_d(s, q * (-PI4_C*2));
-  s = ddadd2_d2_d2_d(s, q * (-PI4_D*2));
+  s = ddadd2_d2_d_d(d, q * (-PI4_A * 2));
+  s = ddadd2_d2_d2_d(s, q * (-PI4_B * 2));
+  s = ddadd2_d2_d2_d(s, q * (-PI4_C * 2));
+  s = ddadd2_d2_d2_d(s, q * (-PI4_D * 2));
 
   if ((q & 1) != 0) s = ddneg_d2_d2(s);
 
@@ -812,14 +943,15 @@ double xtan_u1(double d) {
   return u;
 }
 
-double xlog(double d) {
+double xlog(double d)
+{
   double x, x2, t, m;
   int e;
 
   e = ilogbp1(d * 0.7071);
   m = ldexpk(d, -e);
 
-  x = (m-1) / (m+1);
+  x = (m - 1) / (m + 1);
   x2 = x * x;
 
   t = 0.148197055177935105296783;
@@ -840,7 +972,8 @@ double xlog(double d) {
   return x;
 }
 
-double xexp(double d) {
+double xexp(double d)
+{
   int q = (int)xrint(d * R_LN2);
   double s, u;
 
@@ -867,7 +1000,8 @@ double xexp(double d) {
   return u;
 }
 
-static inline double2 logk(double d) {
+static inline double2 logk(double d)
+{
   double2 x, x2;
   double m, t;
   int e;
@@ -888,10 +1022,11 @@ static inline double2 logk(double d) {
   t = mla(t, x2.x, 0.666666666666666371239645);
 
   return ddadd2_d2_d2_d2(ddmul_d2_d2_d(dd(0.693147180559945286226764, 2.319046813846299558417771e-17), e),
-			 ddadd2_d2_d2_d2(ddscale_d2_d2_d(x, 2), ddmul_d2_d2_d(ddmul_d2_d2_d2(x2, x), t)));
+                         ddadd2_d2_d2_d2(ddscale_d2_d2_d(x, 2), ddmul_d2_d2_d(ddmul_d2_d2_d2(x2, x), t)));
 }
 
-double xlog_u1(double d) {
+double xlog_u1(double d)
+{
   double2 s = logk(d);
   double x = s.x + s.y;
 
@@ -902,7 +1037,8 @@ double xlog_u1(double d) {
   return x;
 }
 
-static inline double expk(double2 d) {
+static inline double expk(double2 d)
+{
   int q = (int)xrint((d.x + d.y) * R_LN2);
   double2 s, t;
   double u;
@@ -929,14 +1065,15 @@ static inline double expk(double2 d) {
   return ldexpk(t.x + t.y, q);
 }
 
-double xpow(double x, double y) {
+double xpow(double x, double y)
+{
   int yisint = (int)y == y;
   int yisodd = (1 & (int)y) != 0 && yisint;
 
   double result = expk(ddmul_d2_d2_d(logk(xfabs(x)), y));
 
   result = xisnan(result) ? INFINITY : result;
-  result *=  (x >= 0 ? 1 : (!yisint ? NAN : (yisodd ? -1 : 1)));
+  result *= (x >= 0 ? 1 : (!yisint ? NAN : (yisodd ? -1 : 1)));
 
   double efx = mulsign(xfabs(x) - 1, y);
   if (xisinf(y)) result = efx < 0 ? 0.0 : (efx == 0 ? 1.0 : INFINITY);
@@ -947,7 +1084,8 @@ double xpow(double x, double y) {
   return result;
 }
 
-static inline double2 expk2(double2 d) {
+static inline double2 expk2(double2 d)
+{
   int q = (int)xrint((d.x + d.y) * R_LN2);
   double2 s, t;
   double u;
@@ -972,7 +1110,8 @@ static inline double2 expk2(double2 d) {
   return ddscale_d2_d2_d(t, pow2i(q));
 }
 
-double xsinh(double x) {
+double xsinh(double x)
+{
   double y = xfabs(x);
   double2 d = expk2(dd(y, 0));
   d = ddsub_d2_d2_d2(d, ddrec_d2_d2(d));
@@ -986,7 +1125,8 @@ double xsinh(double x) {
   return y;
 }
 
-double xcosh(double x) {
+double xcosh(double x)
+{
   double y = xfabs(x);
   double2 d = expk2(dd(y, 0));
   d = ddadd_d2_d2_d2(d, ddrec_d2_d2(d));
@@ -999,7 +1139,8 @@ double xcosh(double x) {
   return y;
 }
 
-double xtanh(double x) {
+double xtanh(double x)
+{
   double y = xfabs(x);
   double2 d = expk2(dd(y, 0));
   double2 e = ddrec_d2_d2(d);
@@ -1014,7 +1155,8 @@ double xtanh(double x) {
   return y;
 }
 
-static inline double2 logk2(double2 d) {
+static inline double2 logk2(double2 d)
+{
   double2 x, x2, m;
   double t;
   int e;
@@ -1035,10 +1177,11 @@ static inline double2 logk2(double2 d) {
   t = mla(t, x2.x, 0.666666666666666371239645);
 
   return ddadd2_d2_d2_d2(ddmul_d2_d2_d(dd(0.693147180559945286226764, 2.319046813846299558417771e-17), e),
-			 ddadd2_d2_d2_d2(ddscale_d2_d2_d(x, 2), ddmul_d2_d2_d(ddmul_d2_d2_d2(x2, x), t)));
+                         ddadd2_d2_d2_d2(ddscale_d2_d2_d(x, 2), ddmul_d2_d2_d(ddmul_d2_d2_d2(x2, x), t)));
 }
 
-double xasinh(double x) {
+double xasinh(double x)
+{
   double y = xfabs(x);
   double2 d = logk2(ddadd_d2_d2_d(ddsqrt_d2_d2(ddadd2_d2_d2_d(ddmul_d2_d_d(y, y),  1)), y));
   y = d.x + d.y;
@@ -1050,7 +1193,8 @@ double xasinh(double x) {
   return y;
 }
 
-double xacosh(double x) {
+double xacosh(double x)
+{
   double2 d = logk2(ddadd2_d2_d2_d(ddsqrt_d2_d2(ddadd2_d2_d2_d(ddmul_d2_d_d(x, x), -1)), x));
   double y = d.x + d.y;
 
@@ -1062,7 +1206,8 @@ double xacosh(double x) {
   return y;
 }
 
-double xatanh(double x) {
+double xatanh(double x)
+{
   double y = xfabs(x);
   double2 d = logk2(dddiv_d2_d2_d2(ddadd2_d2_d_d(1, y), ddadd2_d2_d_d(1, -y)));
   y = y > 1.0 ? NAN : (y == 1.0 ? INFINITY : (d.x + d.y) * 0.5);
@@ -1076,8 +1221,10 @@ double xatanh(double x) {
 
 //
 
-double xfma(double x, double y, double z) {
-  union {
+double xfma(double x, double y, double z)
+{
+  union
+  {
     double f;
     long long int i;
   } tmp;
@@ -1102,10 +1249,12 @@ double xfma(double x, double y, double z) {
   return h2 + l2;
 }
 
-double xsqrt(double d) { // max error : 0.5 ulp
+double xsqrt(double d)   // max error : 0.5 ulp
+{
   double q = 1;
 
-  if (d < 8.636168555094445E-78) {
+  if (d < 8.636168555094445E-78)
+  {
     d *= 1.157920892373162E77;
     q = 2.9387358770557188E-39;
   }
@@ -1123,7 +1272,8 @@ double xsqrt(double d) { // max error : 0.5 ulp
   return d == INFINITY ? INFINITY : x * q;
 }
 
-double xcbrt(double d) { // max error : 2 ulps
+double xcbrt(double d)   // max error : 2 ulps
+{
   double x, y, q = 1.0;
   int e, r;
 
@@ -1144,14 +1294,17 @@ double xcbrt(double d) { // max error : 2 ulps
   x = x * d + -3.85841935510444988821632;
   x = x * d + 2.2307275302496609725722;
 
-  y = x * x; y = y * y; x -= (d * y - x) * (1.0 / 3.0);
+  y = x * x;
+  y = y * y;
+  x -= (d * y - x) * (1.0 / 3.0);
   y = d * x * x;
   y = (y - (2.0 / 3.0) * y * (y * x - 1)) * q;
 
   return y;
 }
 
-double xcbrt_u1(double d) {
+double xcbrt_u1(double d)
+{
   double x, y, z;
   double2 q2 = dd(1, 0), u, v;
   int e, r;
@@ -1162,7 +1315,8 @@ double xcbrt_u1(double d) {
   q2 = (r == 1) ? dd(1.2599210498948731907, -2.5899333753005069177e-17) : q2;
   q2 = (r == 2) ? dd(1.5874010519681995834, -1.0869008194197822986e-16) : q2;
 
-  q2.x = mulsign(q2.x, d); q2.y = mulsign(q2.y, d);
+  q2.x = mulsign(q2.x, d);
+  q2.y = mulsign(q2.y, d);
   d = xfabs(d);
 
   x = -0.640245898480692909870982;
@@ -1172,7 +1326,9 @@ double xcbrt_u1(double d) {
   x = x * d + -3.85841935510444988821632;
   x = x * d + 2.2307275302496609725722;
 
-  y = x * x; y = y * y; x -= (d * y - x) * (1.0 / 3.0);
+  y = x * x;
+  y = y * y;
+  x -= (d * y - x) * (1.0 / 3.0);
 
   z = x;
 
@@ -1188,27 +1344,36 @@ double xcbrt_u1(double d) {
   v = ddmul_d2_d2_d2(v, q2);
   z = ldexp(v.x + v.y, (e + 6144) / 3 - 2048);
 
-  if (xisinf(d)) { z = mulsign(INFINITY, q2.x); }
-  if (d == 0) { z = mulsign(0, q2.x); }
+  if (xisinf(d))
+  {
+    z = mulsign(INFINITY, q2.x);
+  }
+  if (d == 0)
+  {
+    z = mulsign(0, q2.x);
+  }
 
   return z;
 }
 
-double xexp2(double a) {
+double xexp2(double a)
+{
   double u = expk(ddmul_d2_d2_d(dd(0.69314718055994528623, 2.3190468138462995584e-17), a));
   if (a > 1023) u = INFINITY;
   if (xisminf(a)) u = 0;
   return u;
 }
 
-double xexp10(double a) {
+double xexp10(double a)
+{
   double u = expk(ddmul_d2_d2_d(dd(2.3025850929940459011, -2.1707562233822493508e-16), a));
   if (a > 308) u = INFINITY;
   if (xisminf(a)) u = 0;
   return u;
 }
 
-double xexpm1(double a) {
+double xexpm1(double a)
+{
   double2 d = ddadd2_d2_d2_d(expk2(dd(a, 0)), -1.0);
   double x = d.x + d.y;
   if (a > 700) x = INFINITY;
@@ -1216,7 +1381,8 @@ double xexpm1(double a) {
   return x;
 }
 
-double xlog10(double a) {
+double xlog10(double a)
+{
   double2 d = ddmul_d2_d2_d2(logk(a), dd(0.43429448190325176116, 6.6494347733425473126e-17));
   double x = d.x + d.y;
 
@@ -1227,7 +1393,8 @@ double xlog10(double a) {
   return x;
 }
 
-double xlog1p(double a) {
+double xlog1p(double a)
+{
   double2 d = logk2(ddadd2_d2_d_d(a, 1));
   double x = d.x + d.y;
 
