@@ -24,7 +24,7 @@
  */
 
 
-#define SQUEEZE_VERSION 2.5
+#define SQUEEZE_VERSION 2.6
 
 // Minimization engines
 #define ENGINE_SIMULATED_ANNEALING 1
@@ -153,18 +153,14 @@ int writeasfits(const char *file_basename, double *image, int nwavr, long depth,
                 unsigned short axis_len, double ndf, double tmin, double chi2_temp, double chi2_target, double mas_pixel, int nchains, double logZ, double logZ_err,
                 char *init_filename, char *prior_filename, double *params, double *params_std);
 
-void mcmc_annealing_results(char *file_basename, const int nchains, const unsigned int *burn_in_times, const long depth, const long nelements, const unsigned short axis_len,
+void mcmc_results(int minimization_engine, char *file_basename, const int nchains, const unsigned int *burn_in_times, const long depth, const long nelements, const unsigned short axis_len,
                             const double complex *__restrict xtransform, const double complex *__restrict ytransform,
                             const unsigned short *saved_x, const unsigned short *saved_y, const double *saved_params, const long niter,
                             const int nwavr, double *final_params, double *final_params_std,
                             double *reg_param, double *final_reg_value, const double *prior_image, const unsigned short *initial_x, const unsigned short *initial_y,
-                            double *centroid_image_x, double *centroid_image_y, const double fov, const double cent_mult, const int ndf, double tmin, double chi2_temp, double chi2_target, double mas_pixel, char *init_filename, char *prior_filename);
+		            double *centroid_image_x, double *centroid_image_y, const double fov, const double cent_mult, const int ndf, double tmin, double chi2_temp,
+		            double chi2_target, double mas_pixel, char *init_filename, char *prior_filename, double logZ, double logZe);
 
-
-
-void mcmc_tempering_results(char *file, double *image, long lowtempthread, long depth, long nelements,
-                            unsigned short axis_len, double complex *__restrict xtransform, double complex *__restrict ytransform,
-                            double *mn_chi2, unsigned short *saved_x, unsigned short *saved_y, double *saved_params, long niter, int nchanr);
 
 void compute_logZ(const double *temperature , const unsigned short *iStoragetoThread, const double *lLikelihood_expectation, const double *lLikelihood_deviation, int nchains, double *logZ, double *logZ_err);
 

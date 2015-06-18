@@ -1,7 +1,7 @@
 pro plot_res, fitsfile = fitsfile, datafile = datafile, log = log
 device, decompose=0
-if(NOT(keyword_set(datafile))) then datafile = 'output.data'
-if(NOT(keyword_set(fitsfile))) then fitsfile = 'output.fits'
+if(NOT(keyword_set(datafile))) then datafile = '../output.data'
+if(NOT(keyword_set(fitsfile))) then fitsfile = '../output.fits'
 
 tab=readtab(datafile)
 
