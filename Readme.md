@@ -60,10 +60,12 @@ Before using the cmake command above, you will have to set the default
 cmake compiler to be the Macports one. If you use the bash shell:
 ```
 export CC=/opt/local/bin/gcc-mp-4.8
+export CXX=/opt/local/bin/g++-mp-4.8
 ```
 For tsch:
 ```
 setenv CC /opt/local/bin/gcc-mp-4.8
+setenv CXX /opt/local/bin/g++-mp-4.8
 ```
 
 If you are not sure which shell you have, you may type 'echo $SHELL'.
