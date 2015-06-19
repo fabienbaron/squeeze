@@ -96,13 +96,13 @@ Note: SQUEEZE help can be invoked by typing 'squeeze -h'.
 ```
 ./bin/squeeze ./sample_data/2004-data1.oifits -w 64 -s 0.2
 ```
-*    Parallel simulated annealing with 50 threads, starting from a random image for each thread
+*    Parallel simulated annealing with 50 chains, starting from a random image for each chain
 ```
-./bin/squeeze ./sample_data/2004-data1.oifits -w 64 -s 0.2 -threads 50 -i randomthr
+./bin/squeeze ./sample_data/2004-data1.oifits -w 64 -s 0.2 -chains 50 -i randomthr
 ```
-*    Parallel tempering with 100 threads and full MCMC chain output
+*    Parallel tempering with 100 chains and full MCMC chain output
 ```
-./bin/squeeze ./sample_data/2004-data1.oifits -w 64 -s 0.2 -threads 100 -tempering -fullchain
+./bin/squeeze ./sample_data/2004-data1.oifits -w 64 -s 0.2 -chains 100 -tempering -fullchain
 ```
 *    Polychromatic imaging, e.g. 3 channels (1.2 to 1.35 microns, 1.35-1.43 microns, and 1.6-1.8 microns).
 ```
@@ -117,20 +117,20 @@ Note: SQUEEZE help can be invoked by typing 'squeeze -h'.
 
 SQUEEZE includes several visualization tools for GDL and Python (requires Astropy). With these you can:
  
-* Follow monothread reconstructions as they run, seeing chi2 and regularizations evolve in real time. 
-* Follow multithreaded reconstruction as they run, checking for thread mixing for parallel tempering or for converge for simulated annealing. 
+* Follow single-chain reconstructions as they run, seeing chi2 and regularizations evolve in real time.
+* Follow multi-chain reconstruction as they run, checking for chain mixing for parallel tempering or for converge for simulated annealing. 
 * Analyze the full MCMC probability chain of a reconstruction. 
 * Plot the residuals of the reconstructions.
-
 
 To display and analyze the reconstruction process, a set of utilities
 has been developped in several interpreted languages (IDL/GDL, PYTHON, JULIA).
 
 * squeeze_display: displays the ongoing reconstruction (chi2 and regularizers,
-current image, previous final image)
+current image, previous final image). This requires using the option "-temporaryfits" in SQUEEZE to continuously write chain files. 
 
-* squeeze_threads: displays the ongoing reconstruction when using multiple
-threads, e.g. when using parallel tempering
+* squeeze_display_chains: displays the ongoing reconstruction when using multiple
+chains, e.g. when using parallel tempering. This requires using the option "-temporaryfits" in SQUEEZE to continuously write chain files. 
 
 * plot_res: displays the final reconstructed FITS image, as well as how well
 it fits the data. To be used after reconstruction.
+
