@@ -1,4 +1,4 @@
-# SQUEEZE 2.0 
+# SQUEEZE 2.6 
 
 ## 1. Introduction
 SQUEEZE is an image reconstruction for optical interferometry. It is designed to image complex astrophysical sources, while (optionally) modeling them simultaneously with analytic models. SQUEEZE is based on Markov Chain Monte-Carlo (MCMC) exploration of the imaging probability space, and reconstructs images and associated error bars from standard OIFITS data. SQUEEZE leverages the Open Multi-Processing (OpenMP) application programming interface to implement simulated annealing and parallel tempering, in the hope of avoiding the local minima better than classic gradient-based image reconstruction software. Another key difference is that SQUEEZE can reconstruct images using non-convex regularizers, e.g. the l0 norm for true compressed sensing.
@@ -75,7 +75,7 @@ If you are not sure which shell you have, you may type 'echo $SHELL'.
 
 First download the current git version of SQUEEZE using:
 ```
-git clone https://gitorious.org/squeeze/squeeze.git
+git clone https://github.com/fabienbaron/squeeze.git
 ```
 which will create a squeeze subdirectory and download the SQUEEZE source into it.
 Then install SQUEEZE by typing:
