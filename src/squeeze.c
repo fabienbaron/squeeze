@@ -1824,6 +1824,11 @@ int writeasfits(const char *file, double *image, int nwavr, long depth, long min
   if (fits_write_key_str(fptr, "CTYPE2", "DEC", "Name of Y-coordinate", &status))
     printerror(status);
 
+  //  if ( fits_write_key_str ( fptr, "CUNIT1", "mas", "Unit of X-coordinate", &status ) ) 
+  //  printerror ( status ); 
+  // if ( fits_write_key_str ( fptr, "CUNIT2", "mas", "Unit of Y-coordinate", &status ) )
+  // printerror ( status ); 
+  
   if (regpar != NULL)
   {
 
@@ -1850,13 +1855,8 @@ int writeasfits(const char *file, double *image, int nwavr, long depth, long min
     }
   }
 
-  /* if ( fits_write_key_str ( fptr, "CUNIT1", "mas", "Unit of X-coordinate",
-   *    &status ) ) */
-  /*   printerror ( status ); */
-  /* if ( fits_write_key_str ( fptr, "CUNIT2", "mas", "Unit of Y-coordinate",
-   *    &status ) ) */
-  /*   printerror ( status ); */
-  //  getchar();
+
+ 
   /* Write model parameters */
   if ((min_elt >= 0) && (nparams > 0))
   {
@@ -2188,8 +2188,7 @@ void mcmc_fullchain(char *file, long nchains, long niter, int nwavr, long neleme
 // then dump the info into .fits (+headers) and .data files
 //
 void mcmc_writeoutput(char *file_basename, double *image, const int nchains, const int nrealizations, const unsigned int *burn_in_times, const long depth, const long nelements, const unsigned short axis_len,
-                      const double complex *__restrict xtransform, const double complex *__restrict ytransform,
-                      const unsigned short *saved_x, const unsigned short *saved_y, const double *saved_params, const long niter,
+                      const double complex *__restrict xtransform, const double complex *__restrict ytransform, const unsigned short *saved_x, const unsigned short *saved_y, const double *saved_params, const long niter,
                       const int nwavr, double *params, double *params_std, double *reg_param, double *reg_value, const double *prior_image, const unsigned short *initial_x, const unsigned short *initial_y,
                       double *centroid_image_x, double *centroid_image_y, const double fov, const double cent_mult, const int ndf, double tmin, double chi2_temp, double chi2_target, double mas_pixel, char *init_filename, char *prior_filename,
 		      double logZ, double logZe)
@@ -2484,13 +2483,13 @@ void mcmc_results(int minimization_engine, char *file_basename, const int nchain
       if(nchains_eff < 2)
 	{
 	  sprintf(data_filename, "%s", file_basename);
-	  mcmc_writeoutput(data_filename, &images_mean[t * nwavr * axis_len * axis_len], 1, niter - burn_in_times[t], &burn_in_times[t], depth, nelements, axis_len, xtransform, ytransform,
+	  mcmc_writeoutput(data_filename, &images_mean[t * nwavr * axis_len * axis_len], nchains, niter - burn_in_times[t], &burn_in_times[t], depth, nelements, axis_len, xtransform, ytransform,
                        saved_x, saved_y, saved_params, niter, nwavr, final_params, final_params_std, reg_param, final_reg_value, prior_image, initial_x, initial_y,
 			   centroid_image_x, centroid_image_y, fov, cent_mult, ndf, tmin, chi2_temp, chi2_target, mas_pixel, init_filename, prior_filename, logZ, logZe);
 	}
 
       sprintf(data_filename, "%s_MEAN_chain%d", file_basename, t);
-      mcmc_writeoutput(data_filename, &images_mean[t * nwavr * axis_len * axis_len], 1, niter - burn_in_times[t], &burn_in_times[t], depth, nelements, axis_len, xtransform, ytransform,
+      mcmc_writeoutput(data_filename, &images_mean[t * nwavr * axis_len * axis_len], nchains, niter - burn_in_times[t], &burn_in_times[t], depth, nelements, axis_len, xtransform, ytransform,
                        saved_x, saved_y, saved_params, niter, nwavr, final_params, final_params_std, reg_param, final_reg_value, prior_image, initial_x, initial_y,
                        centroid_image_x, centroid_image_y, fov, cent_mult, ndf, tmin, chi2_temp, chi2_target, mas_pixel, init_filename, prior_filename, logZ, logZe);
 
@@ -2509,7 +2508,7 @@ void mcmc_results(int minimization_engine, char *file_basename, const int nchain
 
       normalize_image(&images_median[t * nwavr * axis_len * axis_len], nwavr * axis_len * axis_len);
       sprintf(data_filename, "%s_MEDIAN_chain%d", file_basename, t);
-      mcmc_writeoutput(data_filename, &images_median[t * nwavr * axis_len * axis_len], 1, niter - burn_in_times[t], &burn_in_times[t], depth, nelements, axis_len, xtransform, ytransform,
+      mcmc_writeoutput(data_filename, &images_median[t * nwavr * axis_len * axis_len], nchains, niter - burn_in_times[t], &burn_in_times[t], depth, nelements, axis_len, xtransform, ytransform,
                        saved_x, saved_y, saved_params, niter, nwavr, final_params, final_params_std, reg_param, final_reg_value, prior_image, initial_x, initial_y,
                        centroid_image_x, centroid_image_y, fov, cent_mult, ndf, tmin, chi2_temp, chi2_target, mas_pixel, init_filename, prior_filename,logZ, logZe) ;
 
@@ -2527,7 +2526,7 @@ void mcmc_results(int minimization_engine, char *file_basename, const int nchain
 
       normalize_image(&images_mode[t * nwavr * axis_len * axis_len], nwavr * axis_len * axis_len);
       sprintf(data_filename, "%s_MODE_chain%d", file_basename, t);
-      mcmc_writeoutput(data_filename, &images_mode[t * nwavr * axis_len * axis_len], 1, niter - burn_in_times[t], &burn_in_times[t], depth, nelements, axis_len, xtransform, ytransform,
+      mcmc_writeoutput(data_filename, &images_mode[t * nwavr * axis_len * axis_len], nchains, niter - burn_in_times[t], &burn_in_times[t], depth, nelements, axis_len, xtransform, ytransform,
                        saved_x, saved_y, saved_params, niter, nwavr, final_params, final_params_std, reg_param, final_reg_value, prior_image, initial_x, initial_y,
                        centroid_image_x, centroid_image_y, fov, cent_mult, ndf, tmin, chi2_temp, chi2_target, mas_pixel, init_filename, prior_filename, logZ, logZe);
     }
