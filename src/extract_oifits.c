@@ -204,7 +204,7 @@ int import_single_epoch_oifits(char *filename, bool use_v2, bool use_t3amp, bool
     {
       nt3 = nt3 + t3_table.numrec * t3_table.nwave;
       nt3_tables++;
-      // printf("Finding T3 Table %i. Total T3 Points %ld\n",nt3_tables,nt3);
+      //printf("T3 Table %i. Total T3 Points %ld\n",nt3_tables,nt3);
       free_oi_t3(&t3_table);
       read_next_oi_t3(fptr, &t3_table, &status);
     }
@@ -271,8 +271,10 @@ int import_single_epoch_oifits(char *filename, bool use_v2, bool use_t3amp, bool
     status2 = 0;
     fits_open_file(&fptr, filename, READONLY, &status);
     fits_open_file(&fptr2, filename, READONLY, &status2);
+    
     while (tempindex < nv2)
     {
+      // printf("OIFITS import -- Remaining V2 to import %ld\r", nv2);      
       read_next_oi_vis2(fptr, &vis2_table, &status);
       read_oi_wavelength(fptr2, vis2_table.insname, &wave, &status2);
       for (i = 0; i < vis2_table.numrec; i++)
@@ -348,6 +350,7 @@ int import_single_epoch_oifits(char *filename, bool use_v2, bool use_t3amp, bool
     {
       read_next_oi_t3(fptr, &t3_table, &status);
       read_oi_wavelength(fptr2, t3_table.insname, &wave, &status2);
+      //printf("OIFITS import -- Remaining T3 to import %ld\r", nt3);      
       for (i = 0; i < t3_table.numrec; i++)
       {
         for (j = 0; j < t3_table.nwave; j++)
@@ -482,6 +485,7 @@ int import_single_epoch_oifits(char *filename, bool use_v2, bool use_t3amp, bool
     {
       read_next_oi_vis(fptr, &vis_table, &status);
       read_oi_wavelength(fptr2, vis_table.insname, &wave, &status2);
+      // printf("OIFITS import -- Remaining VIS to import %ld\r", nvis);      
       for (i = 0; i < vis_table.numrec; i++)
       {
         uvindex0 = uvindex;
@@ -544,7 +548,7 @@ int import_single_epoch_oifits(char *filename, bool use_v2, bool use_t3amp, bool
           }
           else
           {
-            if ((use_visamp == TRUE) && (use_visphi == TRUE)) printf("OIFITS import -- Bad vis at tempindex %ld \n", tempindex);
+            if ((use_visamp == TRUE) && (use_visphi == TRUE)) printf("OIFITS import -- Bad vis at tempindex %ld -- visamp test: %d -- visphi test: %d \n", tempindex, valid_visamp, valid_visphi);
             nvis--;
           }
         }

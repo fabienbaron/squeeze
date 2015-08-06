@@ -44,7 +44,7 @@ available_tags=" CXX F77"
 
 # ### BEGIN LIBTOOL CONFIG
 
-# Libtool was configured on host voyager:
+# Libtool was configured on host baron-G73Jh:
 
 # Shell to use when invoking shell scripts.
 SHELL="/bin/bash"
@@ -147,7 +147,7 @@ pic_flag=" -fPIC -DPIC"
 pic_mode=default
 
 # What is the maximum length of a command?
-max_cmd_len=1572864
+max_cmd_len=3458764513820540925
 
 # Does compiler simultaneously support -c and -o options?
 compiler_c_o="yes"
@@ -329,10 +329,10 @@ variables_saved_for_relink="PATH LD_LIBRARY_PATH LD_RUN_PATH GCC_EXEC_PREFIX COM
 link_all_deplibs=unknown
 
 # Compile-time system search path for libraries
-sys_lib_search_path_spec="/usr/lib/gcc/x86_64-linux-gnu/4.9 /usr/lib/x86_64-linux-gnu /usr/lib /lib/x86_64-linux-gnu /lib /opt/intel/composer_xe_2015.3.187/compiler/lib/intel64 /opt/intel/composer_xe_2015.3.187/ipp/lib/intel64 /opt/intel/composer_xe_2015.3.187/mkl/lib/intel64 /opt/intel/composer_xe_2015.3.187/tbb/lib/intel64/gcc4.4"
+sys_lib_search_path_spec="/usr/lib/gcc/x86_64-linux-gnu/4.8 /usr/lib/x86_64-linux-gnu /usr/lib /lib/x86_64-linux-gnu /lib /opt/intel/composer_xe_2013_sp1.3.174/compiler/lib/intel64 /opt/intel/composer_xe_2013_sp1.3.174/mkl/lib/intel64"
 
 # Run-time system search path for libraries
-sys_lib_dlsearch_path_spec="/lib /usr/lib /usr/lib/x86_64-linux-gnu/libfakeroot /lib/i386-linux-gnu /usr/lib/i386-linux-gnu /lib/i686-linux-gnu /usr/lib/i686-linux-gnu /usr/local/lib /lib/x86_64-linux-gnu /usr/lib/x86_64-linux-gnu /usr/lib/x86_64-linux-gnu/mesa-egl /usr/lib/nvidia-346-updates /usr/lib32/nvidia-346-updates /usr/lib/x86_64-linux-gnu/mir/client8driver/mesa /lib32 /usr/lib32 /libx32 /usr/libx32 "
+sys_lib_dlsearch_path_spec="/lib /usr/lib /opt/AMDAPPSDK-2.9-1/lib/x86 /opt/AMDAPPSDK-2.9-1/lib/x86_64 /usr/lib/x86_64-linux-gnu/libfakeroot /lib/i386-linux-gnu /usr/lib/i386-linux-gnu /lib/i686-linux-gnu /usr/lib/i686-linux-gnu /usr/local/lib /lib/x86_64-linux-gnu /usr/lib/x86_64-linux-gnu /usr/lib/x86_64-linux-gnu/mesa-egl /usr/lib/fglrx /usr/lib32/fglrx /lib32 /usr/lib32 "
 
 # Fix the shell variable $srcfile for the compiler.
 fix_srcfile_path=""
@@ -7331,7 +7331,7 @@ disable_libs=static
 # End:
 # ### BEGIN LIBTOOL TAG CONFIG: CXX
 
-# Libtool was configured on host voyager:
+# Libtool was configured on host baron-G73Jh:
 
 # Shell to use when invoking shell scripts.
 SHELL="/bin/bash"
@@ -7434,7 +7434,7 @@ pic_flag=" -fPIC -DPIC"
 pic_mode=default
 
 # What is the maximum length of a command?
-max_cmd_len=1572864
+max_cmd_len=3458764513820540925
 
 # Does compiler simultaneously support -c and -o options?
 compiler_c_o="yes"
@@ -7513,11 +7513,11 @@ striplib="strip --strip-unneeded"
 
 # Dependencies to place before the objects being linked to create a
 # shared library.
-predep_objects="/usr/lib/gcc/x86_64-linux-gnu/4.9/../../../x86_64-linux-gnu/crti.o /usr/lib/gcc/x86_64-linux-gnu/4.9/crtbeginS.o"
+predep_objects="/usr/lib/gcc/x86_64-linux-gnu/4.8/../../../x86_64-linux-gnu/crti.o /usr/lib/gcc/x86_64-linux-gnu/4.8/crtbeginS.o"
 
 # Dependencies to place after the objects being linked to create a
 # shared library.
-postdep_objects="/usr/lib/gcc/x86_64-linux-gnu/4.9/crtendS.o /usr/lib/gcc/x86_64-linux-gnu/4.9/../../../x86_64-linux-gnu/crtn.o"
+postdep_objects="/usr/lib/gcc/x86_64-linux-gnu/4.8/crtendS.o /usr/lib/gcc/x86_64-linux-gnu/4.8/../../../x86_64-linux-gnu/crtn.o"
 
 # Dependencies to place before the objects being linked to create a
 # shared library.
@@ -7529,11 +7529,11 @@ postdeps="-lstdc++ -lm -lgcc_s -lc -lgcc_s"
 
 # The directories searched by this compiler when creating a shared
 # library
-compiler_lib_search_dirs="/usr/lib/gcc/x86_64-linux-gnu/4.9 /usr/lib/gcc/x86_64-linux-gnu/4.9/../../../x86_64-linux-gnu /usr/lib/gcc/x86_64-linux-gnu/4.9/../../../../lib /lib/x86_64-linux-gnu /lib/../lib /usr/lib/x86_64-linux-gnu /usr/lib/../lib /opt/intel/composer_xe_2015.3.187/compiler/lib/intel64 /opt/intel/composer_xe_2015.3.187/ipp/../compiler/lib/intel64 /opt/intel/composer_xe_2015.3.187/ipp/lib/intel64 /opt/intel/composer_xe_2015.3.187/compiler/lib/intel64 /opt/intel/composer_xe_2015.3.187/mkl/lib/intel64 /opt/intel/composer_xe_2015.3.187/tbb/lib/intel64/gcc4.4 /usr/lib/gcc/x86_64-linux-gnu/4.9/../../.."
+compiler_lib_search_dirs="/usr/lib/gcc/x86_64-linux-gnu/4.8 /usr/lib/gcc/x86_64-linux-gnu/4.8/../../../x86_64-linux-gnu /usr/lib/gcc/x86_64-linux-gnu/4.8/../../../../lib /lib/x86_64-linux-gnu /lib/../lib /usr/lib/x86_64-linux-gnu /usr/lib/../lib /opt/intel/composer_xe_2013_sp1.3.174/compiler/lib/intel64 /opt/intel/composer_xe_2013_sp1.3.174/compiler/lib/intel64 /opt/intel/composer_xe_2013_sp1.3.174/mkl/lib/intel64 /usr/lib/gcc/x86_64-linux-gnu/4.8/../../.."
 
 # The library search path used internally by the compiler when linking
 # a shared library.
-compiler_lib_search_path="-L/usr/lib/gcc/x86_64-linux-gnu/4.9 -L/usr/lib/gcc/x86_64-linux-gnu/4.9/../../../x86_64-linux-gnu -L/usr/lib/gcc/x86_64-linux-gnu/4.9/../../../../lib -L/lib/x86_64-linux-gnu -L/lib/../lib -L/usr/lib/x86_64-linux-gnu -L/usr/lib/../lib -L/opt/intel/composer_xe_2015.3.187/compiler/lib/intel64 -L/opt/intel/composer_xe_2015.3.187/ipp/../compiler/lib/intel64 -L/opt/intel/composer_xe_2015.3.187/ipp/lib/intel64 -L/opt/intel/composer_xe_2015.3.187/compiler/lib/intel64 -L/opt/intel/composer_xe_2015.3.187/mkl/lib/intel64 -L/opt/intel/composer_xe_2015.3.187/tbb/lib/intel64/gcc4.4 -L/usr/lib/gcc/x86_64-linux-gnu/4.9/../../.."
+compiler_lib_search_path="-L/usr/lib/gcc/x86_64-linux-gnu/4.8 -L/usr/lib/gcc/x86_64-linux-gnu/4.8/../../../x86_64-linux-gnu -L/usr/lib/gcc/x86_64-linux-gnu/4.8/../../../../lib -L/lib/x86_64-linux-gnu -L/lib/../lib -L/usr/lib/x86_64-linux-gnu -L/usr/lib/../lib -L/opt/intel/composer_xe_2013_sp1.3.174/compiler/lib/intel64 -L/opt/intel/composer_xe_2013_sp1.3.174/compiler/lib/intel64 -L/opt/intel/composer_xe_2013_sp1.3.174/mkl/lib/intel64 -L/usr/lib/gcc/x86_64-linux-gnu/4.8/../../.."
 
 # Method to check whether dependent libraries are shared objects.
 deplibs_check_method="pass_all"
@@ -7613,10 +7613,10 @@ variables_saved_for_relink="PATH LD_LIBRARY_PATH LD_RUN_PATH GCC_EXEC_PREFIX COM
 link_all_deplibs=unknown
 
 # Compile-time system search path for libraries
-sys_lib_search_path_spec="/usr/lib/gcc/x86_64-linux-gnu/4.9 /usr/lib/x86_64-linux-gnu /usr/lib /lib/x86_64-linux-gnu /lib /opt/intel/composer_xe_2015.3.187/compiler/lib/intel64 /opt/intel/composer_xe_2015.3.187/ipp/lib/intel64 /opt/intel/composer_xe_2015.3.187/mkl/lib/intel64 /opt/intel/composer_xe_2015.3.187/tbb/lib/intel64/gcc4.4"
+sys_lib_search_path_spec="/usr/lib/gcc/x86_64-linux-gnu/4.8 /usr/lib/x86_64-linux-gnu /usr/lib /lib/x86_64-linux-gnu /lib /opt/intel/composer_xe_2013_sp1.3.174/compiler/lib/intel64 /opt/intel/composer_xe_2013_sp1.3.174/mkl/lib/intel64"
 
 # Run-time system search path for libraries
-sys_lib_dlsearch_path_spec="/lib /usr/lib /usr/lib/x86_64-linux-gnu/libfakeroot /lib/i386-linux-gnu /usr/lib/i386-linux-gnu /lib/i686-linux-gnu /usr/lib/i686-linux-gnu /usr/local/lib /lib/x86_64-linux-gnu /usr/lib/x86_64-linux-gnu /usr/lib/x86_64-linux-gnu/mesa-egl /usr/lib/nvidia-346-updates /usr/lib32/nvidia-346-updates /usr/lib/x86_64-linux-gnu/mir/client8driver/mesa /lib32 /usr/lib32 /libx32 /usr/libx32 "
+sys_lib_dlsearch_path_spec="/lib /usr/lib /opt/AMDAPPSDK-2.9-1/lib/x86 /opt/AMDAPPSDK-2.9-1/lib/x86_64 /usr/lib/x86_64-linux-gnu/libfakeroot /lib/i386-linux-gnu /usr/lib/i386-linux-gnu /lib/i686-linux-gnu /usr/lib/i686-linux-gnu /usr/local/lib /lib/x86_64-linux-gnu /usr/lib/x86_64-linux-gnu /usr/lib/x86_64-linux-gnu/mesa-egl /usr/lib/fglrx /usr/lib32/fglrx /lib32 /usr/lib32 "
 
 # Fix the shell variable $srcfile for the compiler.
 fix_srcfile_path=""
@@ -7640,7 +7640,7 @@ include_expsyms=""
 
 # ### BEGIN LIBTOOL TAG CONFIG: F77
 
-# Libtool was configured on host voyager:
+# Libtool was configured on host baron-G73Jh:
 
 # Shell to use when invoking shell scripts.
 SHELL="/bin/bash"
@@ -7684,7 +7684,7 @@ LTCC="gcc"
 LTCFLAGS="-g -O2"
 
 # A language-specific compiler.
-CC="f77"
+CC="gfortran"
 
 # Is the compiler the GNU C compiler?
 with_gcc=yes
@@ -7743,7 +7743,7 @@ pic_flag=" -fPIC"
 pic_mode=default
 
 # What is the maximum length of a command?
-max_cmd_len=1572864
+max_cmd_len=3458764513820540925
 
 # Does compiler simultaneously support -c and -o options?
 compiler_c_o="yes"
@@ -7925,10 +7925,10 @@ variables_saved_for_relink="PATH LD_LIBRARY_PATH LD_RUN_PATH GCC_EXEC_PREFIX COM
 link_all_deplibs=unknown
 
 # Compile-time system search path for libraries
-sys_lib_search_path_spec="/usr/lib/gcc/x86_64-linux-gnu/4.9 /usr/lib/x86_64-linux-gnu /usr/lib /lib/x86_64-linux-gnu /lib /opt/intel/composer_xe_2015.3.187/compiler/lib/intel64 /opt/intel/composer_xe_2015.3.187/ipp/lib/intel64 /opt/intel/composer_xe_2015.3.187/mkl/lib/intel64 /opt/intel/composer_xe_2015.3.187/tbb/lib/intel64/gcc4.4"
+sys_lib_search_path_spec="/usr/lib/gcc/x86_64-linux-gnu/4.8 /usr/lib/x86_64-linux-gnu /usr/lib /lib/x86_64-linux-gnu /lib /opt/intel/composer_xe_2013_sp1.3.174/compiler/lib/intel64 /opt/intel/composer_xe_2013_sp1.3.174/mkl/lib/intel64"
 
 # Run-time system search path for libraries
-sys_lib_dlsearch_path_spec="/lib /usr/lib /usr/lib/x86_64-linux-gnu/libfakeroot /lib/i386-linux-gnu /usr/lib/i386-linux-gnu /lib/i686-linux-gnu /usr/lib/i686-linux-gnu /usr/local/lib /lib/x86_64-linux-gnu /usr/lib/x86_64-linux-gnu /usr/lib/x86_64-linux-gnu/mesa-egl /usr/lib/nvidia-346-updates /usr/lib32/nvidia-346-updates /usr/lib/x86_64-linux-gnu/mir/client8driver/mesa /lib32 /usr/lib32 /libx32 /usr/libx32 "
+sys_lib_dlsearch_path_spec="/lib /usr/lib /opt/AMDAPPSDK-2.9-1/lib/x86 /opt/AMDAPPSDK-2.9-1/lib/x86_64 /usr/lib/x86_64-linux-gnu/libfakeroot /lib/i386-linux-gnu /usr/lib/i386-linux-gnu /lib/i686-linux-gnu /usr/lib/i686-linux-gnu /usr/local/lib /lib/x86_64-linux-gnu /usr/lib/x86_64-linux-gnu /usr/lib/x86_64-linux-gnu/mesa-egl /usr/lib/fglrx /usr/lib32/fglrx /lib32 /usr/lib32 "
 
 # Fix the shell variable $srcfile for the compiler.
 fix_srcfile_path=""

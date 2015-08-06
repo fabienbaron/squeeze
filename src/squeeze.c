@@ -3038,7 +3038,8 @@ void print_diagnostics(int iChain, long current_iter, long nvis, long nv2, long 
   // Note: current_iter = i / (nwavr * nelements) + 1
 
   long w, j;
-  char diagnostics[250];
+  const int maxlength = 400;
+  char diagnostics[maxlength];
   int diagnostics_used = 0;
 
   /* Print output to screen (or wherever stdout is piped to) */
@@ -3059,56 +3060,56 @@ void print_diagnostics(int iChain, long current_iter, long nvis, long nv2, long 
   {
 
     if (nwavr > 1)
-      diagnostics_used = snprintf(diagnostics, 250, "Chain: %d Chan: %ld lPost:%8.1f lPrior:%8.1f lLike:%9.1f ", iChain, w, lPosterior, lPrior,
+      diagnostics_used = snprintf(diagnostics, maxlength, "Chain: %d Chan: %ld lPost:%8.1f lPrior:%8.1f lLike:%9.1f ", iChain, w, lPosterior, lPrior,
                                   lLikelihood);
     else
-      diagnostics_used = snprintf(diagnostics, 250, "Chain: %d lPost:%8.1f lPrior:%8.1f lLike:%9.1f ", iChain, lPosterior, lPrior, lLikelihood);
+      diagnostics_used = snprintf(diagnostics, maxlength, "Chain: %d lPost:%8.1f lPrior:%8.1f lLike:%9.1f ", iChain, lPosterior, lPrior, lLikelihood);
 
     if (nv2 > 0)
-      diagnostics_used += snprintf(diagnostics + diagnostics_used, 250 - diagnostics_used,
+      diagnostics_used += snprintf(diagnostics + diagnostics_used, maxlength - diagnostics_used,
                                    TEXT_COLOR_RED "V2:%5.2f " TEXT_COLOR_BLACK, chi2v2);
     if (nt3amp > 0)
-      diagnostics_used += snprintf(diagnostics + diagnostics_used, 250 - diagnostics_used,
+      diagnostics_used += snprintf(diagnostics + diagnostics_used, maxlength - diagnostics_used,
                                    TEXT_COLOR_BLUE "T3A:%5.2f " TEXT_COLOR_BLACK, chi2t3amp);
     if (nt3phi > 0)
-      diagnostics_used += snprintf(diagnostics + diagnostics_used, 250 - diagnostics_used,
+      diagnostics_used += snprintf(diagnostics + diagnostics_used, maxlength - diagnostics_used,
                                    TEXT_COLOR_GREEN "T3P:%5.2f " TEXT_COLOR_BLACK, chi2t3phi);
     if (nvisamp > 0)
-      diagnostics_used += snprintf(diagnostics + diagnostics_used, 250 - diagnostics_used,
+      diagnostics_used += snprintf(diagnostics + diagnostics_used, maxlength - diagnostics_used,
                                    TEXT_COLOR_CYAN "VA:%5.2f " TEXT_COLOR_BLACK, chi2visamp);
     if (nvisphi > 0)
-      diagnostics_used += snprintf(diagnostics + diagnostics_used, 250 - diagnostics_used,
+      diagnostics_used += snprintf(diagnostics + diagnostics_used, maxlength - diagnostics_used,
                                    TEXT_COLOR_MAGENTA "VP:%5.2f " TEXT_COLOR_BLACK, chi2visphi);
 
     if (reg_param[REG_PRIORIMAGE] > 0)
-      diagnostics_used += snprintf(diagnostics + diagnostics_used, 250 - diagnostics_used, "PRI:%5.2f ",
+      diagnostics_used += snprintf(diagnostics + diagnostics_used, maxlength - diagnostics_used, "PRI:%5.2f ",
                                    reg_param[REG_PRIORIMAGE] * reg_value[w * NREGULS + REG_PRIORIMAGE]);
     if (reg_param[REG_ENTROPY] > 0)
-      diagnostics_used += snprintf(diagnostics + diagnostics_used, 250 - diagnostics_used, "ENT:%5.2f ",
+      diagnostics_used += snprintf(diagnostics + diagnostics_used, maxlength - diagnostics_used, "ENT:%5.2f ",
                                    reg_param[REG_ENTROPY] * reg_value[w * NREGULS + REG_ENTROPY]);
     if (reg_param[REG_DARKENERGY] > 0)
-      diagnostics_used += snprintf(diagnostics + diagnostics_used, 250 - diagnostics_used, "DEN:%5.2f ",
+      diagnostics_used += snprintf(diagnostics + diagnostics_used, maxlength - diagnostics_used, "DEN:%5.2f ",
                                    reg_param[REG_DARKENERGY] * reg_value[w * NREGULS + REG_DARKENERGY]);
     if (reg_param[REG_SPOT] > 0)
-      diagnostics_used += snprintf(diagnostics + diagnostics_used, 250 - diagnostics_used, "UD:%5.2f ",
+      diagnostics_used += snprintf(diagnostics + diagnostics_used, maxlength - diagnostics_used, "UD:%5.2f ",
                                    reg_param[REG_SPOT] * reg_value[w * NREGULS + REG_SPOT]);
     if (reg_param[REG_TV] > 0)
-      diagnostics_used += snprintf(diagnostics + diagnostics_used, 250 - diagnostics_used, "TV:%5.2f ",
+      diagnostics_used += snprintf(diagnostics + diagnostics_used, maxlength - diagnostics_used, "TV:%5.2f ",
                                    reg_param[REG_TV] * reg_value[w * NREGULS + REG_TV]);
     if (reg_param[REG_LAP] > 0)
-      diagnostics_used += snprintf(diagnostics + diagnostics_used, 250 - diagnostics_used, "LAP:%5.2f ",
+      diagnostics_used += snprintf(diagnostics + diagnostics_used, maxlength - diagnostics_used, "LAP:%5.2f ",
                                    reg_param[REG_LAP] * reg_value[w * NREGULS + REG_LAP]);
     if (reg_param[REG_L0] > 0)
-      diagnostics_used += snprintf(diagnostics + diagnostics_used, 250 - diagnostics_used, "L0:%5.2f ",
+      diagnostics_used += snprintf(diagnostics + diagnostics_used, maxlength - diagnostics_used, "L0:%5.2f ",
                                    reg_param[REG_L0] * reg_value[w * NREGULS + REG_L0]);
     if (reg_param[REG_TRANSPECL2] > 0)
-      diagnostics_used += snprintf(diagnostics + diagnostics_used, 250 - diagnostics_used, "TS:%5.2f ",
+      diagnostics_used += snprintf(diagnostics + diagnostics_used, maxlength - diagnostics_used, "TS:%5.2f ",
                                    reg_param[REG_TRANSPECL2] * reg_value[REG_TRANSPECL2]);
     if (reg_param[REG_CENTERING] > 0)
-      diagnostics_used += snprintf(diagnostics + diagnostics_used, 250 - diagnostics_used, "C:%5.1f XY:(%5.2f,%5.2f) ",
+      diagnostics_used += snprintf(diagnostics + diagnostics_used, maxlength - diagnostics_used, "C:%5.1f XY:(%5.2f,%5.2f) ",
                                    reg_param[REG_CENTERING] * reg_value[w * NREGULS + REG_CENTERING], centroid_image_x[w] / nelements, centroid_image_y[w] / nelements);
 
-    diagnostics_used += snprintf(diagnostics + diagnostics_used, 250 - diagnostics_used, "E: %5ld MPr: %4.2f T: %5.2f Iter: %4ld of %4ld", nelements,
+    diagnostics_used += snprintf(diagnostics + diagnostics_used, maxlength - diagnostics_used, "E: %5ld MPr: %4.2f T: %5.2f Iter: %4ld of %4ld", nelements,
                                  prob_movement, temperature[iChain], current_iter, niter);
 
     puts(diagnostics);
