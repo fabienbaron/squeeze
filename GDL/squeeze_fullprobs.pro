@@ -1,7 +1,9 @@
 ; note: temperatures are only useful for parallel tempering
 ;
 ;
-pro squeeze_fullprobs, file
+pro squeeze_fullprobs, file =file
+
+if not(keyword_set(file)) then file = '../output.fullprobs'
 device, decomposed=0
 plotsym, 0, /fill
 file = read_csv(file)

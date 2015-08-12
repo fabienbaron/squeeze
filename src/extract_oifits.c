@@ -89,6 +89,20 @@ double wrappednormal_to_vonmises(double var)
 */
 // END OF GSL REQUIREMENT
 
+void find_vec_minmax(double* output_min, double *output_max, double* vec, long N)
+{
+  double min=0;
+  double max=0;
+  for(long i=0; i<N;i++)
+    {
+      if (vec[i] > max)
+	max = vec[i];
+      if ((vec[i] < min)||(i==0))
+	min = vec[i];
+    }
+  *output_min = min;
+  *output_max = max;
+}
 
 
 void add_new_uv(long *obs_index, long *uvindex, double new_u, double new_v, double new_uv_lambda, double new_uv_dlambda, double new_uv_time, double *table_u, double *table_v, double *table_uv_lambda, double *table_uv_dlambda, double *table_uv_time, double uvtol);
@@ -632,15 +646,8 @@ int import_single_epoch_oifits(char *filename, bool use_v2, bool use_t3amp, bool
   // Check for smallest/largest wavelength
   //
 
-  double minwav = 0;
-  double maxwav = 0;
-  for (i = 0; i < nuv; i++)
-  {
-    if (uv_lambda[i] > maxwav)
-      maxwav = uv_lambda[i];
-    if ((i == 0) || (uv_lambda[i] < minwav))
-      minwav = uv_lambda[i];
-  }
+  double minwav, maxwav;
+  find_vec_minmax(&minwav, &maxwav, uv_lambda, nuv);
   printf("OIFITS import -- Wavelength range:\t%lf - %lf um\n", minwav * 1e6, maxwav * 1e6);
 
   if (nwavr == 1)
@@ -650,15 +657,8 @@ int import_single_epoch_oifits(char *filename, bool use_v2, bool use_t3amp, bool
   }
 
 
-  double mintime = 0;
-  double maxtime = 0;
-  for (i = 0; i < nuv; i++)
-  {
-    if (uv_time[i] > maxtime)
-      maxtime = uv_time[i];
-    if ((i == 0) || (uv_time[i] < mintime))
-      mintime = uv_time[i];
-  }
+  double mintime, maxtime;
+  find_vec_minmax(&mintime, &maxtime, uv_time, nuv);
   printf("OIFITS import -- MJD range:\t%lf - %lf \n", mintime, maxtime);
 
   if (ntimer == 1)
@@ -696,7 +696,7 @@ int import_single_epoch_oifits(char *filename, bool use_v2, bool use_t3amp, bool
 
   for (w = 0; w < nwavr; w++)
   {
-    printf("OIFITS import -- Channel: %ld (%lf - %lf um), Number of uv points: %ld\n", w, wavmin[w] * 1e6, wavmax[w] * 1e6, nuv_chan[w]);
+    printf("OIFITS import -- Channel: %ld (%lf - %lf um) has %ld uv points\n", w, wavmin[w] * 1e6, wavmax[w] * 1e6, nuv_chan[w]);
     if (nuv_chan[w] == 0)
     {
       printf("OIFITS import -- No data in channel %ld\n", w);
@@ -858,15 +858,19 @@ void add_new_uv(long *obs_index, long *uvindex, double new_u, double new_v, doub
   // First check for redundancy
   long i;
   long redundant_index = -1;
+  
   for (i = 0; i < *uvindex; i++)
   {
-    if (((table_u[i] - new_u) * (table_u[i] - new_u) + (table_v[i] - new_v) * (table_v[i] - new_v)  < uvtol * uvtol) && fabs((table_uv_lambda[i] - new_uv_lambda) / table_uv_lambda[i]) < 1e-6)
+    // Need to be clever here, as this is a major source of slowdown for very large datasets
+    
+    if (((table_u[i] - new_u) * (table_u[i] - new_u) + (table_v[i] - new_v) * (table_v[i] - new_v)  < uvtol * uvtol)&&
+	fabs((table_uv_lambda[i] - new_uv_lambda) / table_uv_lambda[i]) < 1e-6)
     {
       redundant_index = i;
       break;
     }
   }
-
+  
   if (redundant_index == -1)  // the current point is not redundant with a previous one
   {
     table_u[*uvindex] = new_u;
@@ -907,5 +911,4 @@ int write_best_oifits(char *filestring, double complex *mod_vis)
   fclose(fileptr);
   return 0;
 }
-
 

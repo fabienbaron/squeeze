@@ -1499,7 +1499,7 @@ void printhelp(void)
   printf("\n***** OUTPUT SETTINGS ***** \n");
   printf("  -o filename     : Squeeze outputs as a FITS image file.\n");
   printf("  -fullchain      : Output the full MCMC chain into the file output.fullchain .\n");
-  printf("  -temporaryfits  : Enable continuous writing of chainxx.fits to monitor execution.\n");
+  printf("  -monitor        : Enable continuous writing of chainxx.fits to monitor execution.\n");
 
   printf("\n***** SIMULTANEOUS MODEL FITTING SETTINGS ***** \n");
   printf("  -P p0 p1...    : Initial parameter input.\n");
@@ -1581,6 +1581,7 @@ void vis_to_obs(const double complex *__restrict mod_vis, double *__restrict mod
 {
   long i;
   double complex modt3;
+  const long t3ampoffset = nv2;
   const long visampoffset = nv2 + nt3amp;
   const long t3phioffset = nv2 + nt3amp + nvisamp;
   const long visphioffset = nv2 + nt3amp + nvisamp + nt3phi;
@@ -1595,8 +1596,8 @@ void vis_to_obs(const double complex *__restrict mod_vis, double *__restrict mod
     modt3 = mod_vis[ t3in1[i] ] * mod_vis[ t3in2[i] ] * conj(mod_vis[ t3in3[i] ]);
 
     if (nt3amp > 0) // as many instruments only have closure phases, useful check to gain cycles
-      if (data_err[nv2 + i] > 0)
-        mod_obs[nv2 + i] = cabs(modt3);
+      if (data_err[t3ampoffset + i] > 0)
+        mod_obs[t3ampoffset + i] = cabs(modt3);
 
     if (nt3phi > 0)
       if (data_err[t3phioffset + i] > 0)
@@ -2812,7 +2813,7 @@ bool read_commandline(int *argc, char **argv, bool *benchmark, bool *use_v2, boo
     {
       *use_diffvis = TRUE; // interpret VIS tables as differential visibilities, not complex visibilities
     }
-    else if (strcmp(argv[i], "-temporaryfits") == 0)
+    else if (strcmp(argv[i], "-monitor") == 0)
     {
       *use_tempfitswriting = TRUE; // enable writing chainxx.fits to disc
     }

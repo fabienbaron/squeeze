@@ -31,7 +31,7 @@ res     = reform(tab[3, 2+nuv+nt3:*])
 
 baseline = sqrt(u*u+v*v)
 
-plotsym, 0, 0.5, /fill
+plotsym, 0, .75, /fill
 loadct, 39
 white = 0
 blue = 64
@@ -47,9 +47,10 @@ v2y = data[0:nv2-1]
 v2e = data_err[0:nv2-1]
 v2y2 = reconst[0:nv2-1]
 v2r = res[0:nv2-1]
-if(NOT(keyword_set(log))) then plot, v2x, v2y, psym=8, title='V2 -- reconst & data vs baseline', xtitle='Spatial frequency (mega-lambda)', /xs, /ys else plot, v2x, v2y, psym=8, title='V2 -- reconst & data vs baseline', xtitle='Spatial frequency (mega-lambda)', /xs, /ys, /ylog, yr=[1e-4, 1]
+if(NOT(keyword_set(log))) then plot, v2x, v2y, psym=8, title='V2 -- reconst & data vs baseline', xtitle='Spatial frequency (mega-lambda)', /xs, /ys, /nodata else plot, v2x, v2y, psym=8, title='V2 -- reconst & data vs baseline', xtitle='Spatial frequency (mega-lambda)', /xs, /ys, /ylog, yr=[1e-4, 1],/nodata
 oplot, v2x, v2y, col = blue, psym=8
-errplot, v2x, v2y-v2e*0.5, v2y+v2e*0.5, col = blue
+errplot, v2x, v2y-v2e*0.5, v2y+v2e*0.5, col = blue, WIDTH=0
+
 oplot, v2x, v2y2, col=red, psym=8
 legend, ['Reconst', 'Data'], li=[0, 0], col=[red, blue], /right
 plot, v2x, v2r,  psym=8, title='V2 -- Residuals', xtitle='Spatial frequency (mega-lambda)', ytitle='Normalized residuals', /xs
@@ -68,7 +69,7 @@ t3phiy2 = reconst[t3phi_offset:t3phi_offset+nt3phi-1] / !pi * 180.
 t3phir = res[t3phi_offset:t3phi_offset+nt3phi-1] 
 plot, t3phix, t3phiy, psym=8, title='Closure phases -- reconst & data vs baseline', xtitle='Spatial frequency (mega-lambda)', /xs, /ys, /nodata
 oplot, t3phix, t3phiy, col = blue, psym=8
-errplot, t3phix, t3phiy-t3phie*0.5, t3phiy+t3phie*0.5, col = blue, psym=8
+errplot, t3phix, t3phiy-t3phie*0.5, t3phiy+t3phie*0.5, col = blue, psym=8, width=0
 oplot, t3phix, t3phiy2, col=red, psym=8
 legend, ['Reconst', 'Data'], li=[0, 0], col=[red, blue], /right
 plot, t3phix, t3phir,  psym=8, title='Closure phases -- Residuals', xtitle='Spatial frequency (mega-lambda)', ytitle='Normalized residuals', /xs
