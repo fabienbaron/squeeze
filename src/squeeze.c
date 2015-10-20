@@ -563,6 +563,8 @@ int main(int argc, char **argv)
   printf("Reconst setup -- Number of iterations:\t%ld\n", niter);
   if (depth > niter)
     depth = niter;
+  if(depth < 1)
+    depth = 1;
   printf("Reconst setup -- Depth of final image:\t%ld\n", depth);
 
   for (i = 0; i < nparams; i++)
@@ -1366,7 +1368,6 @@ int main(int argc, char **argv)
 
       }
 
-
       if (lowest_lLikelihood < 1e99)
         printf("Output -- Best single-frame chi2: %f obtained at iteration: %ld in chain number %ld.\n", 2.0 * lowest_lLikelihood / ndf,  lowest_lLikelihood_indx % niter, lowest_lLikelihood_indx / niter);
 
@@ -1377,11 +1378,11 @@ int main(int argc, char **argv)
       {
         printf("Output -- DID NOT REACH BURN IN ! Writing final image based on depth parameter anyway\n");
         printf("Output -- DID NOT REACH BURN IN ! Be careful when interpreting the final image.\n");
-        for (i = 0; i < nchains; i++)
-          for (j = niter - depth; j < niter; j++)
-            burn_in_times[i] = niter - depth; // note: we previously ensured depth <= niter
       }
 
+      for (i = 0; i < nchains; i++)
+	if(burn_in_times[i] < niter - depth) burn_in_times[i] = niter - depth ; // note: we previously ensured depth <= niter
+      
       mcmc_results(minimization_engine, output_filename, nchains, burn_in_times, depth, nelements, axis_len, xtransform, ytransform, saved_x, saved_y,
                              saved_params, niter, nwavr, final_params, final_params_std, reg_param, final_reg_value, prior_image, initial_x, initial_y, centroid_image_x,
 		   centroid_image_y, fov, cent_mult, ndf, tmin, chi2_temp, chi2_target, mas_pixel, init_filename, prior_filename, 0, 0);
@@ -2398,8 +2399,11 @@ void mcmc_results(int minimization_engine, char *file_basename, const int nchain
 
   int nburned = 0;
   for (t = 0; t < nchains_eff; t++)
-    nburned += niter - burn_in_times[t];
-
+    {
+      //printf("JAC %d\n", burn_in_times[t]);
+      nburned += niter - burn_in_times[t];
+    }
+  
   if (nparams > 0)
   {
     for (i = 0; i < nparams; i++)
@@ -2476,6 +2480,7 @@ void mcmc_results(int minimization_engine, char *file_basename, const int nchain
     images_mean = calloc(nchains_eff * nwavr * axis_len * axis_len, sizeof(double));
     for (t = 0; t < nchains_eff; t++)
     {
+      
       for (i = 0; i < nwavr * axis_len * axis_len; i++)
         images_mean[t * nwavr * axis_len * axis_len + i] = mean(&images[t * nwavr * axis_len * axis_len * niter + i * niter + burn_in_times[t]], niter - burn_in_times[t]);
 
