@@ -1378,6 +1378,10 @@ int main(int argc, char **argv)
       {
         printf("Output -- DID NOT REACH BURN IN ! Writing final image based on depth parameter anyway\n");
         printf("Output -- DID NOT REACH BURN IN ! Be careful when interpreting the final image.\n");
+	printf("Output -- DID NOT REACH BURN IN ! Setting final image depth to: %ld\n", depth);
+	nburned = depth;
+	for (i = 0; i < nchains; i++)
+	  burn_in_times[i] = niter - depth ;
       }
 
       for (i = 0; i < nchains; i++)
@@ -2356,12 +2360,6 @@ void register_image_mse(double *in_image, double *out_image, int nx, int ny, int
   free(temp_image);
 }
 
-
-
-
-
-
-
 ////////////////////////////////
 //
 // Compute final MCMC expectations for images and parameters
@@ -2375,7 +2373,7 @@ void mcmc_results(int minimization_engine, char *file_basename, const int nchain
 		  double *centroid_image_x, double *centroid_image_y, const double fov, const double cent_mult, const int ndf, double tmin, double chi2_temp,
 		  double chi2_target, double mas_pixel, char *init_filename, char *prior_filename, double logZ, double logZe)
 // This averages the image obtained by MCMC over the iterations and chains
-// the depth input should be the actual available depth, not the requested one
+// the depth input should be the actual available depth, not the requested one, unless the chain did not converge
 {
   int i, j, k, w, n, t, isaved;
 
