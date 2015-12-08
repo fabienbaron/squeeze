@@ -101,7 +101,7 @@ int main(int argc, char **argv)
 
   bool dumpchain = FALSE;
   bool benchmark = FALSE;
-  //  const char *reg_names[NREGULS] = {"PARAM", "C", "PRI", "ENT", "DEN", "TV", "UD", "LAP", "L0", "TS"};
+  //  const char *reg_names[NREGULS] = {"PARAM", "C", "PRI", "ENT", "DEN", "TV", "UD", "LAP", "L0", "L0W", "TS"};
   long i, j, k, w, depth = DEFAULT_DEPTH, offset = 0;
 
   double *initial_image = NULL;
@@ -1033,37 +1033,23 @@ int main(int argc, char **argv)
         new_pos = chan * axis_len * axis_len + new_y * axis_len + new_x;
 
         //
-        // Regularization
+        // Regularization update
         //
 
+	// Regularizations for which we know the finite difference
         if (reg_param[REG_ENTROPY] > 0.0)
-          new_reg_value[chan * NREGULS + REG_ENTROPY] = reg_value[chan * NREGULS + REG_ENTROPY] - entropy(image[old_pos])
-              + entropy(image[old_pos] - 1);
+          new_reg_value[chan * NREGULS + REG_ENTROPY] = reg_value[chan * NREGULS + REG_ENTROPY]
+	    - entropy(image[old_pos]) + entropy(image[old_pos] - 1)+ entropy(image[new_pos] + 1) - entropy(image[new_pos]);
         if (reg_param[REG_PRIORIMAGE] > 0.0)
-          new_reg_value[chan * NREGULS + REG_PRIORIMAGE] = reg_value[chan * NREGULS + REG_PRIORIMAGE] - prior_image[old_pos];
+          new_reg_value[chan * NREGULS + REG_PRIORIMAGE] = reg_value[chan * NREGULS + REG_PRIORIMAGE]
+	    - prior_image[old_pos] + prior_image[new_pos];
         if (reg_param[REG_DARKENERGY] > 0.0)
           new_reg_value[chan * NREGULS + REG_DARKENERGY] = reg_value[chan * NREGULS + REG_DARKENERGY]
-              - den_change(image, old_x, old_y, DEN_SUBTRACT, axis_len);
-        if (reg_param[REG_SPOT] > 0.0)
-          reg_value[chan * NREGULS + REG_SPOT] = UDreg(&image[chan * axis_len * axis_len], NULL, 0.0, axis_len, axis_len, (const double) nelements);
-        if (reg_param[REG_TV] > 0.0)
-          reg_value[chan * NREGULS + REG_TV] = TV(&image[chan * axis_len * axis_len], NULL, 0.0, axis_len, axis_len, (const double) nelements);
-        if (reg_param[REG_LAP] > 0.0)
-          reg_value[chan * NREGULS + REG_LAP] = LAP(&image[chan * axis_len * axis_len], NULL, 0.0, axis_len, axis_len, (const double) nelements);
-        if (reg_param[REG_L0] > 0.0)
-          reg_value[chan * NREGULS + REG_L0] = L0(&image[chan * axis_len * axis_len], NULL, 0.0, axis_len, axis_len, (const double) nelements);
-        if (reg_param[REG_TRANSPECL2] > 0.0)
-          reg_value[REG_TRANSPECL2] = transpec(nwavr, axis_len, image, (const double) nelements);
+	    - den_change(image, old_x, old_y, DEN_SUBTRACT, axis_len) + den_change(image, new_x, new_y, DEN_ADD, axis_len);
 
+
+	// Regularization for which we need to recompute the whole thing
         image[old_pos]--;
-
-        if (reg_param[REG_ENTROPY] > 0.0)
-          new_reg_value[chan * NREGULS + REG_ENTROPY] += entropy(image[new_pos] + 1) - entropy(image[new_pos]);
-        if (reg_param[REG_PRIORIMAGE] > 0.0)
-          new_reg_value[chan * NREGULS + REG_PRIORIMAGE] += prior_image[new_pos];
-        if (reg_param[REG_DARKENERGY] > 0.0)
-          new_reg_value[chan * NREGULS + REG_DARKENERGY] += den_change(image, new_x, new_y, DEN_ADD, axis_len);
-
         image[new_pos]++;
 
         if (reg_param[REG_SPOT] > 0.0)
@@ -1071,11 +1057,15 @@ int main(int argc, char **argv)
               (const double) nelements);  // before
         if (reg_param[REG_TV] > 0.0)
           new_reg_value[chan * NREGULS + REG_TV] = TV(&image[chan * axis_len * axis_len], NULL, 0.0, axis_len, axis_len, (const double) nelements); // before
-        if (reg_param[REG_LAP] > 0.0)
+
+	if (reg_param[REG_LAP] > 0.0)
           new_reg_value[chan * NREGULS + REG_LAP] = LAP(&image[chan * axis_len * axis_len], NULL, 0.0, axis_len, axis_len, (const double) nelements); // before
 
         if (reg_param[REG_L0] > 0.0)
           new_reg_value[chan * NREGULS + REG_L0] = L0(&image[chan * axis_len * axis_len], NULL, 0.0, axis_len, axis_len, (const double) nelements); // before
+
+	if (reg_param[REG_L0W] > 0.0)
+          new_reg_value[chan * NREGULS + REG_L0W] = L0W(&image[chan * axis_len * axis_len], NULL, 0.0, axis_len, axis_len, (const double) nelements); // before
 
         if (reg_param[REG_TRANSPECL2] > 0.0)
           new_reg_value[REG_TRANSPECL2] = transpec(nwavr, axis_len, image, (const double) nelements);
@@ -1089,7 +1079,7 @@ int main(int argc, char **argv)
               + fov * cent_change(chan, centroid_image_x, centroid_image_y, new_x, new_y, old_x, old_y, axis_len, fov, cent_mult);
         if (reg_param[REG_MODELPARAM] > 0.0)
           new_reg_value[REG_MODELPARAM] = reg_value[REG_MODELPARAM];
-
+	
         /* Modify the visibilities */
         //#pragma omp parallel for simd
         for (j = 0; j < nuv; j++)
@@ -1173,6 +1163,7 @@ int main(int argc, char **argv)
           reg_value[chan * NREGULS + REG_TV] = new_reg_value[chan * NREGULS + REG_TV];
           reg_value[chan * NREGULS + REG_LAP] = new_reg_value[chan * NREGULS + REG_LAP];
           reg_value[chan * NREGULS + REG_L0] = new_reg_value[chan * NREGULS + REG_L0];
+	  reg_value[chan * NREGULS + REG_L0W] = new_reg_value[chan * NREGULS + REG_L0W];
           reg_value[chan * NREGULS + REG_SPOT] = new_reg_value[chan * NREGULS + REG_SPOT];
           reg_value[chan * NREGULS + REG_CENTERING] = new_reg_value[chan * NREGULS + REG_CENTERING];
           reg_value[REG_TRANSPECL2] = new_reg_value[REG_TRANSPECL2];
@@ -1546,6 +1537,7 @@ void printhelp(void)
   printf("  -uvtol tol    : Consider all uv points to be the same within tolerance uvtol.\n");
 
   printf("\n***** REGULARIZATION & INIT SETTINGS ***** \n");
+  printf("  -l0w param     : Wavelet sparsity (test).\n");
   printf("  -en param     : Entropy regularization multiplier.\n");
   printf("  -de param     : Dark energy regularization multiplier.\n");
   printf("  -ud param     : Uniform disc regularization multiplier.\n");
@@ -2630,6 +2622,9 @@ void compute_regularizers(const double *reg_param, double *reg_value, const doub
     if (reg_param[REG_L0] > 0.0)
       reg_value[w * NREGULS + REG_L0] = L0(&image[w * axis_len * axis_len], NULL, 0.0, axis_len, axis_len, fluxscaling);
 
+  if (reg_param[REG_L0W] > 0.0)
+      reg_value[w * NREGULS + REG_L0W] = L0W(&image[w * axis_len * axis_len], NULL, 0.0, axis_len, axis_len, fluxscaling);
+    
     if (reg_param[REG_PRIORIMAGE] > 0)
       reg_value[w * NREGULS + REG_PRIORIMAGE] = reg_prior_image(&image[w * axis_len * axis_len], &prior_image[w * axis_len * axis_len], 0.0, axis_len,
           axis_len, fluxscaling);
@@ -2855,6 +2850,8 @@ bool read_commandline(int *argc, char **argv, bool *benchmark, bool *use_v2, boo
         sscanf(argv[i + 1], "%lf", &reg_param[REG_TV]);
       else if (strcmp(argv[i], "-la") == 0)
         sscanf(argv[i + 1], "%lf", &reg_param[REG_LAP]);
+      else if (strcmp(argv[i], "-l0w") == 0)
+        sscanf(argv[i + 1], "%lf", &reg_param[REG_L0W]);
       else if (strcmp(argv[i], "-l0") == 0)
         sscanf(argv[i + 1], "%lf", &reg_param[REG_L0]);
       else if (strcmp(argv[i], "-ts") == 0)
@@ -3106,6 +3103,11 @@ void print_diagnostics(int iChain, long current_iter, long nvis, long nv2, long 
     if (reg_param[REG_L0] > 0)
       diagnostics_used += snprintf(diagnostics + diagnostics_used, maxlength - diagnostics_used, "L0:%5.2f ",
                                    reg_param[REG_L0] * reg_value[w * NREGULS + REG_L0]);
+
+    if (reg_param[REG_L0W] > 0)
+      diagnostics_used += snprintf(diagnostics + diagnostics_used, maxlength - diagnostics_used, "L0W:%5.2f ",
+                                   reg_param[REG_L0W] * reg_value[w * NREGULS + REG_L0W]);
+
     if (reg_param[REG_TRANSPECL2] > 0)
       diagnostics_used += snprintf(diagnostics + diagnostics_used, maxlength - diagnostics_used, "TS:%5.2f ",
                                    reg_param[REG_TRANSPECL2] * reg_value[REG_TRANSPECL2]);
@@ -3140,6 +3142,7 @@ void compute_lPrior(double *lPrior, const long chan, const double *reg_param, co
             + reg_param[REG_TV]         * reg_value[chan * NREGULS + REG_TV]
             + reg_param[REG_LAP]        * reg_value[chan * NREGULS + REG_LAP]
             + reg_param[REG_L0]         * reg_value[chan * NREGULS + REG_L0]
+            + reg_param[REG_L0W]        * reg_value[chan * NREGULS + REG_L0W]
             + reg_param[REG_TRANSPECL2] * reg_value[REG_TRANSPECL2];
 
 }

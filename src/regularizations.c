@@ -232,6 +232,17 @@ double L0(const double *x, const double *pr, const double eps, const int nx, con
   return L0l / flux;
 }
 
+double L1(const double *x, const double *pr, const double eps, const int nx, const int ny, const double flux)
+{
+  register int i;
+  double L1l = 0;
+  for (i = 0; i < nx * ny; i++)
+  {
+    L1l += fabs(x[i]);
+  }
+  return L1l / flux;
+}
+
 
 double L2(const double *x, const double *pr, const double eps, const int nx, const int ny, const double flux)
 {
@@ -306,4 +317,155 @@ double reg_prior_image(const double *x, const double *pr, const double eps, cons
   //    reg_value[w * NREGULS + REG_PRIORIMAGE] += prior_image[element_y[w * nelements + i] * axis_len + element_x[w * nelements + i]];
 
   return rpi;
+}
+
+//
+// Wavelets
+//
+
+// CDF (5,3), used in JPEG2000 -- Note: this can be sped up a lot in the future
+void fwt53(double *wav, const double* x, const int nx, const int ny)
+{
+	const double a0 = -0.5;
+	const double a1 = 0.25;
+	const double s0 = sqrt(2.0);
+	const double s1 = sqrt(2.0) * 0.5;
+	register int i, j, off;
+
+	double* tempx = malloc(nx * ny * sizeof(double));
+	memcpy(tempx, x, nx * ny * sizeof(double));
+
+	for (j = 0; j < ny; j++)
+	{
+		off = nx * j;
+		// Predict 1
+		for (i = 1; i < nx - 1; i += 2)
+		{
+			tempx[off + i] += a0 * (tempx[off + i - 1] + tempx[off + i + 1]);
+		}
+		tempx[off + nx - 1] += 2 * a0 * tempx[off + nx - 2];
+
+		// Update 1
+		for (i = 2; i < nx; i += 2)
+		{
+			tempx[off + i] += a1 * (tempx[off + i - 1] + tempx[off + i + 1]);
+		}
+		tempx[off] += 2 * a1 * tempx[off + 1];
+
+	}
+
+	for (j = 0; j < ny; j++)
+	{
+		off = nx * j;
+		for (i = 0; i < nx; i++)
+		{
+			if (i % 2 == 0)
+				wav[(i / 2) * ny + j] = s0 * tempx[off + i];
+			else
+				wav[(nx / 2 + i / 2) * ny + j] = s1 * tempx[off + i];
+		}
+	}
+	free(tempx);
+
+}
+
+// CDF (9,7), used in JPEG2000 -- Note: this can be sped up a lot in the future
+void fwt97(double *wav, const double* x, const int nx, const int ny)
+{
+	const double a0 = -1.586134342;
+	const double a1 = -0.05298011854;
+	const double a2 = 0.8829110762;
+	const double a3 = 0.4435068522;
+	const double s0 = 0.81289306611596146; // 1/1.230174104914
+	const double s1 = 0.61508705245700002; // 0.5 * 1.230174104914 
+	register int i, j;
+	int off;
+	double* tempx = malloc(nx * ny * sizeof(double));
+	memcpy(tempx, x, nx * ny * sizeof(double));
+
+	for (j = 0; j < ny; j++)
+	{
+		off = nx * j;
+		// Predict 1
+		for (i = 1; i < nx - 1; i += 2)
+		{
+			tempx[i + off] += a0 * (tempx[off + i - 1] + tempx[off + i + 1]);
+		}
+		tempx[off + nx - 1] += 2 * a0 * tempx[off + nx - 2];
+
+		// Update 1
+		for (i = 2; i < nx; i += 2)
+		{
+			tempx[off + i] += a1 * (tempx[off + i - 1] + tempx[off + i + 1]);
+		}
+		tempx[off] += 2 * a1 * tempx[off + 1];
+
+		// Predict 2
+		for (i = 1; i < nx - 1; i += 2)
+		{
+			tempx[off + i] += a2 * (tempx[off + i - 1] + tempx[off + i + 1]);
+		}
+		tempx[off + nx - 1] += 2 * a2 * tempx[off + nx - 2];
+
+		// Update 2
+		for (i = 2; i < nx; i += 2)
+		{
+			tempx[off + i] += a3 * (tempx[off + i - 1] + tempx[off + i + 1]);
+		}
+		tempx[off] += 2 * a3 * tempx[off + 1];
+
+	}
+
+	// Deinterlace, transpose and scale
+	for (j = 0; j < ny; j++)
+	{
+		off = nx * j;
+		for (i = 0; i < nx; i++)
+		{
+			if (i % 2 == 0)
+				wav[(i / 2) * ny + j] = s0 * tempx[off + i];
+			else
+				wav[(nx / 2 + i / 2) * ny + j] = s1 * tempx[off + i];
+		}
+	}
+	free(tempx);
+
+}
+
+void fwt97_2D(double *wav, const double* x, const int nx, const int ny, const int levels)
+{
+	int i;
+	for (i = 0; i < levels; i++)
+	{
+		fwt97(wav, x, nx, ny); // do on rows
+		fwt97(wav, wav, nx, ny); // do on cols using the result
+	}
+}
+
+void fwt53_2D(double *wav, const double* x, const int nx, const int ny, const int levels)
+{
+	int i;
+	for (i = 0; i < levels; i++)
+	{
+		fwt53(wav, x, nx, ny); // do on rows
+		fwt53(wav, wav, nx, ny); // do on cols using the previous result
+	}
+}
+
+double L0W(const double *x, const double *pr, const double eps, const int nx, const int ny, const double flux)
+{
+  double* wav = malloc( nx * ny * sizeof(double));
+  fwt53_2D(wav, x, nx, ny, 1);
+  double reg = L0(wav, NULL, 0, nx, ny, 1.); 
+  free(wav);
+  return reg;
+}
+
+double L1W(const double *x, const double *pr, const double eps, const int nx, const int ny, const double flux)
+{
+  double* wav = malloc( nx * ny * sizeof(double));
+  fwt53_2D(wav, x, nx, ny, 1);
+  double reg = L1(wav, NULL, 0, nx, ny, 1.); 
+  free(wav);
+  return reg;
 }

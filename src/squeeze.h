@@ -24,14 +24,14 @@
  */
 
 
-#define SQUEEZE_VERSION 2.6
+#define SQUEEZE_VERSION 2.7
 
 // Minimization engines
 #define ENGINE_SIMULATED_ANNEALING 1
 #define ENGINE_PARALLEL_TEMPERING 2
 
 // Regularizers
-#define NREGULS 10
+#define NREGULS 11
 #define REG_MODELPARAM 0
 #define REG_CENTERING 1
 #define REG_PRIORIMAGE 2
@@ -41,7 +41,8 @@
 #define REG_SPOT 6
 #define REG_LAP 7
 #define REG_L0 8
-#define REG_TRANSPECL2 9
+#define REG_L0W 9
+#define REG_TRANSPECL2 10
 
 // Mathematical constants
 #define MAS_RAD          206264806.2
@@ -196,6 +197,7 @@ double UDreg(const double *x, const double *pr, const double eps, const int nx, 
 double TV(const double *x, const double *pr, const double eps, const int nx, const int ny, const double flux);
 double LAP(const double *x, const double *pr, const double eps, const int nx, const int ny, const double flux);
 double L0(const double *x, const double *pr, const double eps, const int nx, const int ny, const double flux);
+double L0W(const double *x, const double *pr, const double eps, const int nx, const int ny, const double flux);
 double entropy_full(const double *x, const double *pr, const double eps, const int nx, const int ny, const double flux);
 double L2(const double *x, const double *pr, const double eps, const int nx, const int ny, const double flux);
 double transpec(const int nchan, const long imwidth, const double *image, const double flux);
