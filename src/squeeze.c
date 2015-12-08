@@ -1053,19 +1053,18 @@ int main(int argc, char **argv)
         image[new_pos]++;
 
         if (reg_param[REG_SPOT] > 0.0)
-          new_reg_value[chan * NREGULS + REG_SPOT] = UDreg(&image[chan * axis_len * axis_len], NULL, 0.0, axis_len, axis_len,
-              (const double) nelements);  // before
+          new_reg_value[chan * NREGULS + REG_SPOT] = UDreg(&image[chan * axis_len * axis_len], NULL, 0.0, axis_len, axis_len, (const double) nelements);
         if (reg_param[REG_TV] > 0.0)
-          new_reg_value[chan * NREGULS + REG_TV] = TV(&image[chan * axis_len * axis_len], NULL, 0.0, axis_len, axis_len, (const double) nelements); // before
+          new_reg_value[chan * NREGULS + REG_TV] = TV(&image[chan * axis_len * axis_len], NULL, 0.0, axis_len, axis_len, (const double) nelements); 
 
 	if (reg_param[REG_LAP] > 0.0)
-          new_reg_value[chan * NREGULS + REG_LAP] = LAP(&image[chan * axis_len * axis_len], NULL, 0.0, axis_len, axis_len, (const double) nelements); // before
+          new_reg_value[chan * NREGULS + REG_LAP] = LAP(&image[chan * axis_len * axis_len], NULL, 0.0, axis_len, axis_len, (const double) nelements);
 
         if (reg_param[REG_L0] > 0.0)
-          new_reg_value[chan * NREGULS + REG_L0] = L0(&image[chan * axis_len * axis_len], NULL, 0.0, axis_len, axis_len, (const double) nelements); // before
+          new_reg_value[chan * NREGULS + REG_L0] = L0(&image[chan * axis_len * axis_len], NULL, 0.0, axis_len, axis_len, (const double) nelements);
 
 	if (reg_param[REG_L0W] > 0.0)
-          new_reg_value[chan * NREGULS + REG_L0W] = L0W(&image[chan * axis_len * axis_len], NULL, 0.0, axis_len, axis_len, (const double) nelements); // before
+          new_reg_value[chan * NREGULS + REG_L0W] = L0W(&image[chan * axis_len * axis_len], NULL, 0.0, axis_len, axis_len, (const double) nelements);
 
         if (reg_param[REG_TRANSPECL2] > 0.0)
           new_reg_value[REG_TRANSPECL2] = transpec(nwavr, axis_len, image, (const double) nelements);
