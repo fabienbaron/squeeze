@@ -2621,8 +2621,26 @@ void compute_regularizers(const double *reg_param, double *reg_value, const doub
     if (reg_param[REG_L0] > 0.0)
       reg_value[w * NREGULS + REG_L0] = L0(&image[w * axis_len * axis_len], NULL, 0.0, axis_len, axis_len, fluxscaling);
 
-  if (reg_param[REG_L0W] > 0.0)
+    if (reg_param[REG_L0W] > 0.0)
+    {
       reg_value[w * NREGULS + REG_L0W] = L0W(&image[w * axis_len * axis_len], NULL, 0.0, axis_len, axis_len, fluxscaling);
+    
+    double* wav = malloc( axis_len * axis_len * sizeof(double));
+    fwt97_2D(wav, &image[w * axis_len * axis_len], axis_len, axis_len, 1);
+    char wav_filename[100];
+    sprintf(wav_filename, "output.wav");
+    FILE *pFile = fopen(wav_filename, "w");
+    for(int j=0;j<axis_len;j++)
+    {
+        for(int i=0;i< axis_len;i++)
+            fprintf(pFile, "%lf ", wav[j*axis_len +i]);
+        fprintf(pFile,"\n");
+        
+    }
+    fclose(pFile);
+    free(wav);  
+    //    getchar();
+    }
     
     if (reg_param[REG_PRIORIMAGE] > 0)
       reg_value[w * NREGULS + REG_PRIORIMAGE] = reg_prior_image(&image[w * axis_len * axis_len], &prior_image[w * axis_len * axis_len], 0.0, axis_len,

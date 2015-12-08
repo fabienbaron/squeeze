@@ -226,7 +226,7 @@ double L0(const double *x, const double *pr, const double eps, const int nx, con
   double L0l = 0;
   for (i = 0; i < nx * ny; i++)
   {
-    if (x[i] > 0)
+    if (x[i] != 0)
       L0l += 1.;
   }
   return L0l / flux;
@@ -455,7 +455,7 @@ void fwt53_2D(double *wav, const double* x, const int nx, const int ny, const in
 double L0W(const double *x, const double *pr, const double eps, const int nx, const int ny, const double flux)
 {
   double* wav = malloc( nx * ny * sizeof(double));
-  fwt53_2D(wav, x, nx, ny, 1);
+  fwt97_2D(wav, x, nx, ny, 1);
   double reg = L0(wav, NULL, 0, nx, ny, 1.); 
   free(wav);
   return reg;
@@ -464,7 +464,7 @@ double L0W(const double *x, const double *pr, const double eps, const int nx, co
 double L1W(const double *x, const double *pr, const double eps, const int nx, const int ny, const double flux)
 {
   double* wav = malloc( nx * ny * sizeof(double));
-  fwt53_2D(wav, x, nx, ny, 1);
+  fwt97_2D(wav, x, nx, ny, 1);
   double reg = L1(wav, NULL, 0, nx, ny, 1.); 
   free(wav);
   return reg;
