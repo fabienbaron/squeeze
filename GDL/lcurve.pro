@@ -21,7 +21,7 @@ for i=0, nfiles-1 do begin
    im_name = '../2004-data1_regtv'+strcompress(string(i), /remove_all)+'.fits'
    im = readfits(im_name, head)
    tv_weight[i] =  sxpar(head, 'HYPER5')
-   tv_val[i] =  sxpar(head, 'REGUL5W0')
+   tv_val[i] =  sxpar(head, 'REG5W0')
    chi2[i] =  sxpar(head, 'CHI2')
 ;   image_cont, im, /asp, /noc, tit='a='+strcompress(string(tv_reg[i], format='(F0.1)'),/remove_all)
 endfor

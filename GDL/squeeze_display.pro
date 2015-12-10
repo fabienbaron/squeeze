@@ -65,7 +65,7 @@ while (1) do begin
  if n_elements(reg_vals) EQ 0 then reg_vals = dblarr(nchanr, nreguls)
  for i=0, nreguls-1 do begin
     reg_params[i] = sxpar(head,  'HYPER'+strcompress(string(i),/remove_all))
-    if(reg_params[i] GT 0) then for j=0, nchanr-1 do reg_vals[j, i] = sxpar(head,  'REGUL'+strcompress(string(i),/remove_all)+'W'+strcompress(string(j),/remove_all))
+    if(reg_params[i] GT 0) then for j=0, nchanr-1 do reg_vals[j, i] = sxpar(head,  'REG'+strcompress(string(i),/remove_all)+'W'+strcompress(string(j),/remove_all))
  endfor
 
 reg_active = where(reg_params GT 0)

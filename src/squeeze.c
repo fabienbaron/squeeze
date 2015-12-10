@@ -1845,7 +1845,7 @@ int writeasfits(const char *file, double *image, int nwavr, long depth, long min
       for (i = 0; i < NREGULS; i++)
       {
         //printf("w: %d i: %d reg = %lf\n",w, i, regval[w * NREGULS + i]);
-        sprintf(param_string, "REGUL%1dW%1d", i, w);
+        sprintf(param_string, "REG%1dW%1d", i, w);
         fits_write_key_dbl(fptr, param_string, regval[w * NREGULS + i], 3, "Regularizer value", &status);
         printerror(status);
       }
