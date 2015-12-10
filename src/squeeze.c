@@ -2461,7 +2461,7 @@ void mcmc_results(int minimization_engine, char *file_basename, const int nchain
   /////////////////////////////////////////
   bool output_mean = 1, output_median = 1, output_mode = 1;
   double *images_mean, *images_mode, *images_median;
-  char data_filename[200];
+  char data_filename[MAX_STRINGS];
   // MEAN over iterations
   if (output_mean)
   {
