@@ -116,7 +116,7 @@
 
 
 /* Max number of characters in a filename */
-#define MAX_STRINGS   1024
+#define MAX_STRINGS   1000
 
 #include <complex.h>
 #include <stdbool.h>
