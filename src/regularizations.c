@@ -30,7 +30,7 @@ double entropy_full(const double *x, const double *pr, const double eps, const i
 {
   register int i;
   double reg = 0;
-  for (i = 0; i < nx * ny; i++)
+  for (i = 0; i < nx * ny; ++i)
   {
     if (x[i] > 0)
       reg += entropy(x[i]);
@@ -42,8 +42,8 @@ double den_full(const double *x, const double *pr, const double eps, const int n
 {
   register int i, j;
   double reg = 2.*(nx + ny);
-  for (i = 0; i < nx; i++)
-    for (j = 0; j < ny; j++)
+  for (i = 0; i < nx; ++i)
+    for (j = 0; j < ny; ++j)
       reg += den_change(x, i, j, DEN_INIT, nx);
   return 0.5 * reg;
 }
@@ -93,7 +93,7 @@ double transpec(const int nchan, const long imwidth, const double *image, const 
   double temp1, temp2;
 
   temp1 = 0;
-  for (i = 0; i < imwidth * imwidth; i++)
+  for (i = 0; i < imwidth * imwidth; ++i)
   {
     temp2 = 0;
     for (w = 0; w < nchan; w++)
@@ -129,10 +129,10 @@ double TV(const double *x, const double *pr, const double eps, const int nx, con
 //printf("nx ny %i %i\n",nx,ny);
   // Compute the norm of the local image gradient on each point
   //#pragma omp for
-  for (j = 1; j < ny; j++)
+  for (j = 1; j < ny; ++j)
   {
     off = nx * j;
-    for (i = 1; i < nx; i++)
+    for (i = 1; i < nx; ++i)
     {
       if (i > 0)
       {
@@ -187,10 +187,10 @@ double UDreg(const double *x, const double *pr, const double eps, const int nx, 
 
 //printf("nx ny %i %i\n",nx,ny);
   // Compute the norm of the local image gradient on each point
-  for (j = 1; j < ny; j++)
+  for (j = 1; j < ny; ++j)
   {
     off = nx * j;
-    for (i = 1; i < nx; i++)
+    for (i = 1; i < nx; ++i)
     {
       if (i > 0)
       {
@@ -224,7 +224,7 @@ double L0(const double *x, const double *pr, const double eps, const int nx, con
 {
   register int i;
   double L0l = 0;
-  for (i = 0; i < nx * ny; i++)
+  for (i = 0; i < nx * ny; ++i)
   {
     if (x[i] != 0)
       L0l += 1.;
@@ -236,7 +236,7 @@ double L1(const double *x, const double *pr, const double eps, const int nx, con
 {
   register int i;
   double L1l = 0;
-  for (i = 0; i < nx * ny; i++)
+  for (i = 0; i < nx * ny; ++i)
   {
     L1l += fabs(x[i]);
   }
@@ -248,7 +248,7 @@ double L2(const double *x, const double *pr, const double eps, const int nx, con
 {
   register int i;
   double L2l = 0;
-  for (i = 0; i < nx * ny; i++)
+  for (i = 0; i < nx * ny; ++i)
   {
     L2l += x[i] * x[i];
   }
@@ -259,7 +259,7 @@ double L2sq(const double *x, const double *pr, const double eps, const int nx, c
 {
   register int i;
   double L2l = 0;
-  for (i = 0; i < nx * ny; i++)
+  for (i = 0; i < nx * ny; ++i)
   {
     L2l += x[i] * x[i];
   }
@@ -278,10 +278,10 @@ double LAP(const double *x, const double *pr, const double eps, const int nx, co
   double L1l = 0;
 
   // for boundaries, we assume zeroes outside of the image
-  for (j = 1; j < ny - 1; j++)
+  for (j = 1; j < ny - 1; ++j)
   {
     off = nx * j;
-    for (i = 1; i < nx - 1; i++)
+    for (i = 1; i < nx - 1; ++i)
       L1l += fabs(x[ i - 1 + off] + x[i + 1 + off] + x[i + off - nx] + x[i + off + nx] - 4. * x[i + off]);
     // case i = 0
     L1l += fabs(x[1 + off] + x[off - nx] + x[off + nx] - 3. * x[off]);
@@ -289,7 +289,7 @@ double LAP(const double *x, const double *pr, const double eps, const int nx, co
     L1l += fabs(x[ nx - 2 + off] + x[nx - 1 + off - nx] + x[nx - 1  + off + nx] - 3. * x[nx - 1 + off]);
   }
 
-  for (i = 1; i < nx - 1; i++)
+  for (i = 1; i < nx - 1; ++i)
   {
     // case j = 0
     off = 0 ;
@@ -308,12 +308,12 @@ double reg_prior_image(const double *x, const double *pr, const double eps, cons
   register int i;
   double rpi = 0;
 
-  for (i = 0; i < nx * ny; i++)
+  for (i = 0; i < nx * ny; ++i)
     if (x[i] > 0)
       rpi += pr[i];
 
   // For ref, initial methods was:
-  //      for (i = 0; i < nelements; i++)
+  //      for (i = 0; i < nelements; ++i)
   //    reg_value[w * NREGULS + REG_PRIORIMAGE] += prior_image[element_y[w * nelements + i] * axis_len + element_x[w * nelements + i]];
 
   return rpi;
@@ -335,7 +335,7 @@ void fwt53(double *wav, const double* x, const int nx, const int ny)
 	double* tempx = malloc(nx * ny * sizeof(double));
 	memcpy(tempx, x, nx * ny * sizeof(double));
 
-	for (j = 0; j < ny; j++)
+	for (j = 0; j < ny; ++j)
 	{
 		off = nx * j;
 		// Predict 1
@@ -354,10 +354,10 @@ void fwt53(double *wav, const double* x, const int nx, const int ny)
 
 	}
 
-	for (j = 0; j < ny; j++)
+	for (j = 0; j < ny; ++j)
 	{
 		off = nx * j;
-		for (i = 0; i < nx; i++)
+		for (i = 0; i < nx; ++i)
 		{
 			if (i % 2 == 0)
 				wav[(i / 2) * ny + j] = s0 * tempx[off + i];
@@ -383,7 +383,7 @@ void fwt97(double *wav, const double* x, const int nx, const int ny)
 	double* tempx = malloc(nx * ny * sizeof(double));
 	memcpy(tempx, x, nx * ny * sizeof(double));
 
-	for (j = 0; j < ny; j++)
+	for (j = 0; j < ny; ++j)
 	{
 		off = nx * j;
 		// Predict 1
@@ -417,10 +417,10 @@ void fwt97(double *wav, const double* x, const int nx, const int ny)
 	}
 
 	// Deinterlace, transpose and scale
-	for (j = 0; j < ny; j++)
+	for (j = 0; j < ny; ++j)
 	{
 		off = nx * j;
-		for (i = 0; i < nx; i++)
+		for (i = 0; i < nx; ++i)
 		{
 			if (i % 2 == 0)
 				wav[(i / 2) * ny + j] = s0 * tempx[off + i];
@@ -435,7 +435,7 @@ void fwt97(double *wav, const double* x, const int nx, const int ny)
 void fwt97_2D(double *wav, const double* x, const int nx, const int ny, const int levels)
 {
 	int i;
-	for (i = 0; i < levels; i++)
+	for (i = 0; i < levels; ++i)
 	{
 		fwt97(wav, x, nx, ny); // do on rows
 		fwt97(wav, wav, nx, ny); // do on cols using the result
@@ -445,14 +445,14 @@ void fwt97_2D(double *wav, const double* x, const int nx, const int ny, const in
 void fwt53_2D(double *wav, const double* x, const int nx, const int ny, const int levels)
 {
 	int i;
-	for (i = 0; i < levels; i++)
+	for (i = 0; i < levels; ++i)
 	{
 		fwt53(wav, x, nx, ny); // do on rows
 		fwt53(wav, wav, nx, ny); // do on cols using the previous result
 	}
 }
 
-double L0W(const double *x, const double *pr, const double eps, const int nx, const int ny, const double flux)
+double L0_CDF97(const double *x, const double *pr, const double eps, const int nx, const int ny, const double flux)
 {
   double* wav = malloc( nx * ny * sizeof(double));
   fwt97_2D(wav, x, nx, ny, 1);
@@ -461,10 +461,140 @@ double L0W(const double *x, const double *pr, const double eps, const int nx, co
   return reg;
 }
 
-double L1W(const double *x, const double *pr, const double eps, const int nx, const int ny, const double flux)
+double L0_CDF53(const double *x, const double *pr, const double eps, const int nx, const int ny, const double flux)
+{
+  double* wav = malloc( nx * ny * sizeof(double));
+  fwt53_2D(wav, x, nx, ny, 1);
+  double reg = L0(wav, NULL, 0, nx, ny, 1.); 
+  free(wav);
+  return reg;
+}
+
+double L1_CDF53(const double *x, const double *pr, const double eps, const int nx, const int ny, const double flux)
+{
+  double* wav = malloc( nx * ny * sizeof(double));
+  fwt53_2D(wav, x, nx, ny, 1);
+  double reg = L1(wav, NULL, 0, nx, ny, 1.); 
+  free(wav);
+  return reg;
+}
+
+double L1_CDF97(const double *x, const double *pr, const double eps, const int nx, const int ny, const double flux)
 {
   double* wav = malloc( nx * ny * sizeof(double));
   fwt97_2D(wav, x, nx, ny, 1);
+  double reg = L1(wav, NULL, 0, nx, ny, 1.); 
+  free(wav);
+  return reg;
+}
+
+
+
+void atrous_set(int idx) // set the wavelet coefficients for the a trous algorithm 
+{
+	static float d1_lin3[3] = { 0.25, 0.5, 0.25 };
+	static float d1_spl5[5] = { 0.0625, 0.25, 0.375, 0.25, 0.0625 };
+	static float d2_lin3[3 * 3];
+	static float d2_spl5[5 * 5];
+	int i, j;
+
+	switch (idx)
+	{
+	case 1: // linear interpolation filter 
+		atrous_1d_filter.ncof = 3;
+		atrous_1d_filter.cc = d1_lin3;
+		atrous_2d_filter.ncof = 3;
+		atrous_2d_filter.cc = d2_lin3;
+		break;
+	case 2: // B_3-spline interpolation 
+		atrous_1d_filter.ncof = 5;
+		atrous_1d_filter.cc = d1_spl5;
+		atrous_2d_filter.ncof = 5;
+		atrous_2d_filter.cc = d2_spl5;
+		break;
+	default:
+		printf("unknown value in my_at_set\n");
+		break;
+	}
+
+	// compute the two dimensional convolution mask 
+	for (i = 0; i < atrous_2d_filter.ncof; i++)
+	{
+		for (j = 0; j < atrous_2d_filter.ncof; j++)
+		{
+			atrous_2d_filter.cc[i * atrous_2d_filter.ncof + j] = atrous_1d_filter.cc[i] * atrous_1d_filter.cc[j];
+			atrous_1d_filter.ioff = atrous_1d_filter.ncof / 2 + atrous_1d_filter.ncof % 2 - 1;
+			atrous_2d_filter.ioff = atrous_2d_filter.ncof / 2 + atrous_2d_filter.ncof % 2 - 1;
+		}
+	}
+}
+
+void atrous_fwd(const double* x, double *wav, const int nx, const int ny, const int nscales) 
+{
+	int i, j, i2, j2, i3, j3, k, nf, nc, istep;
+	nf = atrous_2d_filter.ncof;
+	nc = atrous_2d_filter.ioff;
+	int n = nx * ny;
+
+	// forward transform 
+	float *storage = malloc(sizeof(float) * n);
+	for (i = 0; i < n; i++) // copy initial image - set as first scale 
+		storage[i] = x[i];
+
+	for (k = nscales - 1; k > 0; k--)
+	  { // determine step size for convolution depending on resolution scale 
+
+	    istep = powf(2, nscales - 1 - k); // copy image to scale, starting with large k (small scales) 
+
+		for (i = 0; i < n; i++)
+			wav[k * n + i] = x[i];
+
+		// smooth image by convolution with filter 
+		for (i = 0; i < nx; i++)
+		{
+			for (j = 0; j < ny; j++)
+			{
+				storage[j * nx + i] = 0.;
+				for (i2 = 0; i2 < nf; i2++)
+				{
+					i3 = i + (i2 - nc) * istep;
+					// wrap around edges, using periodic boundary conditions 
+					i3 = (i3 >= 0 ? (i3 < nx ? i3 : i3 - nx) : i3 + nx);
+					for (j2 = 0; j2 < nf; j2++)
+					{
+						j3 = j + (j2 - nc) * istep;
+						// wrap around edges, using periodic boundary conditions 
+						j3 = (j3 >= 0 ? (j3 < ny ? j3 : j3 - ny) : j3 + ny);
+						storage[j * nx + i] += atrous_2d_filter.cc[i2 * nf + j2] * wav[k * n + j3 * nx + i3];
+					}
+				}
+			}
+		}
+		for (i = 0; i < n; i++) // construct detail coefficients by subtraction of smoothed image 
+			wav[k * n + i] -= storage[i];
+
+		for (i = 0; i < n; i++)
+			wav[i] = storage[i];
+	}
+	free(storage);
+}
+
+
+double L0_ATROUS(const double *x, const double *pr, const double eps, const int nx, const int ny, const double flux)
+{
+  const int nscales = 4;
+  double* wav = malloc( nscales * nx * ny * sizeof(double));
+  atrous_fwd(x, wav, nx, ny, nscales);
+  double reg = L0(wav, NULL, 0, nx, ny, 1.); 
+  free(wav);
+  return reg;
+}
+
+double L1_ATROUS(const double *x, const double *pr, const double eps, const int nx, const int ny, const double flux)
+{
+  const int nscales = 4;
+  double* wav = malloc( nscales * nx * ny * sizeof(double));
+  atrous_fwd(x, wav, nx, ny, nscales);
   double reg = L1(wav, NULL, 0, nx, ny, 1.); 
   free(wav);
   return reg;

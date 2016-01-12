@@ -31,7 +31,7 @@
 #define ENGINE_PARALLEL_TEMPERING 2
 
 // Regularizers
-#define NREGULS 11
+#define NREGULS 16
 #define REG_MODELPARAM 0
 #define REG_CENTERING 1
 #define REG_PRIORIMAGE 2
@@ -41,8 +41,15 @@
 #define REG_SPOT 6
 #define REG_LAP 7
 #define REG_L0 8
-#define REG_L0W 9
-#define REG_TRANSPECL2 10
+#define REG_L0CDF53 9
+#define REG_L1CDF53 10
+#define REG_L0CDF97 11
+#define REG_L1CDF97 12
+#define REG_L0ATROUS 13
+#define REG_L1ATROUS 14
+#define REG_TRANSPECL2 15
+
+const char *reg_names[NREGULS] = {"PARAM", "C", "PRI", "ENT", "DEN", "TV", "UD", "LAP", "L0", "L0CDF53","L1CDF53", "L0CDF97", "L1CDF97",  "L0ATROUS", "L1ATROUS", "TS"};
 
 // Mathematical constants
 #define MAS_RAD          206264806.2
@@ -188,8 +195,7 @@ int write_best_oifits(char *filestring, double complex *mod_vis);
 /* Function prototype for modelcode.c */
 int model_vis(const double *params, double complex *modvis, double *logl, double *flux_frac);
 
-/* regularizations */
-
+/* regularizations.c */
 double entropy(const double s);
 double den_full(const double *x, const double *pr, const double eps, const int nx, const int ny, const double flux);
 double den_change(const double *image, const unsigned short i, const unsigned short j, const unsigned short direction, const unsigned short axis_len);
@@ -197,7 +203,16 @@ double UDreg(const double *x, const double *pr, const double eps, const int nx, 
 double TV(const double *x, const double *pr, const double eps, const int nx, const int ny, const double flux);
 double LAP(const double *x, const double *pr, const double eps, const int nx, const int ny, const double flux);
 double L0(const double *x, const double *pr, const double eps, const int nx, const int ny, const double flux);
-double L0W(const double *x, const double *pr, const double eps, const int nx, const int ny, const double flux);
+double L0_CDF53(const double *x, const double *pr, const double eps, const int nx, const int ny, const double flux);
+double L1_CDF53(const double *x, const double *pr, const double eps, const int nx, const int ny, const double flux);
+double L0_CDF97(const double *x, const double *pr, const double eps, const int nx, const int ny, const double flux);
+double L1_CDF97(const double *x, const double *pr, const double eps, const int nx, const int ny, const double flux);
+double L0_ATROUS(const double *x, const double *pr, const double eps, const int nx, const int ny, const double flux);
+double L1_ATROUS(const double *x, const double *pr, const double eps, const int nx, const int ny, const double flux);
+void atrous_set(int idx); // a trous setup
+void atrous_fwd(const double* x, double *wav, const int nx, const int ny, const int nscales);// a trous main
+
+
 double entropy_full(const double *x, const double *pr, const double eps, const int nx, const int ny, const double flux);
 double L2(const double *x, const double *pr, const double eps, const int nx, const int ny, const double flux);
 double transpec(const int nchan, const long imwidth, const double *image, const double flux);
@@ -211,3 +226,10 @@ inline void swapi(unsigned short *a, unsigned short *b);
 inline void swapd(double *a, double *b);
 double xatan2(double y, double x);
 double xatan2_u1(double y, double x);
+
+// Wavelet specifics
+
+typedef struct {
+	int ncof, ioff, joff;
+	float *cc, *cr;
+} wavefilt;
