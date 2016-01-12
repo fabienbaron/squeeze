@@ -3155,38 +3155,14 @@ void print_diagnostics(int iChain, long current_iter, long nvis, long nv2, long 
                                    TEXT_COLOR_MAGENTA "VP:%5.2f " TEXT_COLOR_BLACK, chi2visphi);
 
     // Print values of monospectral regularizers
-    //    for(int k=1;k<NREGULS-1;k++)
-    //  {
-    //	if (reg_param[k] > 0)
-    //	  diagnostics_used += snprintf(diagnostics + diagnostics_used, maxlength - diagnostics_used, "%s :%5.2f ", reg_names[k], reg_param[k] * reg_value[w * NREGULS + k]);
-    //	if ((reg_param[k] == REG_CENTERING) && (reg_param[k] > 0))
-    //	  diagnostics_used += snprintf(diagnostics + diagnostics_used, maxlength - diagnostics_used, "XY:(%5.2f,%5.2f) ", centroid_image_x[w] / nelements, centroid_image_y[w] / nelements);  
-    //   }
+        for(int k=1;k<NREGULS-1;k++)
+      {
+    	if (reg_param[k] > 0)
+    	  diagnostics_used += snprintf(diagnostics + diagnostics_used, maxlength - diagnostics_used, "%s :%5.2f ", reg_names[k], reg_param[k] * reg_value[w * NREGULS + k]);
+    	if ((reg_param[k] == REG_CENTERING) && (reg_param[k] > 0))
+    	  diagnostics_used += snprintf(diagnostics + diagnostics_used, maxlength - diagnostics_used, "XY:(%5.2f,%5.2f) ", centroid_image_x[w] / nelements, centroid_image_y[w] / nelements);  
+       }
 
-
-  if (reg_param[REG_PRIORIMAGE] > 0)
-      diagnostics_used += snprintf(diagnostics + diagnostics_used, maxlength - diagnostics_used, "PRI:%5.2f ",
-                                   reg_param[REG_PRIORIMAGE] * reg_value[w * NREGULS + REG_PRIORIMAGE]);
-    if (reg_param[REG_ENTROPY] > 0)
-      diagnostics_used += snprintf(diagnostics + diagnostics_used, maxlength - diagnostics_used, "ENT:%5.2f ",
-                                   reg_param[REG_ENTROPY] * reg_value[w * NREGULS + REG_ENTROPY]);
-    if (reg_param[REG_DARKENERGY] > 0)
-      diagnostics_used += snprintf(diagnostics + diagnostics_used, maxlength - diagnostics_used, "DEN:%5.2f ",
-                                   reg_param[REG_DARKENERGY] * reg_value[w * NREGULS + REG_DARKENERGY]);
-    if (reg_param[REG_SPOT] > 0)
-      diagnostics_used += snprintf(diagnostics + diagnostics_used, maxlength - diagnostics_used, "UD:%5.2f ",
-                                   reg_param[REG_SPOT] * reg_value[w * NREGULS + REG_SPOT]);
-    if (reg_param[REG_TV] > 0)
-      diagnostics_used += snprintf(diagnostics + diagnostics_used, maxlength - diagnostics_used, "TV:%5.2f ",
-                                   reg_param[REG_TV] * reg_value[w * NREGULS + REG_TV]);
-    if (reg_param[REG_LAP] > 0)
-      diagnostics_used += snprintf(diagnostics + diagnostics_used, maxlength - diagnostics_used, "LAP:%5.2f ",
-                                   reg_param[REG_LAP] * reg_value[w * NREGULS + REG_LAP]);
-    if (reg_param[REG_L0] > 0)
-      diagnostics_used += snprintf(diagnostics + diagnostics_used, maxlength - diagnostics_used, "L0:%5.2f ",
-                                   reg_param[REG_L0] * reg_value[w * NREGULS + REG_L0]);
-
-    
     // transpectral regularizers:
     if (reg_param[REG_TRANSPECL2] > 0)
       diagnostics_used += snprintf(diagnostics + diagnostics_used, maxlength - diagnostics_used, "TS:%5.2f ", reg_param[REG_TRANSPECL2] * reg_value[REG_TRANSPECL2]);
@@ -3210,19 +3186,8 @@ void print_diagnostics(int iChain, long current_iter, long nvis, long nv2, long 
 
 void compute_lPrior(double *lPrior, const long chan, const double *reg_param, const double *reg_value)
 {
-  // double temp = reg_param[REG_TRANSPECL2] * reg_value[REG_TRANSPECL2];
-  // for(int i=0; i<NREGULS-1;++i) temp +=reg_param[i] * reg_value[chan * NREGULS + i];
-  //  *lPrior = temp;
- *lPrior = reg_param[REG_MODELPARAM] * reg_value[chan * NREGULS + REG_MODELPARAM]
-            + reg_param[REG_PRIORIMAGE] * reg_value[chan * NREGULS + REG_PRIORIMAGE]
-            + reg_param[REG_CENTERING]  * reg_value[chan * NREGULS + REG_CENTERING]
-            + reg_param[REG_ENTROPY]    * reg_value[chan * NREGULS + REG_ENTROPY]
-            + reg_param[REG_DARKENERGY] * reg_value[chan * NREGULS + REG_DARKENERGY]
-            + reg_param[REG_SPOT]       * reg_value[chan * NREGULS + REG_SPOT]
-            + reg_param[REG_TV]         * reg_value[chan * NREGULS + REG_TV]
-            + reg_param[REG_LAP]        * reg_value[chan * NREGULS + REG_LAP]
-            + reg_param[REG_L0]         * reg_value[chan * NREGULS + REG_L0]
-   //      + reg_param[REG_L0W]        * reg_value[chan * NREGULS + REG_L0W]
-            + reg_param[REG_TRANSPECL2] * reg_value[REG_TRANSPECL2];
+  double temp = reg_param[REG_TRANSPECL2] * reg_value[REG_TRANSPECL2];
+  for(int i=0; i<NREGULS-1;++i) temp +=reg_param[i] * reg_value[chan * NREGULS + i];
+  *lPrior = temp;
 }
 
