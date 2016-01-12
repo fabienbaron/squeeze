@@ -679,9 +679,8 @@ int main(int argc, char **argv)
     //double change_UDreg, change_TV;
 
     double prob_movement = MPROB_LOW;
-    double chi2v2, chi2t3amp, chi2t3phi, chi2visamp, chi2visphi;
-    double complex
-    *dummy_cpointer = NULL;
+    double chi2v2 =0, chi2t3amp=0, chi2t3phi=0, chi2visamp=0, chi2visphi=0;
+    double complex *dummy_cpointer = NULL;
 
     double *image = malloc(nwavr * axis_len * axis_len * sizeof(double));
     unsigned short *element_x = malloc(nwavr * nelements * sizeof(unsigned short));
@@ -1870,13 +1869,9 @@ int writeasfits(const char *file, double *image, int nwavr, long depth, long min
       }
     }
   }
-
-
- 
   /* Write model parameters */
   if ((min_elt >= 0) && (nparams > 0))
   {
-
     if (params != NULL)
     {
 
@@ -2241,7 +2236,7 @@ void mcmc_writeoutput(char *file_basename, double *image, const int nchains, con
     mod_obs[i] = 0;
   }
   // compute chi2s on final image
-  double chi2, chi2v2, chi2t3amp, chi2visamp, chi2t3phi, chi2visphi;
+  double chi2=0, chi2v2=0, chi2t3amp=0, chi2visamp=0, chi2t3phi=0, chi2visphi=0;
 
   compute_lLikelihood(&chi2, mod_vis, res, mod_obs, &chi2v2, &chi2t3amp, &chi2visamp, &chi2t3phi, &chi2visphi);
   chi2 *= 2.;
@@ -3185,9 +3180,8 @@ void print_diagnostics(int iChain, long current_iter, long nvis, long nv2, long 
 }
 
 void compute_lPrior(double *lPrior, const long chan, const double *reg_param, const double *reg_value)
-{
-  double temp = reg_param[REG_TRANSPECL2] * reg_value[REG_TRANSPECL2];
+{ double temp = reg_param[REG_TRANSPECL2] * reg_value[REG_TRANSPECL2];
   for(int i=0; i<NREGULS-1;++i) temp +=reg_param[i] * reg_value[chan * NREGULS + i];
-  *lPrior = temp;
+  *lPrior = temp; 
 }
 
