@@ -1455,6 +1455,7 @@ int main(int argc, char **argv)
   free(v);
   free(uv_lambda);
   free(uv_dlambda);
+  free(uv_time);
 
   free(dvisnwav);
   if (use_diffvis == TRUE)
@@ -1958,7 +1959,7 @@ int writeasfits(const char *file, double *image, int nwavr, long depth, long min
 }
 
 
-double mean(const double *x, int N)
+double mean(const double *x, const int N)
 {
   int i;
   double avg = 0;
@@ -1971,9 +1972,9 @@ double mean(const double *x, int N)
 }
 
 
-double mode(const double *x, int N)
+double mode(const double *x, const int N)
 {
-  int count = 1, mode = 0, m = 0, i = 1;
+  long count = 1, mode = 0, m = 0, i = 1;
 
   while (i != N + 1)
   {
@@ -1998,7 +1999,7 @@ double mode(const double *x, int N)
 // This code in public domain.
 // FB: this is slow, but one of the few median codes
 //     that do not erase input array
-double median(double *x, int n)
+double median(double *x, const int n)
 {
   int         i, less, greater, equal;
   double  min, max, guess, maxltguess, mingtguess;
