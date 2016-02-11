@@ -528,6 +528,15 @@ void atrous_set(int idx) // set the wavelet coefficients for the a trous algorit
 		}
 	}
 }
+int mpower(int basis, int exponent) {
+	int result = 1;
+	int expo;
+	expo = exponent;
+	while (expo-- > 0) {
+		result *= basis;
+	}
+	return result;
+}
 
 void atrous_fwd(const double* x, double *wav, const int nx, const int ny, const int nscales) 
 {
@@ -579,6 +588,101 @@ void atrous_fwd(const double* x, double *wav, const int nx, const int ny, const 
 	free(storage);
 }
 
+
+
+/* two dimensional a trous transform */
+int a_trous(double **a, int nx, int ny, int nscales, int isign) {
+	int i, j, i2, j2, i3, j3, k, nf, nc, istep;
+	double *image, *image1;
+	double **b;
+	//char line[80];
+
+	nf = atrous_2d_filter.ncof;
+	nc = atrous_2d_filter.ioff;
+
+	//printf("Starting a trous algorithm\n");
+	//printf("n:%i, c:%i, nx:%i, ny:%i\n", nf, nc, nx, ny);
+
+	if (isign > 0) {
+		/* forward transform */
+		image = malloc(sizeof(double) * nx * ny);
+		for (i = 0; i < nx * ny; i++) /* copy image */
+			image[i] = a[0][i];
+
+		for (k = nscales - 1; k > 0; k--) { /* determine step size for convolution depending on resolution scale */
+
+			istep = mpower(2, nscales - 1 - k); /* copy image to scale, starting with large k (small scales) */
+
+			for (i = 0; i < nx * ny; i++)
+				a[k][i] = image[i];
+
+			/* smooth image by convolution with filter */
+			for (i = 0; i < nx; i++) {
+				for (j = 0; j < ny; j++) {
+					image[j * nx + i] = 0.;
+					for (i2 = 0; i2 < nf; i2++)
+					  {
+					    i3 = i + (i2 - nc) * istep;
+					    /* wrap around edges, using periodic boundary conditions */
+					    i3 = (i3 >= 0 ? (i3 < nx ? i3 : i3 - nx) : i3 + nx);
+					    for (j2 = 0; j2 < nf; j2++)
+					      {
+						j3 = j + (j2 - nc) * istep;
+						/* wrap around edges, using periodic boundary conditions */
+						j3 = (j3 >= 0 ? (j3 < ny ? j3 : j3 - ny) : j3 + ny);
+						image[j * nx + i] += atrous_2d_filter.cc[i2 * nf+ j2] * a[k][j3 * nx + i3];
+					      }
+					  }
+				}
+			}
+			for (i = 0; i < nx * ny; i++) /* construct detail coefficients by subtraction of smoothed image */
+				a[k][i] -= image[i];
+
+			for (i = 0; i < nx * ny; i++)
+				a[0][i] = image[i];
+		}
+		free(image);
+	} else {
+		if (isign == -1) {
+			/* inverse transform */
+			/* the inverse transform of the a trous algorithm is a simple sum
+			 of the smoothed image plus the detail images at all scales */
+			for (k = 1; k < nscales; k++) {
+				for (i = 0; i < nx * ny; i++) {
+					a[0][i] += a[k][i];
+					a[k][i] = 0.;
+				}
+			}
+		} else {
+			/* Transposed transform */
+			b = malloc(sizeof(double *) * nscales);
+			image1 = malloc(sizeof(double) * nx * ny * nscales);
+			for (k = 0; k < nscales; k++)
+				b[k] = image1 + k * nx * ny;
+			for (k = nscales - 1; k > 0; k--) {
+				for (i = 0; i < nx * ny; i++)
+					b[0][i] = a[k][i];
+				a_trous(b, nx, ny, nscales + 1 - k, 1);
+				for (i = 0; i < nx * ny; i++)
+					a[k][i] = b[1][i];
+			}
+			for (i = 0; i < nx * ny; i++)
+				b[0][i] = a[0][i];
+			a_trous(b, nx, ny, nscales, 1);
+			for (i = 0; i < nx * ny; i++)
+				a[0][i] = b[0][i];
+			for (k = 1; k < nscales; k++) {
+				for (i = 0; i < nx * ny; i++) {
+					a[0][i] += a[k][i];
+					a[k][i] = 0.;
+				}
+			}
+			free(b);
+			free(image1);
+		}
+	}
+	return 0;
+}
 
 double L0_ATROUS(const double *x, const double *pr, const double eps, const int nx, const int ny, const double flux)
 {

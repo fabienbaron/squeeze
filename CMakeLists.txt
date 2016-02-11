@@ -26,7 +26,7 @@ find_package(OpenMP)
 if (OPENMP_FOUND)
     set (CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${OpenMP_C_FLAGS}")
 else()
-    message(STATUS "The compiler ${CMAKE_C_COMPILER} has no OpenMP support, and if you want to use OpenMP capabilities you will need to switch to a different compiler. If you are using clang on Apple OS X, please switch to gcc (version > 4.7) which is compliant with the OpenMP standard. ")
+    message(STATUS "The compiler ${CMAKE_C_COMPILER} has no OpenMP 3.x support, and if you want to use OpenMP capabilities you will need to switch to a different compiler. gcc > 4.7 and clang > 3.7 both support OpenMP 3.x. ")
 endif()
 
 # We need to compile the following libraries

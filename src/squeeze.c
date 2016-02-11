@@ -774,6 +774,10 @@ int main(int argc, char **argv)
     compute_lLikelihood(&lLikelihood, mod_vis, res, mod_obs, &chi2v2, &chi2t3amp, &chi2visamp, &chi2t3phi, &chi2visphi);
     compute_lPrior(&lPrior, chan, reg_param, reg_value);
     lPosterior = lLikelihood + lPrior;
+    print_diagnostics(iChain, -1, nvis, nv2, nt3, nt3phi, nt3amp, nvisamp, nvisphi, chi2v2, chi2t3amp, chi2t3phi,
+                          chi2visphi, chi2visamp, lPosterior, lPrior, lLikelihood, reg_param, reg_value, centroid_image_x, centroid_image_y, nelements, nwavr,
+                          niter, temperature, prob_movement, params, stepsize);
+
 
     if (minimization_engine == ENGINE_SIMULATED_ANNEALING)
     {
@@ -1976,7 +1980,7 @@ double mode(const double *x, const int N)
 {
   long count = 1, mode = 0, m = 0, i = 1;
 
-  while (i != N + 1)
+  while (i < N)
   {
     if (lround(x[i - 1]) != lround(x[i]))
     {
@@ -2649,7 +2653,49 @@ void compute_regularizers(const double *reg_param, double *reg_value, const doub
     if (reg_param[REG_L0ATROUS] > 0.0)
       {
 	reg_value[w * NREGULS + REG_L0ATROUS] = L0_ATROUS(&image[w * axis_len * axis_len], NULL, 0.0, axis_len, axis_len, fluxscaling);
-      }
+
+
+      // DEBUG : this is a good place to test wavelet transforms
+    const int nscales = 4;
+    char wav_filename[100];
+    sprintf(wav_filename, "output.wav");
+     FILE *pFile = fopen(wav_filename, "w");
+
+    
+    //     double* wav = malloc( nscales * axis_len * axis_len * sizeof(double));
+//     atrous_fwd(&image[0], wav, axis_len, axis_len, nscales);
+//     for(int k=0;k<4;k++)
+//     {
+//    	for(int j=0;j<axis_len;j++)
+//    	  {
+//    	    for(int i=0;i< axis_len;i++)
+//    	      fprintf(pFile, "%lf ", wav[k * axis_len * axis_len + j*axis_len +i]);
+//    	  }
+//      }
+// 
+//      free(wav);
+  
+      double **wav = malloc(sizeof(double *) * nscales);
+     for (int k = 0; k < nscales; k++)
+      wav[k] = malloc(sizeof(double) * axis_len*axis_len);
+
+  
+     for (i = 0; i < axis_len*axis_len; i++)
+      wav[0][i] = image[i]/fluxscaling;
+    
+  
+     if (a_trous(wav, axis_len, axis_len, nscales, 1) != 0)
+      printf("Error during DWT \n");
+    
+  
+     for (int k = 0; k < nscales; k++) 
+     for (int i = 0; i < axis_len*axis_len; i++)
+     	fprintf(pFile, "%lf ", wav[k][i]); 
+      
+      fclose(pFile);    
+      printf("Debug: atrous %f\n", fluxscaling);
+      getchar();
+    }
     
     if (reg_param[REG_L1CDF53] > 0.0)
       {
@@ -2659,30 +2705,14 @@ void compute_regularizers(const double *reg_param, double *reg_value, const doub
     if (reg_param[REG_L1CDF97] > 0.0)
       {
 	reg_value[w * NREGULS + REG_L1CDF97] = L1_CDF97(&image[w * axis_len * axis_len], NULL, 0.0, axis_len, axis_len, fluxscaling);
-      }
+}
     
     if (reg_param[REG_L1ATROUS] > 0.0)
       {
 	reg_value[w * NREGULS + REG_L1ATROUS] = L1_ATROUS(&image[w * axis_len * axis_len], NULL, 0.0, axis_len, axis_len, fluxscaling);
+      
+    
       }
-    
-      // DEBUG : this is a good place to test wavelet transforms
-      //    double* wav = malloc( axis_len * axis_len * sizeof(double));
-      //    fwt97_2D(wav, &image[w * axis_len * axis_len], axis_len, axis_len, 1);
-      //char wav_filename[100];
-      //sprintf(wav_filename, "output.wav");
-      //FILE *pFile = fopen(wav_filename, "w");
-      //for(int j=0;j<axis_len;j++)
-      //{
-      //   for(int i=0;i< axis_len;i++)
-      //     fprintf(pFile, "%lf ", wav[j*axis_len +i]);
-      //  fprintf(pFile,"\n");
-      //
-      // }
-      //fclose(pFile);
-      //  free(wav);  
-      //  getchar();
-    
     if (reg_param[REG_PRIORIMAGE] > 0)
       reg_value[w * NREGULS + REG_PRIORIMAGE] = reg_prior_image(&image[w * axis_len * axis_len], &prior_image[w * axis_len * axis_len], 0.0, axis_len,
           axis_len, fluxscaling);
@@ -3104,7 +3134,7 @@ void print_diagnostics(int iChain, long current_iter, long nvis, long nv2, long 
                        const double *reg_value, const double *centroid_image_x, const double *centroid_image_y, long nelements, int nwavr, long niter,
                        const double *temperature, double prob_movement, const double *params, const double *stepsize)
 {
-  // Note: current_iter = i / (nwavr * nelements) + 1
+  // Note: current_iter = i / (nwavr * nelements) + 1 unless we're printing initialization
 
   long w, j;
   const int maxlength = 400;
@@ -3163,10 +3193,13 @@ void print_diagnostics(int iChain, long current_iter, long nvis, long nv2, long 
     if (reg_param[REG_TRANSPECL2] > 0)
       diagnostics_used += snprintf(diagnostics + diagnostics_used, maxlength - diagnostics_used, "TS:%5.2f ", reg_param[REG_TRANSPECL2] * reg_value[REG_TRANSPECL2]);
 
-
+    if(current_iter > 0)
     diagnostics_used += snprintf(diagnostics + diagnostics_used, maxlength - diagnostics_used, "E: %5ld MPr: %4.2f T: %5.2f Iter: %4ld of %4ld", nelements,
                                  prob_movement, temperature[iChain], current_iter, niter);
-
+    else
+       diagnostics_used += snprintf(diagnostics + diagnostics_used, maxlength - diagnostics_used, "E: %5ld MPr: %4.2f T: %5.2f -- INITIAL", nelements,
+                                 prob_movement, temperature[iChain]);
+      
     puts(diagnostics);
   }
   fflush(stdout);
