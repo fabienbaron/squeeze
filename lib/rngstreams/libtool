@@ -329,10 +329,10 @@ variables_saved_for_relink="PATH LD_LIBRARY_PATH LD_RUN_PATH GCC_EXEC_PREFIX COM
 link_all_deplibs=unknown
 
 # Compile-time system search path for libraries
-sys_lib_search_path_spec="/usr/lib/gcc/x86_64-linux-gnu/5 /usr/lib/x86_64-linux-gnu /usr/lib /lib/x86_64-linux-gnu /lib /opt/intel/composer_xe_2015.3.187/compiler/lib/intel64 /opt/intel/composer_xe_2015.3.187/ipp/lib/intel64 /opt/intel/composer_xe_2015.3.187/mkl/lib/intel64 /opt/intel/composer_xe_2015.3.187/tbb/lib/intel64/gcc4.1"
+sys_lib_search_path_spec="/usr/lib/gcc/x86_64-linux-gnu/5 /usr/lib/x86_64-linux-gnu /usr/lib /lib/x86_64-linux-gnu /lib"
 
 # Run-time system search path for libraries
-sys_lib_dlsearch_path_spec="/lib /usr/lib /usr/lib/x86_64-linux-gnu/libfakeroot /lib/i386-linux-gnu /usr/lib/i386-linux-gnu /lib/i686-linux-gnu /usr/lib/i686-linux-gnu /usr/lib/i386-linux-gnu/mesa /usr/local/lib /lib/x86_64-linux-gnu /usr/lib/x86_64-linux-gnu /usr/lib/x86_64-linux-gnu/mesa-egl /usr/lib/x86_64-linux-gnu/mesa /usr/lib/x86_64-linux-gnu/mir/client8driver/mesa /lib32 /usr/lib32 /libx32 /usr/libx32 "
+sys_lib_dlsearch_path_spec="/lib /usr/lib /usr/lib/x86_64-linux-gnu/libfakeroot /lib/i386-linux-gnu /usr/lib/i386-linux-gnu /lib/i686-linux-gnu /usr/lib/i686-linux-gnu /usr/local/lib /lib/x86_64-linux-gnu /usr/lib/x86_64-linux-gnu /usr/lib/nvidia-361-updates /usr/lib32/nvidia-361-updates /usr/lib/nvidia-361-updates /usr/lib32/nvidia-361-updates /usr/lib/x86_64-linux-gnu/mir/client8driver/mesa /lib64 /usr/lib64 /lib32 /usr/lib32 /libx32 /usr/libx32 "
 
 # Fix the shell variable $srcfile for the compiler.
 fix_srcfile_path=""
@@ -7529,11 +7529,11 @@ postdeps="-lstdc++ -lm -lgcc_s -lc -lgcc_s"
 
 # The directories searched by this compiler when creating a shared
 # library
-compiler_lib_search_dirs="/usr/lib/gcc/x86_64-linux-gnu/5 /usr/lib/gcc/x86_64-linux-gnu/5/../../../x86_64-linux-gnu /usr/lib/gcc/x86_64-linux-gnu/5/../../../../lib /lib/x86_64-linux-gnu /lib/../lib /usr/lib/x86_64-linux-gnu /usr/lib/../lib /opt/intel/composer_xe_2015.3.187/compiler/lib/intel64 /opt/intel/composer_xe_2015.3.187/ipp/../compiler/lib/intel64 /opt/intel/composer_xe_2015.3.187/ipp/lib/intel64 /opt/intel/composer_xe_2015.3.187/compiler/lib/intel64 /opt/intel/composer_xe_2015.3.187/mkl/lib/intel64 /opt/intel/composer_xe_2015.3.187/tbb/lib/intel64/gcc4.1 /usr/lib/gcc/x86_64-linux-gnu/5/../../.."
+compiler_lib_search_dirs="/usr/lib/gcc/x86_64-linux-gnu/5 /usr/lib/gcc/x86_64-linux-gnu/5/../../../x86_64-linux-gnu /usr/lib/gcc/x86_64-linux-gnu/5/../../../../lib /lib/x86_64-linux-gnu /lib/../lib /usr/lib/x86_64-linux-gnu /usr/lib/../lib /usr/lib/gcc/x86_64-linux-gnu/5/../../.."
 
 # The library search path used internally by the compiler when linking
 # a shared library.
-compiler_lib_search_path="-L/usr/lib/gcc/x86_64-linux-gnu/5 -L/usr/lib/gcc/x86_64-linux-gnu/5/../../../x86_64-linux-gnu -L/usr/lib/gcc/x86_64-linux-gnu/5/../../../../lib -L/lib/x86_64-linux-gnu -L/lib/../lib -L/usr/lib/x86_64-linux-gnu -L/usr/lib/../lib -L/opt/intel/composer_xe_2015.3.187/compiler/lib/intel64 -L/opt/intel/composer_xe_2015.3.187/ipp/../compiler/lib/intel64 -L/opt/intel/composer_xe_2015.3.187/ipp/lib/intel64 -L/opt/intel/composer_xe_2015.3.187/compiler/lib/intel64 -L/opt/intel/composer_xe_2015.3.187/mkl/lib/intel64 -L/opt/intel/composer_xe_2015.3.187/tbb/lib/intel64/gcc4.1 -L/usr/lib/gcc/x86_64-linux-gnu/5/../../.."
+compiler_lib_search_path="-L/usr/lib/gcc/x86_64-linux-gnu/5 -L/usr/lib/gcc/x86_64-linux-gnu/5/../../../x86_64-linux-gnu -L/usr/lib/gcc/x86_64-linux-gnu/5/../../../../lib -L/lib/x86_64-linux-gnu -L/lib/../lib -L/usr/lib/x86_64-linux-gnu -L/usr/lib/../lib -L/usr/lib/gcc/x86_64-linux-gnu/5/../../.."
 
 # Method to check whether dependent libraries are shared objects.
 deplibs_check_method="pass_all"
@@ -7613,10 +7613,10 @@ variables_saved_for_relink="PATH LD_LIBRARY_PATH LD_RUN_PATH GCC_EXEC_PREFIX COM
 link_all_deplibs=unknown
 
 # Compile-time system search path for libraries
-sys_lib_search_path_spec="/usr/lib/gcc/x86_64-linux-gnu/5 /usr/lib/x86_64-linux-gnu /usr/lib /lib/x86_64-linux-gnu /lib /opt/intel/composer_xe_2015.3.187/compiler/lib/intel64 /opt/intel/composer_xe_2015.3.187/ipp/lib/intel64 /opt/intel/composer_xe_2015.3.187/mkl/lib/intel64 /opt/intel/composer_xe_2015.3.187/tbb/lib/intel64/gcc4.1"
+sys_lib_search_path_spec="/usr/lib/gcc/x86_64-linux-gnu/5 /usr/lib/x86_64-linux-gnu /usr/lib /lib/x86_64-linux-gnu /lib"
 
 # Run-time system search path for libraries
-sys_lib_dlsearch_path_spec="/lib /usr/lib /usr/lib/x86_64-linux-gnu/libfakeroot /lib/i386-linux-gnu /usr/lib/i386-linux-gnu /lib/i686-linux-gnu /usr/lib/i686-linux-gnu /usr/lib/i386-linux-gnu/mesa /usr/local/lib /lib/x86_64-linux-gnu /usr/lib/x86_64-linux-gnu /usr/lib/x86_64-linux-gnu/mesa-egl /usr/lib/x86_64-linux-gnu/mesa /usr/lib/x86_64-linux-gnu/mir/client8driver/mesa /lib32 /usr/lib32 /libx32 /usr/libx32 "
+sys_lib_dlsearch_path_spec="/lib /usr/lib /usr/lib/x86_64-linux-gnu/libfakeroot /lib/i386-linux-gnu /usr/lib/i386-linux-gnu /lib/i686-linux-gnu /usr/lib/i686-linux-gnu /usr/local/lib /lib/x86_64-linux-gnu /usr/lib/x86_64-linux-gnu /usr/lib/nvidia-361-updates /usr/lib32/nvidia-361-updates /usr/lib/nvidia-361-updates /usr/lib32/nvidia-361-updates /usr/lib/x86_64-linux-gnu/mir/client8driver/mesa /lib64 /usr/lib64 /lib32 /usr/lib32 /libx32 /usr/libx32 "
 
 # Fix the shell variable $srcfile for the compiler.
 fix_srcfile_path=""
@@ -7925,10 +7925,10 @@ variables_saved_for_relink="PATH LD_LIBRARY_PATH LD_RUN_PATH GCC_EXEC_PREFIX COM
 link_all_deplibs=unknown
 
 # Compile-time system search path for libraries
-sys_lib_search_path_spec="/usr/lib/gcc/x86_64-linux-gnu/5 /usr/lib/x86_64-linux-gnu /usr/lib /lib/x86_64-linux-gnu /lib /opt/intel/composer_xe_2015.3.187/compiler/lib/intel64 /opt/intel/composer_xe_2015.3.187/ipp/lib/intel64 /opt/intel/composer_xe_2015.3.187/mkl/lib/intel64 /opt/intel/composer_xe_2015.3.187/tbb/lib/intel64/gcc4.1"
+sys_lib_search_path_spec="/usr/lib/gcc/x86_64-linux-gnu/5 /usr/lib/x86_64-linux-gnu /usr/lib /lib/x86_64-linux-gnu /lib"
 
 # Run-time system search path for libraries
-sys_lib_dlsearch_path_spec="/lib /usr/lib /usr/lib/x86_64-linux-gnu/libfakeroot /lib/i386-linux-gnu /usr/lib/i386-linux-gnu /lib/i686-linux-gnu /usr/lib/i686-linux-gnu /usr/lib/i386-linux-gnu/mesa /usr/local/lib /lib/x86_64-linux-gnu /usr/lib/x86_64-linux-gnu /usr/lib/x86_64-linux-gnu/mesa-egl /usr/lib/x86_64-linux-gnu/mesa /usr/lib/x86_64-linux-gnu/mir/client8driver/mesa /lib32 /usr/lib32 /libx32 /usr/libx32 "
+sys_lib_dlsearch_path_spec="/lib /usr/lib /usr/lib/x86_64-linux-gnu/libfakeroot /lib/i386-linux-gnu /usr/lib/i386-linux-gnu /lib/i686-linux-gnu /usr/lib/i686-linux-gnu /usr/local/lib /lib/x86_64-linux-gnu /usr/lib/x86_64-linux-gnu /usr/lib/nvidia-361-updates /usr/lib32/nvidia-361-updates /usr/lib/nvidia-361-updates /usr/lib32/nvidia-361-updates /usr/lib/x86_64-linux-gnu/mir/client8driver/mesa /lib64 /usr/lib64 /lib32 /usr/lib32 /libx32 /usr/libx32 "
 
 # Fix the shell variable $srcfile for the compiler.
 fix_srcfile_path=""
