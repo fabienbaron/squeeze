@@ -76,8 +76,8 @@ wavefilt atrous_1d_filter, atrous_2d_filter;
 /* SQUEEZE MAIN LOOP */
 int main(int argc, char **argv)
 {
- 
-    
+
+
   // TBD: documentation for all variables coming soon.....
   signal(SIGINT, intHandler);
 
@@ -86,7 +86,7 @@ int main(int argc, char **argv)
   int nthreads = 0; // default number of threads for computation
   int nmaxthreads = 0;
   int nthreadsperchain = 1;
-  double cent_mult = 0.0, fov = 1; // centroid regularization
+  double cent_mult = 0.0, fov = 1; // default = centroid regularization
   double reg_param[NREGULS];
   long niter = DEFAULT_NITER;
   double mas_pixel;
@@ -144,7 +144,7 @@ int main(int argc, char **argv)
   double *wavmax = NULL;
 
   atrous_set(2);
- 
+
   printf(TEXT_COLOR_RED"SQUEEZE - Version %1.1f\n"TEXT_COLOR_BLACK, SQUEEZE_VERSION);
 
   /* Initialize regularization parameters */
@@ -550,12 +550,16 @@ int main(int argc, char **argv)
    *    there is some a-priori information for each parameter in reg_value[REG_MODELPARAM]... */
   ndf = (double)(nvisamp + nvisphi + nt3amp + nt3phi + nv2 + nparams);
 
-  /* cent_mult should only be non-zero if there is no model to fit */
-  if (nparams == 0)
+  // cent_mult is zero if there is a model to fit
+  if ((nparams == 0) && (fov == 1))
   {
     cent_mult = DEFAULT_CENT_MULT;
     reg_param[REG_CENTERING] = 1.0;
     ndf += 2.;
+  } else
+  {
+    cent_mult = 0.0;
+    reg_param[REG_CENTERING] = 0.0;
   }
 
   printf("Reconst setup -- Degrees of freedom:\t%ld\n", (long) round(ndf));
@@ -760,7 +764,7 @@ int main(int argc, char **argv)
     //
     // COMPUTE INITIAL REGULARIZER VALUE
     //
-   
+
     compute_regularizers(reg_param, reg_value, image, prior_image, (double) nelements, initial_x, initial_y, nwavr, axis_len, nelements, centroid_image_x,
                          centroid_image_y, fov, cent_mult);
 
@@ -1064,7 +1068,7 @@ int main(int argc, char **argv)
         if (reg_param[REG_SPOT] > 0.0)
           new_reg_value[chan * NREGULS + REG_SPOT] = UDreg(&image[chan * axis_len * axis_len], NULL, 0.0, axis_len, axis_len, (const double) nelements);
         if (reg_param[REG_TV] > 0.0)
-          new_reg_value[chan * NREGULS + REG_TV] = TV(&image[chan * axis_len * axis_len], NULL, 0.0, axis_len, axis_len, (const double) nelements); 
+          new_reg_value[chan * NREGULS + REG_TV] = TV(&image[chan * axis_len * axis_len], NULL, 0.0, axis_len, axis_len, (const double) nelements);
 
 	if (reg_param[REG_LAP] > 0.0)
           new_reg_value[chan * NREGULS + REG_LAP] = LAP(&image[chan * axis_len * axis_len], NULL, 0.0, axis_len, axis_len, (const double) nelements);
@@ -1089,7 +1093,7 @@ int main(int argc, char **argv)
 
 	if (reg_param[REG_L1ATROUS] > 0.0)
           new_reg_value[chan * NREGULS + REG_L1ATROUS] = L1_ATROUS(&image[chan * axis_len * axis_len], NULL, 0.0, axis_len, axis_len, (const double) nelements);
-	
+
         if (reg_param[REG_TRANSPECL2] > 0.0)
           new_reg_value[REG_TRANSPECL2] = transpec(nwavr, axis_len, image, (const double) nelements);
 
@@ -1102,7 +1106,7 @@ int main(int argc, char **argv)
               + fov * cent_change(chan, centroid_image_x, centroid_image_y, new_x, new_y, old_x, old_y, axis_len, fov, cent_mult);
         if (reg_param[REG_MODELPARAM] > 0.0)
           new_reg_value[REG_MODELPARAM] = reg_value[REG_MODELPARAM];
-	
+
         /* Modify the visibilities */
         //#pragma omp parallel for simd
         for (j = 0; j < nuv; ++j)
@@ -1182,7 +1186,7 @@ int main(int argc, char **argv)
           for(int r = 1; r < NREGULS-1; ++r) // update all spatial regularizers /bug should we include MODELPARAM ?
 	     reg_value[chan * NREGULS + r] = new_reg_value[chan * NREGULS + r];
 	  reg_value[REG_TRANSPECL2] = new_reg_value[REG_TRANSPECL2];
-	  
+
           prob_movement += 1.0 / DAMPING_TIME;
         }
         /* For parameter movement, update parameters */
@@ -1393,7 +1397,7 @@ int main(int argc, char **argv)
 
       for (i = 0; i < nchains; ++i)
 	if(burn_in_times[i] < niter - depth) burn_in_times[i] = niter - depth ; // note: we previously ensured depth <= niter
-      
+
       mcmc_results(minimization_engine, output_filename, nchains, burn_in_times, depth, nelements, axis_len, xtransform, ytransform, saved_x, saved_y,
                              saved_params, niter, nwavr, final_params, final_params_std, reg_param, final_reg_value, prior_image, initial_x, initial_y, centroid_image_x,
 		   centroid_image_y, fov, cent_mult, ndf, tmin, chi2_temp, chi2_target, mas_pixel, init_filename, prior_filename, 0, 0);
@@ -1409,7 +1413,7 @@ int main(int argc, char **argv)
       mcmc_results(minimization_engine, output_filename, nchains, burn_in_times, depth, nelements, axis_len, xtransform, ytransform, saved_x, saved_y,
                              saved_params, niter, nwavr, final_params, final_params_std, reg_param, final_reg_value, prior_image, initial_x, initial_y, centroid_image_x,
                              centroid_image_y, fov, cent_mult, ndf, tmin, chi2_temp, chi2_target, mas_pixel, init_filename, prior_filename, logZ, logZe);
-     
+
     }
 
 
@@ -1657,7 +1661,7 @@ double residuals_to_chi2(const double *res, double *chi2v2, double *chi2t3amp, d
   long i;
   double temp1 = 0, temp2 = 0, temp3 = 0, temp4 = 0, temp5 = 0; // local accumulator (faster than using chi2)
 
-  
+
   //  #pragma omp simd reduction(+:temp1)
   for (i = 0; i < nv2; ++i)
   {
@@ -1680,7 +1684,7 @@ double residuals_to_chi2(const double *res, double *chi2v2, double *chi2t3amp, d
 	{
 	  temp3 += res[i] * res[i];
 	}
-      
+
       *chi2visamp = temp3;
     }
 
@@ -1691,7 +1695,7 @@ double residuals_to_chi2(const double *res, double *chi2v2, double *chi2t3amp, d
 	{
 	  temp4 += res[i] * res[i];
 	}
-      
+
       *chi2visphi = temp4;
     }
 
@@ -1844,11 +1848,11 @@ int writeasfits(const char *file, double *image, int nwavr, long depth, long min
   if (fits_write_key_str(fptr, "CTYPE2", "DEC", "Name of Y-coordinate", &status))
     printerror(status);
 
-  //  if ( fits_write_key_str ( fptr, "CUNIT1", "mas", "Unit of X-coordinate", &status ) ) 
-  //  printerror ( status ); 
+  //  if ( fits_write_key_str ( fptr, "CUNIT1", "mas", "Unit of X-coordinate", &status ) )
+  //  printerror ( status );
   // if ( fits_write_key_str ( fptr, "CUNIT2", "mas", "Unit of Y-coordinate", &status ) )
-  // printerror ( status ); 
-  
+  // printerror ( status );
+
   if (regpar != NULL)
   {
 
@@ -2398,7 +2402,7 @@ void mcmc_results(int minimization_engine, char *file_basename, const int nchain
     {
       nchains_eff = 1;
     }
-  
+
   ////////////////////////////////////////////////
   //
   // Compute MCMC parametric model and errors
@@ -2411,7 +2415,7 @@ void mcmc_results(int minimization_engine, char *file_basename, const int nchain
       //printf("JAC %d\n", burn_in_times[t]);
       nburned += niter - burn_in_times[t];
     }
-  
+
   if (nparams > 0)
   {
     for (i = 0; i < nparams; ++i)
@@ -2488,7 +2492,7 @@ void mcmc_results(int minimization_engine, char *file_basename, const int nchain
     images_mean = calloc(nchains_eff * nwavr * axis_len * axis_len, sizeof(double));
     for (t = 0; t < nchains_eff; ++t)
     {
-      
+
       for (i = 0; i < nwavr * axis_len * axis_len; ++i)
         images_mean[t * nwavr * axis_len * axis_len + i] = mean(&images[t * nwavr * axis_len * axis_len * niter + i * niter + burn_in_times[t]], niter - burn_in_times[t]);
 
@@ -2507,7 +2511,7 @@ void mcmc_results(int minimization_engine, char *file_basename, const int nchain
                        saved_x, saved_y, saved_params, niter, nwavr, final_params, final_params_std, reg_param, final_reg_value, prior_image, initial_x, initial_y,
                        centroid_image_x, centroid_image_y, fov, cent_mult, ndf, tmin, chi2_temp, chi2_target, mas_pixel, init_filename, prior_filename, logZ, logZe);
 
-     
+
     }
   }
 
@@ -2644,12 +2648,12 @@ void compute_regularizers(const double *reg_param, double *reg_value, const doub
       {
 	reg_value[w * NREGULS + REG_L0CDF53] = L0_CDF53(&image[w * axis_len * axis_len], NULL, 0.0, axis_len, axis_len, fluxscaling);
       }
-    
+
     if (reg_param[REG_L0CDF97] > 0.0)
       {
 	reg_value[w * NREGULS + REG_L0CDF97] = L0_CDF97(&image[w * axis_len * axis_len], NULL, 0.0, axis_len, axis_len, fluxscaling);
       }
-    
+
     if (reg_param[REG_L0ATROUS] > 0.0)
       {
 	reg_value[w * NREGULS + REG_L0ATROUS] = L0_ATROUS(&image[w * axis_len * axis_len], NULL, 0.0, axis_len, axis_len, fluxscaling);
@@ -2661,7 +2665,7 @@ void compute_regularizers(const double *reg_param, double *reg_value, const doub
     sprintf(wav_filename, "output.wav");
      FILE *pFile = fopen(wav_filename, "w");
 
-    
+
     //     double* wav = malloc( nscales * axis_len * axis_len * sizeof(double));
 //     atrous_fwd(&image[0], wav, axis_len, axis_len, nscales);
 //     for(int k=0;k<4;k++)
@@ -2672,46 +2676,46 @@ void compute_regularizers(const double *reg_param, double *reg_value, const doub
 //    	      fprintf(pFile, "%lf ", wav[k * axis_len * axis_len + j*axis_len +i]);
 //    	  }
 //      }
-// 
+//
 //      free(wav);
-  
+
       double **wav = malloc(sizeof(double *) * nscales);
      for (int k = 0; k < nscales; k++)
       wav[k] = malloc(sizeof(double) * axis_len*axis_len);
 
-  
+
      for (i = 0; i < axis_len*axis_len; i++)
       wav[0][i] = image[i]/fluxscaling;
-    
-  
+
+
      if (a_trous(wav, axis_len, axis_len, nscales, 1) != 0)
       printf("Error during DWT \n");
-    
-  
-     for (int k = 0; k < nscales; k++) 
+
+
+     for (int k = 0; k < nscales; k++)
      for (int i = 0; i < axis_len*axis_len; i++)
-     	fprintf(pFile, "%lf ", wav[k][i]); 
-      
-      fclose(pFile);    
+     	fprintf(pFile, "%lf ", wav[k][i]);
+
+      fclose(pFile);
       printf("Debug: atrous %f\n", fluxscaling);
       getchar();
     }
-    
+
     if (reg_param[REG_L1CDF53] > 0.0)
       {
 	reg_value[w * NREGULS + REG_L1CDF53] = L1_CDF53(&image[w * axis_len * axis_len], NULL, 0.0, axis_len, axis_len, fluxscaling);
       }
-    
+
     if (reg_param[REG_L1CDF97] > 0.0)
       {
 	reg_value[w * NREGULS + REG_L1CDF97] = L1_CDF97(&image[w * axis_len * axis_len], NULL, 0.0, axis_len, axis_len, fluxscaling);
 }
-    
+
     if (reg_param[REG_L1ATROUS] > 0.0)
       {
 	reg_value[w * NREGULS + REG_L1ATROUS] = L1_ATROUS(&image[w * axis_len * axis_len], NULL, 0.0, axis_len, axis_len, fluxscaling);
-      
-    
+
+
       }
     if (reg_param[REG_PRIORIMAGE] > 0)
       reg_value[w * NREGULS + REG_PRIORIMAGE] = reg_prior_image(&image[w * axis_len * axis_len], &prior_image[w * axis_len * axis_len], 0.0, axis_len,
@@ -3186,7 +3190,7 @@ void print_diagnostics(int iChain, long current_iter, long nvis, long nv2, long 
     	if (reg_param[k] > 0)
     	  diagnostics_used += snprintf(diagnostics + diagnostics_used, maxlength - diagnostics_used, "%s :%5.2f ", reg_names[k], reg_param[k] * reg_value[w * NREGULS + k]);
     	if ((reg_param[k] == REG_CENTERING) && (reg_param[k] > 0))
-    	  diagnostics_used += snprintf(diagnostics + diagnostics_used, maxlength - diagnostics_used, "XY:(%5.2f,%5.2f) ", centroid_image_x[w] / nelements, centroid_image_y[w] / nelements);  
+    	  diagnostics_used += snprintf(diagnostics + diagnostics_used, maxlength - diagnostics_used, "XY:(%5.2f,%5.2f) ", centroid_image_x[w] / nelements, centroid_image_y[w] / nelements);
        }
 
     // transpectral regularizers:
@@ -3199,7 +3203,7 @@ void print_diagnostics(int iChain, long current_iter, long nvis, long nv2, long 
     else
        diagnostics_used += snprintf(diagnostics + diagnostics_used, maxlength - diagnostics_used, "E: %5ld MPr: %4.2f T: %5.2f -- INITIAL", nelements,
                                  prob_movement, temperature[iChain]);
-      
+
     puts(diagnostics);
   }
   fflush(stdout);
@@ -3216,6 +3220,5 @@ void print_diagnostics(int iChain, long current_iter, long nvis, long nv2, long 
 void compute_lPrior(double *lPrior, const long chan, const double *reg_param, const double *reg_value)
 { double temp = reg_param[REG_TRANSPECL2] * reg_value[REG_TRANSPECL2];
   for(int i=0; i<NREGULS-1;++i) temp +=reg_param[i] * reg_value[chan * NREGULS + i];
-  *lPrior = temp; 
+  *lPrior = temp;
 }
-
