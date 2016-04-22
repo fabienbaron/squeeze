@@ -109,8 +109,72 @@ void add_new_uv(long *obs_index, long *uvindex, double new_u, double new_v, doub
 
 int import_single_epoch_oifits(char *filename, bool use_v2, bool use_t3amp, bool use_t3phi, bool use_visamp, bool use_visphi,
                                double v2a, double v2s, double t3ampa, double t3amps, double t3phia, double t3phis,
-                               double visampa, double visamps, double visphia, double visphis, double fluxs, double cwhm, double uvtol, int nwavr, double *wavmin, double *wavmax, double *timemin, double *timemax)
+                               double visampa, double visamps, double visphia, double visphis, double fluxs, double cwhm, double uvtol, int* pnwavr,
+                               double **pwavmin, double **pwavmax, bool wavauto, double *timemin, double *timemax)
 {
+
+//  printf("wavauto = %d\n", wavauto);
+
+  int nwavr;
+  double *wavmin, *wavmax;
+  if(wavauto == FALSE ) // nwavr set outside, classic mode
+    {
+      nwavr = *pnwavr;
+      wavmin = *pwavmin;
+      wavmax = *pwavmax;
+    }
+    else
+    {
+      // read in OI_WAVE tables
+      STATUS status = 0;
+      fitsfile *infile;
+      fits_open_file(&infile, filename, READONLY, &status);
+      oi_wavelength wave;
+      nwavr=0;
+      // First scan just to get the total number of wavelengths
+      while (status == 0)
+      {
+        read_next_oi_wavelength(infile, &wave, &status);
+        if (status == 0)
+        {
+          printf("OIFITS import -- Scanning OI_WAVELENGTH table: %s with %d wavebands\n", wave.insname, wave.nwave);
+          nwavr+=wave.nwave;
+          free_oi_wavelength(&wave);
+        }
+      }
+      fits_close_file(infile, &status);
+      // now allocate memory
+      wavmin = malloc(nwavr * sizeof(double));
+      wavmax = malloc(nwavr * sizeof(double));
+
+      // reopen file
+      status = 0;
+      // TODO or BUG : import more than one set of wavelengths
+      // this may require merging tables, etc.
+      fits_open_file(&infile, filename, READONLY, &status);
+      read_next_oi_wavelength(infile, &wave, &status);
+        if (status == 0)
+        {
+          printf("OIFITS import -- Importing OI_WAVELENGTH table: %s\n", wave.insname);
+          // Note: OIFITS stores as eff_wave and eff_band, and we use min/max
+          for(int w=0;w<wave.nwave;w++)
+          {
+            wavmin[w]= wave.eff_wave[w]-0.5*wave.eff_band[w];
+            wavmax[w]= wave.eff_wave[w]+0.5*wave.eff_band[w];
+            printf("OIFITS import -- channel %d  = %lf um to\t %lf um\n", w, wavmin[w]*1e6, wavmax[w]*1e6);
+          }
+        }
+      fits_close_file(infile, &status);
+
+      // output the variable for use in main squeeze
+      *pwavmin = wavmin;
+      *pwavmax = wavmax;
+      *pnwavr = nwavr;
+
+    }
+
+
+
         //oi_array array;
         oi_target targets;
         oi_wavelength wave;
@@ -670,6 +734,8 @@ int import_single_epoch_oifits(char *filename, bool use_v2, bool use_t3amp, bool
         //
         // Assign uv points to reconstruction channels for polychromatic reconstruction
         //
+
+
 
         long *nuv_chan = malloc(nwavr * sizeof(long));       // will store number of uv points in each wavelength channel
         for (w = 0; w < nwavr; w++)

@@ -137,7 +137,7 @@ int main(int argc, char **argv)
   double v2s = 1., t3amps = 1., t3phis = 1., visamps = 1., visphis = 1.;
   double cvfwhm = 0., uvtol = 1e3, fluxs = 1.;
   double tempschedc = 3.0;
-
+  bool wavauto = FALSE;
   double *timemin = NULL;
   double *timemax = NULL;
   double *wavmin = NULL;
@@ -167,7 +167,7 @@ int main(int argc, char **argv)
   if (read_commandline(&argc, argv, &benchmark, &use_v2, &use_t3amp, &use_t3phi, &use_visamp, &use_visphi, &use_diffvis, &use_tempfitswriting,
                        &use_bandwidthsmearing, &minimization_engine, &dumpchain, &mas_pixel, &axis_len, &depth, &niter, &nelements, &f_anywhere, &f_copycat, &nchains,
                        &nthreads, &tempschedc, &fov, &chi2_temp, &chi2_target, &tmin, &prob_auto, &uvtol, &output_filename[0], &init_filename[0], &prior_filename[0], &v2s,
-                       &v2a, &t3amps, &t3ampa, &t3phia, &t3phis, &visamps, &visampa, &visphis, &visphia, &fluxs, &cvfwhm, reg_param, init_params, &wavmin, &wavmax, &nwavr) == FALSE)
+                       &v2a, &t3amps, &t3ampa, &t3phia, &t3phis, &visamps, &visampa, &visphis, &visphia, &fluxs, &cvfwhm, reg_param, init_params, &wavmin, &wavmax, &nwavr, &wavauto) == FALSE)
     return 0;
 
   // Check nchains and nthreads are consistent, and if not overwrite them
@@ -210,8 +210,7 @@ int main(int argc, char **argv)
 
   /* Read in oifits file */
 
-  if (import_single_epoch_oifits(argv[1], use_v2, use_t3amp, use_t3phi, use_visamp, use_visphi, v2a, v2s, t3ampa, t3amps, t3phia, t3phis, visampa, visamps, visphia,
-                                 visphis, fluxs, cvfwhm, uvtol, nwavr, wavmin, wavmax, timemin, timemax))
+  if (import_single_epoch_oifits(argv[1], use_v2, use_t3amp, use_t3phi, use_visamp, use_visphi, v2a, v2s, t3ampa, t3amps, t3phia, t3phis, visampa, visamps, visphia, visphis, fluxs, cvfwhm, uvtol, &nwavr, &wavmin, &wavmax, wavauto , timemin, timemax))
   {
     printf("Error opening %s. \n", argv[1]);
     return 0;
@@ -1530,7 +1529,8 @@ void printhelp(void)
 
   printf("\n***** OIFITS IMPORT SETTINGS ***** \n");
 
-  printf("  -wavchan         : Define polychromatic channels for reconstruction.\n");
+  printf("  -wavauto         : Read polychromatic channels for reconstruction from OIFITS file (works for single OI_WAVELENGTH table only).\n");
+  printf("  -wavchan         : Define custom polychromatic channels for reconstruction.\n");
   printf("                  Usage  : -wavchan 0 wavmin_0 wavmax_0 1 wavmin_1 wavmax_1 ...\n");
   printf("                  Then the wavelength channel i will have points with wavmin_i <= lambda < wavmax_i \n");
   printf("                  Example: -wavchan 0 1.2e-6 1.35e-6 1 1.35e-6 1.43e-6 2 1.6e-6 1.8e-6\n\n");
@@ -2823,11 +2823,10 @@ bool read_commandline(int *argc, char **argv, bool *benchmark, bool *use_v2, boo
                       double *tempschedc, double *fov, double *chi2_temp, double *chi2_target, double *tmin, double *prob_auto, double *uvtol, char *output_filename,
                       char *init_filename, char *prior_filename, double *v2s, double *v2a, double *t3amps, double *t3ampa, double *t3phia, double *t3phis, double *visamps,
                       double *visampa, double *visphis, double *visphia, double *fluxs, double *cvfwhm, double *reg_param, double *init_param, double **pwavmin,
-                      double **pwavmax, int *nwavr)
+                      double **pwavmax, int *nwavr, bool *wavauto)
 {
   long i, j, k;
   double *wavmin, *wavmax;
-
   /* Read in command line info... */
   if (*argc < 2) // need at least a filename to do something
   {
@@ -2906,6 +2905,12 @@ bool read_commandline(int *argc, char **argv, bool *benchmark, bool *use_v2, boo
     else if (strcmp(argv[i], "-monitor") == 0)
     {
       *use_tempfitswriting = TRUE; // enable writing chainxx.fits to disc
+    }
+    else if (strcmp(argv[i], "-wavauto") == 0)
+    {
+      // set wavauto
+      printf("Command line -- Automatic wavelength selection");
+      *wavauto = TRUE;
     }
     else if (strcmp(argv[i], "-nobws") == 0)
     {
@@ -3065,7 +3070,7 @@ bool read_commandline(int *argc, char **argv, bool *benchmark, bool *use_v2, boo
           sscanf(argv[i + 1 + j], "%lf", &(init_stepsize[j]));
         i += nparams - 1;
       }
-      else if (strcmp(argv[i], "-wavchan") == 0)
+      else if ( (strcmp(argv[i], "-wavchan") == 0) && (*wavauto == FALSE))
       {
         int wavchaninfo = 0;
         for (j = i + 1; j < *argc; ++j)
@@ -3118,7 +3123,7 @@ bool read_commandline(int *argc, char **argv, bool *benchmark, bool *use_v2, boo
   }
 
   // If no wavelength info was given, then we are in monochromatic mode
-  if ((*pwavmin == NULL) || (*pwavmax == NULL))
+  if ((*wavauto == FALSE) && ( (*pwavmin == NULL) || (*pwavmax == NULL)))
   {
     printf("Command line -- Monochromatic reconstruction\n");
     *nwavr = 1;
@@ -3127,8 +3132,6 @@ bool read_commandline(int *argc, char **argv, bool *benchmark, bool *use_v2, boo
     *pwavmin = wavmin;
     *pwavmax = wavmax;
   }
-
-
 
   return TRUE;
 }

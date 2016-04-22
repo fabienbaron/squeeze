@@ -28,7 +28,7 @@ restart:                        ;restart from here if severe file read failure f
 while (1) do begin
 
 ; monitor file changes
- while(1) do begin 
+ while(1) do begin
  openr, 1,  dir+'chain00.fits',  error = err
   if (err eq 0) then begin
    stat =  fstat(1)
@@ -38,20 +38,20 @@ while (1) do begin
   endif else print,  'Trouble opening file (ignore if occasional message only)'
   if (mtime GT ltime) then break else wait, 0.3
  endwhile
- ltime = mtime		
+ ltime = mtime
  tab_im =  readfits(dir+'chain00.fits',  head, /silent)
  sz = size(tab_im)
 
  if(sz[0] LT 2) then goto, restart
  if(sz[0] EQ 2) then nchanr = 1 else nchanr = (size(tab_im))[3]
  if(n_elements(oldnchanr) EQ 0) then oldnchanr = nchanr
- 
+
  if ( (n_elements(multi_im) EQ 0) OR (oldnchanr NE nchanr) ) then begin
     oldnchanr = nchanr
-    if(nchanr LE 10) then begin
+    if(nchanr LE 20) then begin
        window, 0, xs = 250*nchanr, ys = 500, title = 'Current/Mean image', xpos = 505
        wset, 0
-       multi_im=[0,nchanr,2] 
+       multi_im=[0,nchanr,2]
     endif else begin
        window, 0, xs = 250, ys = 500, title = 'Current/Mean image', xpos = 505
        wset, 0
@@ -80,7 +80,7 @@ endif
 
 xv=findgen(sz[1])*scale
 yv=findgen(sz[2])*scale
-xv=xv-mean(xv) 
+xv=xv-mean(xv)
 xv=-xv
 yv=yv-mean(yv)
 wset, 0
@@ -91,10 +91,10 @@ for i = 0, nchanr-1 do image_cont_uv, sqrt(reform(tab_im[*,*,i])),xv=xv,yv=yv,ti
 if FILE_TEST(dir+'output.fits') NE 1 then goto, skip
 
 tab_mim=readfits(dir+'output.fits', head2,/silent)
-szm = size(tab_mim) 
+szm = size(tab_mim)
 if(sz[0] LT 2) then goto, skip
 if(szm[0] EQ 2) then nchanrm = 1 else nchanrm = szm[3]
-scale=sxpar(head2,'scale')  
+scale=sxpar(head2,'scale')
 xv=findgen(szm[1])*scale
 yv=findgen(szm[2])*scale
 xv=xv-mean(xv)
@@ -117,11 +117,11 @@ endif else begin
    if valid EQ 1 then begin
   ; for j= 0, nchanr-1 do begin
       ;stop
-      for i=0, n_elements(reg_active)-1 do oplot, regs[*,i], li=linesty[i];, col=j*64   
+      for i=0, n_elements(reg_active)-1 do oplot, regs[*,i], li=linesty[i];, col=j*64
   ; endfor
    legend, ['CHI2', reg_names[reg_active]], li=[0,linesty]
 endif
-   wait, 1 
+   wait, 1
 endelse
 
 endwhile

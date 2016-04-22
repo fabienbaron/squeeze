@@ -332,7 +332,7 @@ link_all_deplibs=unknown
 sys_lib_search_path_spec="/usr/lib/gcc/x86_64-linux-gnu/5 /usr/lib/x86_64-linux-gnu /usr/lib /lib/x86_64-linux-gnu /lib"
 
 # Run-time system search path for libraries
-sys_lib_dlsearch_path_spec="/lib /usr/lib /usr/lib/x86_64-linux-gnu/libfakeroot /lib/i386-linux-gnu /usr/lib/i386-linux-gnu /lib/i686-linux-gnu /usr/lib/i686-linux-gnu /usr/local/lib /lib/x86_64-linux-gnu /usr/lib/x86_64-linux-gnu /usr/lib/nvidia-361-updates /usr/lib32/nvidia-361-updates /usr/lib/nvidia-361-updates /usr/lib32/nvidia-361-updates /usr/lib/x86_64-linux-gnu/mir/client8driver/mesa /lib64 /usr/lib64 /lib32 /usr/lib32 /libx32 /usr/libx32 "
+sys_lib_dlsearch_path_spec="/lib /usr/lib /usr/lib/x86_64-linux-gnu/libfakeroot /lib/i386-linux-gnu /usr/lib/i386-linux-gnu /lib/i686-linux-gnu /usr/lib/i686-linux-gnu /usr/local/lib /lib/x86_64-linux-gnu /usr/lib/x86_64-linux-gnu /usr/lib/nvidia-361 /usr/lib32/nvidia-361 /usr/lib/nvidia-361 /usr/lib32/nvidia-361 /usr/lib/x86_64-linux-gnu/mir/client8driver/mesa /lib64 /usr/lib64 /lib32 /usr/lib32 /libx32 /usr/libx32 "
 
 # Fix the shell variable $srcfile for the compiler.
 fix_srcfile_path=""
@@ -7616,7 +7616,7 @@ link_all_deplibs=unknown
 sys_lib_search_path_spec="/usr/lib/gcc/x86_64-linux-gnu/5 /usr/lib/x86_64-linux-gnu /usr/lib /lib/x86_64-linux-gnu /lib"
 
 # Run-time system search path for libraries
-sys_lib_dlsearch_path_spec="/lib /usr/lib /usr/lib/x86_64-linux-gnu/libfakeroot /lib/i386-linux-gnu /usr/lib/i386-linux-gnu /lib/i686-linux-gnu /usr/lib/i686-linux-gnu /usr/local/lib /lib/x86_64-linux-gnu /usr/lib/x86_64-linux-gnu /usr/lib/nvidia-361-updates /usr/lib32/nvidia-361-updates /usr/lib/nvidia-361-updates /usr/lib32/nvidia-361-updates /usr/lib/x86_64-linux-gnu/mir/client8driver/mesa /lib64 /usr/lib64 /lib32 /usr/lib32 /libx32 /usr/libx32 "
+sys_lib_dlsearch_path_spec="/lib /usr/lib /usr/lib/x86_64-linux-gnu/libfakeroot /lib/i386-linux-gnu /usr/lib/i386-linux-gnu /lib/i686-linux-gnu /usr/lib/i686-linux-gnu /usr/local/lib /lib/x86_64-linux-gnu /usr/lib/x86_64-linux-gnu /usr/lib/nvidia-361 /usr/lib32/nvidia-361 /usr/lib/nvidia-361 /usr/lib32/nvidia-361 /usr/lib/x86_64-linux-gnu/mir/client8driver/mesa /lib64 /usr/lib64 /lib32 /usr/lib32 /libx32 /usr/libx32 "
 
 # Fix the shell variable $srcfile for the compiler.
 fix_srcfile_path=""
@@ -7928,7 +7928,7 @@ link_all_deplibs=unknown
 sys_lib_search_path_spec="/usr/lib/gcc/x86_64-linux-gnu/5 /usr/lib/x86_64-linux-gnu /usr/lib /lib/x86_64-linux-gnu /lib"
 
 # Run-time system search path for libraries
-sys_lib_dlsearch_path_spec="/lib /usr/lib /usr/lib/x86_64-linux-gnu/libfakeroot /lib/i386-linux-gnu /usr/lib/i386-linux-gnu /lib/i686-linux-gnu /usr/lib/i686-linux-gnu /usr/local/lib /lib/x86_64-linux-gnu /usr/lib/x86_64-linux-gnu /usr/lib/nvidia-361-updates /usr/lib32/nvidia-361-updates /usr/lib/nvidia-361-updates /usr/lib32/nvidia-361-updates /usr/lib/x86_64-linux-gnu/mir/client8driver/mesa /lib64 /usr/lib64 /lib32 /usr/lib32 /libx32 /usr/libx32 "
+sys_lib_dlsearch_path_spec="/lib /usr/lib /usr/lib/x86_64-linux-gnu/libfakeroot /lib/i386-linux-gnu /usr/lib/i386-linux-gnu /lib/i686-linux-gnu /usr/lib/i686-linux-gnu /usr/local/lib /lib/x86_64-linux-gnu /usr/lib/x86_64-linux-gnu /usr/lib/nvidia-361 /usr/lib32/nvidia-361 /usr/lib/nvidia-361 /usr/lib32/nvidia-361 /usr/lib/x86_64-linux-gnu/mir/client8driver/mesa /lib64 /usr/lib64 /lib32 /usr/lib32 /libx32 /usr/libx32 "
 
 # Fix the shell variable $srcfile for the compiler.
 fix_srcfile_path=""
