@@ -132,16 +132,17 @@ int import_single_epoch_oifits(char *filename, bool use_v2, bool use_t3amp, bool
       oi_wavelength wave;
       nwavr=0;
       // First scan just to get the total number of wavelengths
-      while (status == 0)
-      {
+      //while (status == 0)
+      //{
         read_next_oi_wavelength(infile, &wave, &status);
         if (status == 0)
         {
           printf("OIFITS import -- Scanning OI_WAVELENGTH table: %s with %d wavebands\n", wave.insname, wave.nwave);
-          nwavr+=wave.nwave;
+          //nwavr+=wave.nwave;
+          nwavr=wave.nwave;
           free_oi_wavelength(&wave);
         }
-      }
+      //}
       fits_close_file(infile, &status);
       // now allocate memory
       wavmin = malloc(nwavr * sizeof(double));

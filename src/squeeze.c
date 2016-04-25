@@ -2501,9 +2501,7 @@ void mcmc_results(int minimization_engine, char *file_basename, const int nchain
       if(nchains_eff < 2)
 	{
 	  sprintf(data_filename, "%s", file_basename);
-	  mcmc_writeoutput(data_filename, &images_mean[t * nwavr * axis_len * axis_len], nchains, niter - burn_in_times[t], &burn_in_times[t], depth, nelements, axis_len, xtransform, ytransform,
-                       saved_x, saved_y, saved_params, niter, nwavr, final_params, final_params_std, reg_param, final_reg_value, prior_image, initial_x, initial_y,
-			   centroid_image_x, centroid_image_y, fov, cent_mult, ndf, tmin, chi2_temp, chi2_target, mas_pixel, init_filename, prior_filename, logZ, logZe);
+	  mcmc_writeoutput(data_filename, &images_mean[t * nwavr * axis_len * axis_len], nchains, niter - burn_in_times[t], &burn_in_times[t], depth, nelements, axis_len, xtransform, ytransform, saved_x, saved_y, saved_params, niter, nwavr, final_params, final_params_std, reg_param, final_reg_value, prior_image, initial_x, initial_y, centroid_image_x, centroid_image_y, fov, cent_mult, ndf, tmin, chi2_temp, chi2_target, mas_pixel, init_filename, prior_filename, logZ, logZe);
 	}
 
       sprintf(data_filename, "%s_MEAN_chain%d", file_basename, t);
