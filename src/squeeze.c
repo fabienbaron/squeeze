@@ -549,16 +549,32 @@ int main(int argc, char **argv)
    *    there is some a-priori information for each parameter in reg_value[REG_MODELPARAM]... */
   ndf = (double)(nvisamp + nvisphi + nt3amp + nt3phi + nv2 + nparams);
 
+
+  //
+  // MODIFICATIONS TO CENTERING
+  //
+
   // cent_mult is zero if there is a model to fit
   if ((nparams == 0) && (fov == 1))
   {
     cent_mult = DEFAULT_CENT_MULT;
     reg_param[REG_CENTERING] = 1.0;
     ndf += 2.;
-  } else
+  }
+  else
   {
     cent_mult = 0.0;
     reg_param[REG_CENTERING] = 0.0;
+  }
+
+  if (( reg_param[REG_PRIORIMAGE] > 0) && (reg_param[REG_CENTERING] >0))
+  {
+      printf(TEXT_COLOR_RED "Reconst setup -- There is a prior image, consider disabling centering\n" TEXT_COLOR_BLACK);
+  }
+
+  if ( (reg_param[REG_TRANSPECL2] > 0.0) && (reg_param[REG_CENTERING] >0))
+  {
+    printf(TEXT_COLOR_RED "Reconst setup -- Transpectral regularization, consider disabling centering except on first channel\n" TEXT_COLOR_BLACK);
   }
 
   printf("Reconst setup -- Degrees of freedom:\t%ld\n", (long) round(ndf));
@@ -1101,8 +1117,12 @@ int main(int argc, char **argv)
         image[new_pos]--;
 
         if (reg_param[REG_CENTERING] > 0.0)
+        {
+          //if((reg_param[REG_TRANSPECL2] > 0.0) && chan > 0
           new_reg_value[chan * NREGULS + REG_CENTERING] = reg_value[chan * NREGULS + REG_CENTERING]
               + fov * cent_change(chan, centroid_image_x, centroid_image_y, new_x, new_y, old_x, old_y, axis_len, fov, cent_mult);
+        }
+
         if (reg_param[REG_MODELPARAM] > 0.0)
           new_reg_value[REG_MODELPARAM] = reg_value[REG_MODELPARAM];
 
@@ -1163,7 +1183,6 @@ int main(int argc, char **argv)
         lLikelihood = new_lLikelihood;
         lPosterior = new_lPosterior;
         lPrior = new_lPrior;
-        reg_value[chan * NREGULS + REG_CENTERING] = new_reg_value[chan * NREGULS + REG_CENTERING];
 
         /* Swap mod_vis and new_mod_vis*/
         dummy_cpointer = mod_vis;
@@ -1183,8 +1202,9 @@ int main(int argc, char **argv)
           element_y[chan * nelements + current_elt] = new_y;
           image[new_pos]++;
           for(int r = 1; r < NREGULS-1; ++r) // update all spatial regularizers /bug should we include MODELPARAM ?
-	     reg_value[chan * NREGULS + r] = new_reg_value[chan * NREGULS + r];
-	  reg_value[REG_TRANSPECL2] = new_reg_value[REG_TRANSPECL2];
+	         reg_value[chan * NREGULS + r] = new_reg_value[chan * NREGULS + r];
+
+          reg_value[REG_TRANSPECL2] = new_reg_value[REG_TRANSPECL2];
 
           prob_movement += 1.0 / DAMPING_TIME;
         }
@@ -2235,6 +2255,8 @@ void mcmc_writeoutput(char *file_basename, double *image, const int nchains, con
   double complex *param_vis = malloc(nuv * sizeof(double complex));
   double *fluxratio_image = malloc(nuv * sizeof(double));
   double lPriorModel = 0;
+
+  // note: compute_model_visibilities_fromimage takes normalized images
   compute_model_visibilities_fromimage(mod_vis, im_vis, param_vis, params, fluxratio_image, image, xtransform, ytransform, &lPriorModel, nparams, nelements, axis_len);
 
   double *res     = malloc((nv2 + nt3amp + nt3phi + nvisamp + nvisphi) * sizeof(double)); // current residuals
@@ -2494,24 +2516,22 @@ void mcmc_results(int minimization_engine, char *file_basename, const int nchain
     {
 
       for (i = 0; i < nwavr * axis_len * axis_len; ++i)
-        images_mean[t * nwavr * axis_len * axis_len + i] = mean(&images[t * nwavr * axis_len * axis_len * niter + i * niter + burn_in_times[t]], niter - burn_in_times[t]);
+      images_mean[t * nwavr * axis_len * axis_len + i] =
+      mean(&images[t * nwavr * axis_len * axis_len * niter + i * niter + burn_in_times[t]], niter - burn_in_times[t]);
 
-      normalize_image(&images_mean[t * nwavr * axis_len * axis_len], nwavr * axis_len * axis_len);
+      for(w=0;w<nwavr;++w)
+      normalize_image(&images_mean[t * nwavr * axis_len * axis_len + w * axis_len * axis_len], axis_len * axis_len);
 
       if(nchains_eff < 2)
-	{
-	  sprintf(data_filename, "%s", file_basename);
-	  mcmc_writeoutput(data_filename, &images_mean[t * nwavr * axis_len * axis_len], nchains, niter - burn_in_times[t], &burn_in_times[t], depth, nelements, axis_len, xtransform, ytransform, saved_x, saved_y, saved_params, niter, nwavr, final_params, final_params_std, reg_param, final_reg_value, prior_image, initial_x, initial_y, centroid_image_x, centroid_image_y, fov, cent_mult, ndf, tmin, chi2_temp, chi2_target, mas_pixel, init_filename, prior_filename, logZ, logZe);
-	}
+      {
+        sprintf(data_filename, "%s", file_basename);
+        mcmc_writeoutput(data_filename, &images_mean[t * nwavr * axis_len * axis_len], nchains, niter - burn_in_times[t], &burn_in_times[t], depth, nelements, axis_len, xtransform, ytransform, saved_x, saved_y, saved_params, niter, nwavr, final_params, final_params_std, reg_param, final_reg_value, prior_image, initial_x, initial_y, centroid_image_x, centroid_image_y, fov, cent_mult, ndf, tmin, chi2_temp, chi2_target, mas_pixel, init_filename, prior_filename, logZ, logZe);
+      }
 
       sprintf(data_filename, "%s_MEAN_chain%d", file_basename, t);
-      mcmc_writeoutput(data_filename, &images_mean[t * nwavr * axis_len * axis_len], nchains, niter - burn_in_times[t], &burn_in_times[t], depth, nelements, axis_len, xtransform, ytransform,
-                       saved_x, saved_y, saved_params, niter, nwavr, final_params, final_params_std, reg_param, final_reg_value, prior_image, initial_x, initial_y,
-                       centroid_image_x, centroid_image_y, fov, cent_mult, ndf, tmin, chi2_temp, chi2_target, mas_pixel, init_filename, prior_filename, logZ, logZe);
-
-
+      mcmc_writeoutput(data_filename, &images_mean[t * nwavr * axis_len * axis_len], nchains, niter - burn_in_times[t], &burn_in_times[t], depth, nelements, axis_len, xtransform, ytransform, saved_x, saved_y, saved_params, niter, nwavr, final_params, final_params_std, reg_param, final_reg_value, prior_image, initial_x, initial_y, centroid_image_x, centroid_image_y, fov, cent_mult, ndf, tmin, chi2_temp, chi2_target, mas_pixel, init_filename, prior_filename, logZ, logZe);
+      }
     }
-  }
 
   // MEDIAN over iterations
   if (output_median)
@@ -2522,7 +2542,10 @@ void mcmc_results(int minimization_engine, char *file_basename, const int nchain
       for (i = 0; i < nwavr * axis_len * axis_len; ++i)
         images_median[t * nwavr * axis_len * axis_len + i] = median(&images[t * nwavr * axis_len * axis_len * niter + i * niter + burn_in_times[t]], niter - burn_in_times[t]);
 
-      normalize_image(&images_median[t * nwavr * axis_len * axis_len], nwavr * axis_len * axis_len);
+        for(w=0;w<nwavr;++w)
+        normalize_image(&images_median[t * nwavr * axis_len * axis_len + w * axis_len * axis_len], axis_len * axis_len);
+
+
       sprintf(data_filename, "%s_MEDIAN_chain%d", file_basename, t);
       mcmc_writeoutput(data_filename, &images_median[t * nwavr * axis_len * axis_len], nchains, niter - burn_in_times[t], &burn_in_times[t], depth, nelements, axis_len, xtransform, ytransform,
                        saved_x, saved_y, saved_params, niter, nwavr, final_params, final_params_std, reg_param, final_reg_value, prior_image, initial_x, initial_y,
@@ -2540,7 +2563,10 @@ void mcmc_results(int minimization_engine, char *file_basename, const int nchain
       for (i = 0; i < nwavr * axis_len * axis_len; ++i)
         images_mode[t * nwavr * axis_len * axis_len + i] = mode(&images[t * nwavr * axis_len * axis_len * niter + i * niter + burn_in_times[t]], niter - burn_in_times[t]);
 
-      normalize_image(&images_mode[t * nwavr * axis_len * axis_len], nwavr * axis_len * axis_len);
+      for(w=0;w<nwavr;++w)
+      normalize_image(&images_mode[t * nwavr * axis_len * axis_len + w * axis_len * axis_len], axis_len * axis_len);
+
+
       sprintf(data_filename, "%s_MODE_chain%d", file_basename, t);
       mcmc_writeoutput(data_filename, &images_mode[t * nwavr * axis_len * axis_len], nchains, niter - burn_in_times[t], &burn_in_times[t], depth, nelements, axis_len, xtransform, ytransform,
                        saved_x, saved_y, saved_params, niter, nwavr, final_params, final_params_std, reg_param, final_reg_value, prior_image, initial_x, initial_y,
