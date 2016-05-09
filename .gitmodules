@@ -1,0 +1,3 @@
+[submodule "lib/oifitslib"]
+	path = lib/oifitslib
+	url = https://github.com/jsy1001/oifitslib
