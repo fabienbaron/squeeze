@@ -398,9 +398,7 @@ int main(int argc, char **argv)
       if (fits_read_img(fptr, TDOUBLE, 1, in_naxes[0] * in_naxes[0] * nwavi, &nullval, initial_image, &dummy_int, &status))
         printerror(status);
 
-
-      bool import_reconst = TRUE; // sometimes we want to import a previous reconstruction
-      // Check flux normalization
+  // Check flux normalization
       for (w = 0; w < nwavi; ++w)
       {
         ftot = 0.0;
@@ -408,9 +406,8 @@ int main(int argc, char **argv)
           for (i = 0; i < in_naxes[0]; ++i)
             ftot += initial_image[i + j * in_naxes[0] + w * in_naxes[0] * in_naxes[0]];
         printf("Initial image -- checking total flux : %lf in channel %ld\n", ftot, w);
-        if(fabs(ftot - nelements) > 1)
+        if(fabs(ftot - 1.0) > 1e-4)
         {
-         import_reconst = FALSE;
          printf("Initial image -- renormalizing channel %ld\n", w);
           for (j = 0; j < in_naxes[0]; ++j)
             for (i = 0; i < in_naxes[0]; ++i)
