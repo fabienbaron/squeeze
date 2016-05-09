@@ -33,62 +33,6 @@
 #include <math.h>
 #include "exchange.h"
 
-
-// This part TBD: requires the Gnu Scientific Library
-// also von Mises is suboptimal...
-/*
-   #include <gsl/gsl_errno.h>
-   #include <gsl/gsl_math.h>
-   #include <gsl/gsl_roots.h>
-   #include <gsl/gsl_sf_bessel.h>
-
-   double vonmises_sigma (double k, void * params)
-   {
-   double* var = (double*) params;
-   return 1.- gsl_sf_bessel_I1(k)/gsl_sf_bessel_I0(k) - *var;
-   }
-
-   double wrappednormal_to_vonmises(double var)
-   {
-   // Solves k numerically from the equation var = 1 - I1(k)/I0(k)
-   const gsl_root_fsolver_type *T;
-   gsl_root_fsolver *s;
-   T = gsl_root_fsolver_brent;
-   s = gsl_root_fsolver_alloc (T);
-
-   gsl_function F;
-   F.function = &vonmises_sigma;
-   F.params = &var;
-
-   double x_lo = 0.0, x_hi = 5.0;
-   gsl_root_fsolver_set (s, &F, x_lo, x_hi);
-
-   int iter = 0, max_iter = 100;
-   int status;
-   double root;
-   do
-   {
-   iter++;
-   status = gsl_root_fsolver_iterate (s);
-   root = gsl_root_fsolver_root (s);
-   x_lo = gsl_root_fsolver_x_lower (s);
-   x_hi = gsl_root_fsolver_x_upper (s);
-   status = gsl_root_test_interval (x_lo, x_hi, 0, 0.001);
-
-   if (status == GSL_SUCCESS)
-   printf ("Converged:\n");
-
-   printf ("%5d %.7f\n", iter, root);
-   }
-   while (status == GSL_CONTINUE && iter < max_iter);
-
-   gsl_root_fsolver_free (s);
-
-   return root;
-   }
- */
-// END OF GSL REQUIREMENT
-
 void find_vec_minmax(double* output_min, double *output_max, double* vec, long N)
 {
         double min=0;
@@ -173,8 +117,6 @@ int import_single_epoch_oifits(char *filename, bool use_v2, bool use_t3amp, bool
       *pnwavr = nwavr;
 
     }
-
-
 
         //oi_array array;
         oi_target targets;

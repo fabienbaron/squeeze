@@ -392,10 +392,14 @@ int main(int argc, char **argv)
       }
 
       initial_image = malloc(in_naxes[0] * in_naxes[0] * nwavi * sizeof(double));
+      initial_x = malloc(nwavi * nelements * sizeof(unsigned short));
+      initial_y = malloc(nwavi * nelements * sizeof(unsigned short));
 
       if (fits_read_img(fptr, TDOUBLE, 1, in_naxes[0] * in_naxes[0] * nwavi, &nullval, initial_image, &dummy_int, &status))
         printerror(status);
 
+
+      bool import_reconst = TRUE; // sometimes we want to import a previous reconstruction
       // Check flux normalization
       for (w = 0; w < nwavi; ++w)
       {
@@ -404,37 +408,35 @@ int main(int argc, char **argv)
           for (i = 0; i < in_naxes[0]; ++i)
             ftot += initial_image[i + j * in_naxes[0] + w * in_naxes[0] * in_naxes[0]];
         printf("Initial image -- checking total flux : %lf in channel %ld\n", ftot, w);
-        // TODO: renormalize image
-        if (fabs((ftot - 1.0)) > 1e-4)
+        if(fabs(ftot - nelements) > 1)
         {
-          printf("Initial image -- renormalizing channel %ld\n", w);
+         import_reconst = FALSE;
+         printf("Initial image -- renormalizing channel %ld\n", w);
           for (j = 0; j < in_naxes[0]; ++j)
             for (i = 0; i < in_naxes[0]; ++i)
-              initial_image[i + j * in_naxes[0] + w * in_naxes[0] * in_naxes[0]] /= ftot;
+              initial_image[i + j * in_naxes[0] + w * in_naxes[0] * in_naxes[0]] *= ftot;
         }
       }
 
-      initial_x = malloc(nwavi * nelements * sizeof(unsigned short));
-      initial_y = malloc(nwavi * nelements * sizeof(unsigned short));
-
+      // This may not be the best way to digitize the image
       for (w = 0; w < nwavi; ++w)
       {
-        /* 1) Dummy int counts through the elements
+         /* 1) Dummy int counts through the elements
          *  2) i,j count through the pixels
          *  3) dtemp counts up flux in the input image.
          *  Once we get to 1 element, we add this in */
-        dummy_int = 0;
-        if (offset < 0)
-          i = -offset;
-        else
-          i = 0;
-        j = i;
-        dtemp = 0.0;
-        /* i,j are in the units of the image (i.e. with in_naxes[0] the width)
-         *  initial_x and initial_y have to be set in units of axis_len. dtemp accumulates fractional flux. */
+         dummy_int = 0;
+         if (offset < 0)
+           i = -offset;
+         else
+           i = 0;
+         j = i;
+         dtemp = 0.0;
+         /* i,j are in the units of the image (i.e. with in_naxes[0] the width)
+          *  initial_x and initial_y have to be set in units of axis_len. dtemp accumulates fractional flux. */
 
-        while (dummy_int < nelements)
-        {
+         while (dummy_int < nelements)
+         {
           if (dtemp >= 1)
           {
             dtemp -= 1.0; /* We've used up one unit of flux */
