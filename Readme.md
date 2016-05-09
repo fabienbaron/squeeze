@@ -79,7 +79,12 @@ First download the current git version of SQUEEZE using:
 ```
 git clone https://github.com/fabienbaron/squeeze.git
 ```
-which will create a squeeze subdirectory and download the SQUEEZE source into it.
+which will create a squeeze subdirectory and download the SQUEEZE source into it. Then you will need to initialize the submodule that pulls the latest OIFITSLIB (from https://github.com/jsy1001/oifitslib).
+```
+git submodule update --init
+```
+
+
 Then install SQUEEZE by typing:
 ```
 cd squeeze/build
