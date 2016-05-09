@@ -5,20 +5,32 @@ CMAKE_MINIMUM_REQUIRED(VERSION 2.8.0)
 OPTION (BUILD_SHARED_LIBS "Build Shared Libraries" OFF)
 OPTION (USE_PTHREADS "Thread-safe build (using pthreads)" ON)
 
-set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/CMakeModules")
+set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}")
 set (LIB_DESTINATION "${CMAKE_INSTALL_PREFIX}/lib${LIB_SUFFIX}")
-set (ARC_DESTINATION "${CMAKE_INSTALL_PREFIX}/lib${LIB_SUFFIX}")
 set (INCLUDE_INSTALL_DIR "${CMAKE_INSTALL_PREFIX}/include/")
 
 # Define project version
 SET(${PROJECT_NAME}_MAJOR_VERSION 3)
-SET(${PROJECT_NAME}_MINOR_VERSION 36)
+SET(${PROJECT_NAME}_MINOR_VERSION 39)
 SET(${PROJECT_NAME}_VERSION ${${PROJECT_NAME}_MAJOR_VERSION}.${${PROJECT_NAME}_MINOR_VERSION})
 SET(LIB_NAME cfitsio)
 
-# Define
-IF(MSVC)
+# Microsoft Visual Studio:
+IF(MSVC OR BORLAND)
+    # Define
     ADD_DEFINITIONS(-D_CRT_SECURE_NO_DEPRECATE)
+    # Need an empty unistd.h in MSVC for flex-generated eval_l.c:
+    FILE(WRITE ${CMAKE_SOURCE_DIR}/unistd.h "")
+    INCLUDE_DIRECTORIES(${CMAKE_SOURCE_DIR})
+ENDIF()
+
+IF(BORLAND)
+    # Suppress spurious Borland compiler warnings about "Suspicious
+    # pointer arithmetic", "Possibly incorrect assignment", and
+    # "Comparing signed and unsigned values".
+    ADD_DEFINITIONS(-w-spa)
+    ADD_DEFINITIONS(-w-pia)
+    ADD_DEFINITIONS(-w-csu)
 ENDIF()
 
 #add_subdirectory (src)
@@ -35,6 +47,13 @@ IF (USE_PTHREADS)
     FIND_PACKAGE(pthreads REQUIRED)
     INCLUDE_DIRECTORIES(${PTHREADS_INCLUDE_DIR})
     ADD_DEFINITIONS(-D_REENTRANT)
+ENDIF()
+
+# Math library (not available in MSVC)
+IF (NOT MSVC)
+    FIND_LIBRARY(M_LIB m)
+ELSE()
+    SET(M_LIB "")
 ENDIF()
 
 SET(SRC_FILES
@@ -56,11 +75,10 @@ SET(SRC_FILES
 )
 
 ADD_LIBRARY(${LIB_NAME} ${LIB_TYPE} ${H_FILES} ${SRC_FILES})
-TARGET_LINK_LIBRARIES(${LIB_NAME} m ${PTHREADS_LIBRARY}
-)
+TARGET_LINK_LIBRARIES(${LIB_NAME} ${PTHREADS_LIBRARY} ${M_LIB})
 
 SET_TARGET_PROPERTIES(${LIB_NAME} PROPERTIES VERSION ${${PROJECT_NAME}_VERSION} SOVERSION ${${PROJECT_NAME}_MAJOR_VERSION})
-install(TARGETS ${LIB_NAME} LIBRARY DESTINATION ${LIB_DESTINATION} ARCHIVE DESTINATION ${ARC_DESTINATION})
+install(TARGETS ${LIB_NAME} DESTINATION ${LIB_DESTINATION})
 install(FILES ${H_FILES} DESTINATION ${INCLUDE_INSTALL_DIR} COMPONENT Devel)
 
 ENABLE_TESTING()
@@ -68,6 +86,9 @@ ENABLE_TESTING()
 ADD_EXECUTABLE(TestProg testprog.c)
 TARGET_LINK_LIBRARIES(TestProg ${LIB_NAME})
 ADD_TEST(TestProg TestProg)
+# Copy testprog.tpt to build directory to allow quick test
+# of ./TestProg (or .\Release\TestProg.exe in MSVC):
+FILE(COPY ${CMAKE_SOURCE_DIR}/testprog.tpt DESTINATION ${CMAKE_CURRENT_BINARY_DIR})
 
 ADD_EXECUTABLE(cookbook cookbook.c)
 TARGET_LINK_LIBRARIES(cookbook ${LIB_NAME})
@@ -79,10 +100,13 @@ TARGET_LINK_LIBRARIES(FPack ${LIB_NAME})
 ADD_EXECUTABLE(Funpack funpack.c fpackutil.c)
 TARGET_LINK_LIBRARIES(Funpack ${LIB_NAME})
 
+ADD_EXECUTABLE(Fitscopy fitscopy.c)
+TARGET_LINK_LIBRARIES(Fitscopy ${LIB_NAME})
+
 # To expands the command line arguments in Windows, see:
 # http://msdn.microsoft.com/en-us/library/8bch7bkk.aspx
 if(MSVC)
-  set_target_properties(FPack Funpack PROPERTIES 
+  set_target_properties(FPack Funpack PROPERTIES
     LINK_FLAGS "setargv.obj"
   )
 endif(MSVC)

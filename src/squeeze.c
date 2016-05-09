@@ -34,7 +34,7 @@
 #include <string.h>
 #include "../lib/rngstreams/src/RngStream.h"
 #include "squeeze.h"
-#include "exchange.h" // includes cfitio
+#include "../lib/oifitslib/src/oifitslib/exchange.h" // includes cfitio
 
 #define TEXT_COLOR_RED     "\x1b[31m"
 #define TEXT_COLOR_GREEN   "\x1b[32m"
