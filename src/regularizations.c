@@ -251,6 +251,21 @@ double L1(const double *x, const double *pr, const double eps, const int nx, con
   return L1l / flux;
 }
 
+// If you're sure flux >= 0 this will be faster
+double L1pos(const double *x, const double *pr, const double eps, const int nx, const int ny, const double flux)
+{
+  register int i;
+  double L1l = 0;
+  for (i = 0; i < nx * ny; ++i)
+  {
+    L1l += x[i];
+  }
+  return L1l / flux;
+}
+
+
+
+
 
 double L2(const double *x, const double *pr, const double eps, const int nx, const int ny, const double flux)
 {
@@ -448,9 +463,6 @@ void fwt97_2D(double *wav, const double* x, const int nx, const int ny, const in
 		fwt97(wav, x, nx, ny); // do on rows
 		fwt97(wav, wav, nx, ny); // do on cols using the result
 	}
-  // For l0 or l1(pos+) we take directly the modulus
-  for (i = 0; i < nx*ny; ++i)
-    wav[i] = fabs(wav[i]);
 }
 
 void fwt53_2D(double *wav, const double* x, const int nx, const int ny, const int levels)
@@ -461,14 +473,15 @@ void fwt53_2D(double *wav, const double* x, const int nx, const int ny, const in
 		fwt53(wav, x, nx, ny); // do on rows
 		fwt53(wav, wav, nx, ny); // do on cols using the previous result
 	}
-  for (i = 0; i < nx*ny; ++i)
-    wav[i] = fabs(wav[i]);
+
 }
 
 double L0_CDF97(const double *x, const double *pr, const double eps, const int nx, const int ny, const double flux)
 {
   double* wav = malloc( nx * ny * sizeof(double));
   fwt97_2D(wav, x, nx, ny, 1);
+  for (int i = 0; i < nx*ny; ++i)
+    wav[i] = fabs(wav[i]);
   double reg = L0(wav, NULL, 0, nx, ny, 1.);
   free(wav);
   return reg;
@@ -478,6 +491,8 @@ double L0_CDF53(const double *x, const double *pr, const double eps, const int n
 {
   double* wav = malloc( nx * ny * sizeof(double));
   fwt53_2D(wav, x, nx, ny, 1);
+  for (int i = 0; i < nx*ny; ++i)
+    wav[i] = fabs(wav[i]);
   double reg = L0(wav, NULL, 0, nx, ny, 1.);
   free(wav);
   return reg;
@@ -715,8 +730,6 @@ double L1_ATROUS(const double *x, const double *pr, const double eps, const int 
   const int nscales = 4;
   double* wav = malloc( nscales * nx * ny * sizeof(double));
   atrous_fwd(x, wav, nx, ny, nscales);
-  for (int i = 0; i < nscales*nx*ny; ++i)
-    wav[i] = fabs(wav[i]);
   double reg = L1(wav, NULL, 0, nx, ny, 1.);
   free(wav);
   return reg;
