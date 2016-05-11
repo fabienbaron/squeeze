@@ -1074,6 +1074,10 @@ int main(int argc, char **argv)
           new_reg_value[chan * NREGULS + REG_DARKENERGY] = reg_value[chan * NREGULS + REG_DARKENERGY]
 	    - den_change(image, old_x, old_y, DEN_SUBTRACT, axis_len) + den_change(image, new_x, new_y, DEN_ADD, axis_len);
 
+    //  if (reg_param[REG_L0] > 0.0)
+    //   new_reg_value[chan * NREGULS + REG_L0] = reg_value[chan * NREGULS + REG_L0] +
+    //   (image[new_pos]<1)?1:0 - ((image[old_pos]>0)&&(image[old_pos]<2))?1:0;
+
 
 	// Regularization for which we need to recompute the whole thing
         image[old_pos]--;
@@ -1087,8 +1091,8 @@ int main(int argc, char **argv)
 	if (reg_param[REG_LAP] > 0.0)
           new_reg_value[chan * NREGULS + REG_LAP] = LAP(&image[chan * axis_len * axis_len], NULL, 0.0, axis_len, axis_len, (const double) nelements);
 
-        if (reg_param[REG_L0] > 0.0)
-          new_reg_value[chan * NREGULS + REG_L0] = L0(&image[chan * axis_len * axis_len], NULL, 0.0, axis_len, axis_len, (const double) nelements);
+      if (reg_param[REG_L0] > 0.0)
+          new_reg_value[chan * NREGULS + REG_L0] = L0(&image[chan * axis_len * axis_len], NULL, 0.0, axis_len, axis_len, 1);
 
 	if (reg_param[REG_L0CDF53] > 0.0)
           new_reg_value[chan * NREGULS + REG_L0CDF53] = L0_CDF53(&image[chan * axis_len * axis_len], NULL, 0.0, axis_len, axis_len, (const double) nelements);

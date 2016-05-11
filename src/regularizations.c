@@ -226,11 +226,19 @@ double L0(const double *x, const double *pr, const double eps, const int nx, con
   double L0l = 0;
   for (i = 0; i < nx * ny; ++i)
   {
-    if (x[i] != 0)
+    if (x[i] > 0.0)
       L0l += 1.;
   }
-  return L0l / flux;
+  return L0l;
 }
+
+double L0_diff(const double *x, const long new_pos, const long old_pos)
+{
+  // difference due to old_pos now having one less element: x[old_pos]==1 -> l0+= -1 else 0
+  // difference due to new_pos now having one more element: x[new_pos]==0 -> l0+= 1 else 0
+  return (x[new_pos]<1)?1:0 -  ( (x[old_pos]>0)&&(x[old_pos]<2) )?1:0 ;
+}
+
 
 double L1(const double *x, const double *pr, const double eps, const int nx, const int ny, const double flux)
 {
@@ -377,7 +385,7 @@ void fwt97(double *wav, const double* x, const int nx, const int ny)
 	const double a2 = 0.8829110762;
 	const double a3 = 0.4435068522;
 	const double s0 = 0.81289306611596146; // 1/1.230174104914
-	const double s1 = 0.61508705245700002; // 0.5 * 1.230174104914 
+	const double s1 = 0.61508705245700002; // 0.5 * 1.230174104914
 	register int i, j;
 	int off;
 	double* tempx = malloc(nx * ny * sizeof(double));
@@ -440,6 +448,9 @@ void fwt97_2D(double *wav, const double* x, const int nx, const int ny, const in
 		fwt97(wav, x, nx, ny); // do on rows
 		fwt97(wav, wav, nx, ny); // do on cols using the result
 	}
+  // For l0 or l1(pos+) we take directly the modulus
+  for (i = 0; i < nx*ny; ++i)
+    wav[i] = fabs(wav[i]);
 }
 
 void fwt53_2D(double *wav, const double* x, const int nx, const int ny, const int levels)
@@ -450,13 +461,15 @@ void fwt53_2D(double *wav, const double* x, const int nx, const int ny, const in
 		fwt53(wav, x, nx, ny); // do on rows
 		fwt53(wav, wav, nx, ny); // do on cols using the previous result
 	}
+  for (i = 0; i < nx*ny; ++i)
+    wav[i] = fabs(wav[i]);
 }
 
 double L0_CDF97(const double *x, const double *pr, const double eps, const int nx, const int ny, const double flux)
 {
   double* wav = malloc( nx * ny * sizeof(double));
   fwt97_2D(wav, x, nx, ny, 1);
-  double reg = L0(wav, NULL, 0, nx, ny, 1.); 
+  double reg = L0(wav, NULL, 0, nx, ny, 1.);
   free(wav);
   return reg;
 }
@@ -465,7 +478,7 @@ double L0_CDF53(const double *x, const double *pr, const double eps, const int n
 {
   double* wav = malloc( nx * ny * sizeof(double));
   fwt53_2D(wav, x, nx, ny, 1);
-  double reg = L0(wav, NULL, 0, nx, ny, 1.); 
+  double reg = L0(wav, NULL, 0, nx, ny, 1.);
   free(wav);
   return reg;
 }
@@ -474,7 +487,7 @@ double L1_CDF53(const double *x, const double *pr, const double eps, const int n
 {
   double* wav = malloc( nx * ny * sizeof(double));
   fwt53_2D(wav, x, nx, ny, 1);
-  double reg = L1(wav, NULL, 0, nx, ny, 1.); 
+  double reg = L1(wav, NULL, 0, nx, ny, 1.);
   free(wav);
   return reg;
 }
@@ -483,14 +496,14 @@ double L1_CDF97(const double *x, const double *pr, const double eps, const int n
 {
   double* wav = malloc( nx * ny * sizeof(double));
   fwt97_2D(wav, x, nx, ny, 1);
-  double reg = L1(wav, NULL, 0, nx, ny, 1.); 
+  double reg = L1(wav, NULL, 0, nx, ny, 1.);
   free(wav);
   return reg;
 }
 
 
 
-void atrous_set(int idx) // set the wavelet coefficients for the a trous algorithm 
+void atrous_set(int idx) // set the wavelet coefficients for the a trous algorithm
 {
 	static float d1_lin3[3] = { 0.25, 0.5, 0.25 };
 	static float d1_spl5[5] = { 0.0625, 0.25, 0.375, 0.25, 0.0625 };
@@ -500,13 +513,13 @@ void atrous_set(int idx) // set the wavelet coefficients for the a trous algorit
 
 	switch (idx)
 	{
-	case 1: // linear interpolation filter 
+	case 1: // linear interpolation filter
 		atrous_1d_filter.ncof = 3;
 		atrous_1d_filter.cc = d1_lin3;
 		atrous_2d_filter.ncof = 3;
 		atrous_2d_filter.cc = d2_lin3;
 		break;
-	case 2: // B_3-spline interpolation 
+	case 2: // B_3-spline interpolation
 		atrous_1d_filter.ncof = 5;
 		atrous_1d_filter.cc = d1_spl5;
 		atrous_2d_filter.ncof = 5;
@@ -517,7 +530,7 @@ void atrous_set(int idx) // set the wavelet coefficients for the a trous algorit
 		break;
 	}
 
-	// compute the two dimensional convolution mask 
+	// compute the two dimensional convolution mask
 	for (i = 0; i < atrous_2d_filter.ncof; i++)
 	{
 		for (j = 0; j < atrous_2d_filter.ncof; j++)
@@ -538,27 +551,27 @@ int mpower(int basis, int exponent) {
 	return result;
 }
 
-void atrous_fwd(const double* x, double *wav, const int nx, const int ny, const int nscales) 
+void atrous_fwd(const double* x, double *wav, const int nx, const int ny, const int nscales)
 {
 	int i, j, i2, j2, i3, j3, k, nf, nc, istep;
 	nf = atrous_2d_filter.ncof;
 	nc = atrous_2d_filter.ioff;
 	int n = nx * ny;
 
-	// forward transform 
+	// forward transform
 	float *storage = malloc(sizeof(float) * n);
-	for (i = 0; i < n; i++) // copy initial image - set as first scale 
+	for (i = 0; i < n; i++) // copy initial image - set as first scale
 		storage[i] = x[i];
 
 	for (k = nscales - 1; k > 0; k--)
-	  { // determine step size for convolution depending on resolution scale 
+	  { // determine step size for convolution depending on resolution scale
 
-	    istep = powf(2, nscales - 1 - k); // copy image to scale, starting with large k (small scales) 
+	    istep = powf(2, nscales - 1 - k); // copy image to scale, starting with large k (small scales)
 
 		for (i = 0; i < n; i++)
 			wav[k * n + i] = x[i];
 
-		// smooth image by convolution with filter 
+		// smooth image by convolution with filter
 		for (i = 0; i < nx; i++)
 		{
 			for (j = 0; j < ny; j++)
@@ -567,19 +580,19 @@ void atrous_fwd(const double* x, double *wav, const int nx, const int ny, const 
 				for (i2 = 0; i2 < nf; i2++)
 				{
 					i3 = i + (i2 - nc) * istep;
-					// wrap around edges, using periodic boundary conditions 
+					// wrap around edges, using periodic boundary conditions
 					i3 = (i3 >= 0 ? (i3 < nx ? i3 : i3 - nx) : i3 + nx);
 					for (j2 = 0; j2 < nf; j2++)
 					{
 						j3 = j + (j2 - nc) * istep;
-						// wrap around edges, using periodic boundary conditions 
+						// wrap around edges, using periodic boundary conditions
 						j3 = (j3 >= 0 ? (j3 < ny ? j3 : j3 - ny) : j3 + ny);
 						storage[j * nx + i] += atrous_2d_filter.cc[i2 * nf + j2] * wav[k * n + j3 * nx + i3];
 					}
 				}
 			}
 		}
-		for (i = 0; i < n; i++) // construct detail coefficients by subtraction of smoothed image 
+		for (i = 0; i < n; i++) // construct detail coefficients by subtraction of smoothed image
 			wav[k * n + i] -= storage[i];
 
 		for (i = 0; i < n; i++)
@@ -689,7 +702,10 @@ double L0_ATROUS(const double *x, const double *pr, const double eps, const int 
   const int nscales = 4;
   double* wav = malloc( nscales * nx * ny * sizeof(double));
   atrous_fwd(x, wav, nx, ny, nscales);
-  double reg = L0(wav, NULL, 0, nx, ny, 1.); 
+// Take modulus for L1(pos) or L0
+  for (int i = 0; i < nscales*nx*ny; ++i)
+    wav[i] = fabs(wav[i]);
+  double reg = L0(wav, NULL, 0, nscales*nx, ny, 1.);
   free(wav);
   return reg;
 }
@@ -699,7 +715,9 @@ double L1_ATROUS(const double *x, const double *pr, const double eps, const int 
   const int nscales = 4;
   double* wav = malloc( nscales * nx * ny * sizeof(double));
   atrous_fwd(x, wav, nx, ny, nscales);
-  double reg = L1(wav, NULL, 0, nx, ny, 1.); 
+  for (int i = 0; i < nscales*nx*ny; ++i)
+    wav[i] = fabs(wav[i]);
+  double reg = L1(wav, NULL, 0, nx, ny, 1.);
   free(wav);
   return reg;
 }
