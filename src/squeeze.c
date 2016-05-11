@@ -699,7 +699,7 @@ int main(int argc, char **argv)
     double prob_movement = MPROB_LOW;
     double chi2v2 =0, chi2t3amp=0, chi2t3phi=0, chi2visamp=0, chi2visphi=0;
     double complex *dummy_cpointer = NULL;
-
+double pipo=0;
     double *image = malloc(nwavr * axis_len * axis_len * sizeof(double));
     unsigned short *element_x = malloc(nwavr * nelements * sizeof(unsigned short));
     unsigned short *element_y = malloc(nwavr * nelements * sizeof(unsigned short));
@@ -730,7 +730,7 @@ int main(int argc, char **argv)
     unsigned short chain1, chain2;
     double logZ = 0; // chose to have logZ to be a private variable
     double logZ_err = 0;
-
+    bool zerostep; // move selection
     // Randomization
 
     char rngname[80];
@@ -781,7 +781,8 @@ int main(int argc, char **argv)
 
     compute_regularizers(reg_param, reg_value, image, prior_image, (double) nelements, initial_x, initial_y, nwavr, axis_len, nelements, centroid_image_x,
                          centroid_image_y, fov, cent_mult);
-
+    for(i=0;i<NREGULS;i++)
+      printf("CRi: %lf %lf\n", reg_param[i], reg_value[i]);
     //
     // COMPUTE INITIAL VISIBILITIES
     //
@@ -817,14 +818,10 @@ int main(int argc, char **argv)
      *    ----------------------------*/
     for (i = 0; i < niter * nwavr * nelements; ++i)
     {
-      // Reset new regularizer values
+      //  new regularizer values
       for (w = 0; w < nwavr; ++w)
-      {
         for (j = 0; j < NREGULS; ++j)
-        {
           new_reg_value[w * NREGULS + j] = reg_value[w * NREGULS + j];
-        }
-      }
 
       if ((i % (nwavr * nelements)) == 0)
       {
@@ -971,16 +968,14 @@ int main(int argc, char **argv)
       if ((i % (STEPS_PER_OUTPUT * nwavr * nelements)) == 0)
       {
         if (use_tempfitswriting == TRUE)
-          writeasfits(temp_filename, image, nwavr, 1, (iChain) * niter + i / (nelements * nwavr), 2.0 * lLikelihood / ndf, chi2v2, chi2t3amp, chi2t3phi, chi2visamp, chi2visphi,
-                      temperature[iChain], nelements, &reg_param[0], &reg_value[0], niter, axis_len, ndf, tmin,
-                      chi2_temp, chi2_target, mas_pixel, nchains, 0, 0, "", "",
-                      &saved_params[iChaintoStorage[iChain] * nparams * niter], NULL);
+          writeasfits(temp_filename, image, nwavr, 1, (iChain) * niter + i / (nelements * nwavr), 2.0 * lLikelihood / ndf, chi2v2, chi2t3amp, chi2t3phi, chi2visamp, chi2visphi, temperature[iChain], nelements, &reg_param[0], &reg_value[0], niter, axis_len, ndf, tmin,
+          chi2_temp, chi2_target, mas_pixel, nchains, 0, 0, "", "", &saved_params[iChaintoStorage[iChain] * nparams * niter], NULL);
 
         // PRINT DIAGNOSTICS
         print_diagnostics(iChain, (i / (nwavr * nelements) + 1), nvis, nv2, nt3, nt3phi, nt3amp, nvisamp, nvisphi, chi2v2, chi2t3amp, chi2t3phi,
                           chi2visphi, chi2visamp, lPosterior, lPrior, lLikelihood, reg_param, reg_value, centroid_image_x, centroid_image_y, nelements, nwavr,
                           niter, temperature, prob_movement, params, stepsize);
-
+//getchar();
         if (prob_auto > 0)
           tmin = tmin * (1.0 - .5 * (prob_movement - prob_auto)); // BUG ? should this be here ?
 
@@ -1010,10 +1005,13 @@ int main(int argc, char **argv)
       if ((nparams == 0) || (current_elt < nelements)) /* Attempt image movement rather than parametric model movement */
       {
 
+        zerostep = TRUE;
         // select step
-        switch (steptype)
+        while(zerostep == TRUE)
         {
-        case STEP_SMALL: /* One step in either x or y direction */
+          switch (steptype)
+          {
+            case STEP_SMALL: /* One step in either x or y direction */
           xstep = rlong % 4;
           rlong /= 4;
           if (xstep > 1)      // 2 or 3, we select a y move
@@ -1050,6 +1048,11 @@ int main(int argc, char **argv)
           rlong = RngStream_RandInt(rng, 0, 2147483647);
           break;
         }
+        if( (xstep !=0) || (ystep != 0) )
+          zerostep = FALSE;
+          else // old position == new position --> we want to redraw
+          rlong = RngStream_RandInt(rng, 0, 2147483647);
+      }
 
         old_x = element_x[chan * nelements + current_elt];
         old_y = element_y[chan * nelements + current_elt];
@@ -1074,12 +1077,13 @@ int main(int argc, char **argv)
           new_reg_value[chan * NREGULS + REG_DARKENERGY] = reg_value[chan * NREGULS + REG_DARKENERGY]
 	    - den_change(image, old_x, old_y, DEN_SUBTRACT, axis_len) + den_change(image, new_x, new_y, DEN_ADD, axis_len);
 
-    //  if (reg_param[REG_L0] > 0.0)
-    //   new_reg_value[chan * NREGULS + REG_L0] = reg_value[chan * NREGULS + REG_L0] +
-    //   (image[new_pos]<1)?1:0 - ((image[old_pos]>0)&&(image[old_pos]<2))?1:0;
+    if (reg_param[REG_L0] > 0.0)
+    {
+       new_reg_value[chan * NREGULS + REG_L0] = reg_value[chan * NREGULS + REG_L0] + (double)((image[new_pos]<.5)?1.0:0.0)
+       - (double)(( (image[old_pos]>0.5)&&(image[old_pos]<1.5))?1.0:0.0);
+    }
 
-
-	// Regularization for which we need to recompute the whole thing
+     // Regularization for which we need to recompute the whole thing
         image[old_pos]--;
         image[new_pos]++;
 
@@ -1091,10 +1095,7 @@ int main(int argc, char **argv)
 	if (reg_param[REG_LAP] > 0.0)
           new_reg_value[chan * NREGULS + REG_LAP] = LAP(&image[chan * axis_len * axis_len], NULL, 0.0, axis_len, axis_len, (const double) nelements);
 
-      if (reg_param[REG_L0] > 0.0)
-          new_reg_value[chan * NREGULS + REG_L0] = L0(&image[chan * axis_len * axis_len], NULL, 0.0, axis_len, axis_len, 1);
-
-	if (reg_param[REG_L0CDF53] > 0.0)
+  if (reg_param[REG_L0CDF53] > 0.0)
           new_reg_value[chan * NREGULS + REG_L0CDF53] = L0_CDF53(&image[chan * axis_len * axis_len], NULL, 0.0, axis_len, axis_len, (const double) nelements);
 
 	if (reg_param[REG_L1CDF53] > 0.0)
@@ -2684,8 +2685,6 @@ void compute_regularizers(const double *reg_param, double *reg_value, const doub
     if (reg_param[REG_L0ATROUS] > 0.0)
       {
 	reg_value[w * NREGULS + REG_L0ATROUS] = L0_ATROUS(&image[w * axis_len * axis_len], NULL, 0.0, axis_len, axis_len, fluxscaling);
-
-
       // DEBUG : this is a good place to test wavelet transforms
     const int nscales = 4;
     char wav_filename[100];
