@@ -411,7 +411,7 @@ int main(int argc, char **argv)
          printf("Initial image -- renormalizing channel %ld\n", w);
           for (j = 0; j < in_naxes[0]; ++j)
             for (i = 0; i < in_naxes[0]; ++i)
-              initial_image[i + j * in_naxes[0] + w * in_naxes[0] * in_naxes[0]] *= ftot;
+              initial_image[i + j * in_naxes[0] + w * in_naxes[0] * in_naxes[0]] /= ftot;
         }
       }
 
@@ -781,8 +781,6 @@ double pipo=0;
 
     compute_regularizers(reg_param, reg_value, image, prior_image, (double) nelements, initial_x, initial_y, nwavr, axis_len, nelements, centroid_image_x,
                          centroid_image_y, fov, cent_mult);
-    for(i=0;i<NREGULS;i++)
-      printf("CRi: %lf %lf\n", reg_param[i], reg_value[i]);
     //
     // COMPUTE INITIAL VISIBILITIES
     //
