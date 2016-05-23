@@ -298,32 +298,32 @@ double LAP(const double *x, const double *pr, const double eps, const int nx, co
   // Laplacian via 5 point stencil  L = x[ i - 1, j] + x[i+1, j] + x[i, j-1] + x[i, j+1] - 4 * x[i,j]
 
   register int i, j, off;
-  double L1l = 0;
+  double reg = 0;
 
   // for boundaries, we assume zeroes outside of the image
   for (j = 1; j < ny - 1; ++j)
   {
     off = nx * j;
     for (i = 1; i < nx - 1; ++i)
-      L1l += fabs(x[ i - 1 + off] + x[i + 1 + off] + x[i + off - nx] + x[i + off + nx] - 4. * x[i + off]);
+      reg += fabs(x[ i - 1 + off] + x[i + 1 + off] + x[i + off - nx] + x[i + off + nx] - 4. * x[i + off]);
     // case i = 0
-    L1l += fabs(x[1 + off] + x[off - nx] + x[off + nx] - 3. * x[off]);
+    reg += fabs(x[1 + off] + x[off - nx] + x[off + nx] - 3. * x[off]);
     // case i = nx -1
-    L1l += fabs(x[ nx - 2 + off] + x[nx - 1 + off - nx] + x[nx - 1  + off + nx] - 3. * x[nx - 1 + off]);
+    reg += fabs(x[ nx - 2 + off] + x[nx - 1 + off - nx] + x[nx - 1  + off + nx] - 3. * x[nx - 1 + off]);
   }
 
   for (i = 1; i < nx - 1; ++i)
   {
     // case j = 0
     off = 0 ;
-    L1l += fabs(x[ i - 1 ] + x[i + 1] + x[i + off + nx] - 3. * x[i + off]);
+    reg += fabs(x[ i - 1 ] + x[i + 1] + x[i + off + nx] - 3. * x[i + off]);
     // case j = nx -1
     off = nx * (nx - 1);
-    L1l += fabs(x[ i - 1 + off] + x[i + 1 + off] + x[i + off - nx] - 3. * x[i + off]);
+    reg += fabs(x[ i - 1 + off] + x[i + 1 + off] + x[i + off - nx] - 3. * x[i + off]);
 
   }
 
-  return L1l / flux;
+  return reg / flux;
 }
 
 double reg_prior_image(const double *x, const double *pr, const double eps, const int nx, const int ny, const double flux)
