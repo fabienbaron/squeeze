@@ -54,7 +54,7 @@ long nvis, nv2, nt3, nt3phi, nt3amp, nt3amp_orphans, nt3phi_orphans, nvisamp, nv
 long *visin, *v2in, *t3in1, *t3in2, *t3in3;
 double *u, *v;
 int ntimer;
-bool use_diffvis = FALSE; // default for VIS tables = complex vis, not differential vis
+bool diffvis = FALSE; // FALSE -> VIS tables = complex vis; TRUE -> VIS tables = differential vis
 long *dvisnwav;
 long **dvisindx;
 
@@ -164,7 +164,7 @@ int main(int argc, char **argv)
 
   // READ IN COMMAND LINE ARGUMENTS
 
-  if (read_commandline(&argc, argv, &benchmark, &use_v2, &use_t3amp, &use_t3phi, &use_visamp, &use_visphi, &use_diffvis, &use_tempfitswriting,
+  if (read_commandline(&argc, argv, &benchmark, &use_v2, &use_t3amp, &use_t3phi, &use_visamp, &use_visphi, &diffvis, &use_tempfitswriting,
                        &use_bandwidthsmearing, &minimization_engine, &dumpchain, &mas_pixel, &axis_len, &depth, &niter, &nelements, &f_anywhere, &f_copycat, &nchains,
                        &nthreads, &tempschedc, &fov, &chi2_temp, &chi2_target, &tmin, &prob_auto, &uvtol, &output_filename[0], &init_filename[0], &prior_filename[0], &v2s,
                        &v2a, &t3amps, &t3ampa, &t3phia, &t3phis, &visamps, &visampa, &visphis, &visphia, &fluxs, &cvfwhm, reg_param, init_params, &wavmin, &wavmax, &nwavr, &wavauto) == FALSE)
@@ -578,7 +578,7 @@ int main(int argc, char **argv)
 
   printf("Reconst setup -- Degrees of freedom:\t%ld\n", (long) round(ndf));
 
-  flat_chi2 = get_flat_chi2(benchmark);
+  flat_chi2 = get_flat_chi2(benchmark, nwavr);
   printf("Reconst setup -- Chi2r random image:\t%lf\n", flat_chi2 / ndf);
 
   /* Print out important parameters */
@@ -788,7 +788,7 @@ double pipo=0;
                                             &reg_value[REG_MODELPARAM], nparams, nelements);
 
     //Compute initial values for prior, likelihood, and posterior
-    compute_lLikelihood(&lLikelihood, mod_vis, res, mod_obs, &chi2v2, &chi2t3amp, &chi2visamp, &chi2t3phi, &chi2visphi);
+    compute_lLikelihood(&lLikelihood, mod_vis, res, mod_obs, &chi2v2, &chi2t3amp, &chi2visamp, &chi2t3phi, &chi2visphi, nwavr);
     compute_lPrior(&lPrior, chan, reg_param, reg_value);
     lPosterior = lLikelihood + lPrior;
     print_diagnostics(iChain, -1, nvis, nv2, nt3, nt3phi, nt3amp, nvisamp, nvisphi, chi2v2, chi2t3amp, chi2t3phi,
@@ -1170,7 +1170,7 @@ double pipo=0;
       // Evaluate posterior probability
       //
 
-      compute_lLikelihood(&new_lLikelihood, new_mod_vis, res, mod_obs, &chi2v2, &chi2t3amp, &chi2visamp, &chi2t3phi, &chi2visphi);
+      compute_lLikelihood(&new_lLikelihood, new_mod_vis, res, mod_obs, &chi2v2, &chi2t3amp, &chi2visamp, &chi2t3phi, &chi2visphi, nwavr);
       compute_lPrior(&lPrior, chan, reg_param, reg_value);
       compute_lPrior(&new_lPrior, chan, reg_param, new_reg_value);
       new_lPosterior = new_lLikelihood + new_lPrior;
@@ -1487,7 +1487,7 @@ double pipo=0;
   free(uv_time);
 
   free(dvisnwav);
-  if (use_diffvis == TRUE)
+  if (diffvis == TRUE)
     for (i = 0; i < nvis; ++i)
       free(dvisindx[i]);
   free(dvisindx);
@@ -1615,16 +1615,16 @@ void printhelp(void)
 /**********************************************************************/
 /* Calculate complex vis chi^2 taking into account the known_phases   */
 /**********************************************************************/
-void compute_lLikelihood(double *likelihood, const double complex *__restrict mod_vis, double *__restrict res, double *__restrict mod_obs, double *chi2v2, double *chi2t3amp, double *chi2visamp, double *chi2t3phi, double *chi2visphi)
+void compute_lLikelihood(double *likelihood, const double complex *__restrict mod_vis, double *__restrict res, double *__restrict mod_obs, double *chi2v2, double *chi2t3amp, double *chi2visamp, double *chi2t3phi, double *chi2visphi, const int nwavr)
 {
-  vis_to_obs(mod_vis, mod_obs);
+  vis_to_obs(mod_vis, mod_obs, nwavr);
   obs_to_res(mod_obs, res);
   *likelihood = 0.5 * residuals_to_chi2(res, chi2v2, chi2t3amp, chi2visamp, chi2t3phi, chi2visphi);
 }
 
-void vis_to_obs(const double complex *__restrict mod_vis, double *__restrict mod_obs)
+void vis_to_obs(const double complex *__restrict mod_vis, double *__restrict mod_obs, const int nwavr)
 {
-  long i;
+  register long i,k;
   double complex modt3;
   const long t3ampoffset = nv2;
   const long visampoffset = nv2 + nt3amp;
@@ -1656,11 +1656,36 @@ void vis_to_obs(const double complex *__restrict mod_vis, double *__restrict mod
       if (data_err[visampoffset + i] > 0)
         mod_obs[visampoffset + i] = cabs(mod_vis[ visin[i] ]);
 
-  if (nvisphi > 0)
+
+if (nvisphi > 0)
+{
     //#pragma omp for simd
-    for (i = 0; i < nvis; ++i)
+    // first we compute the raw vis
+    // complex visibilities
+      for (i = 0; i < nvis; ++i)
+        if (data_err[visphioffset + i] > 0)
+          mod_obs[visphioffset + i] = carg(mod_vis[ visin[i] ]);
+
+    if(diffvis == TRUE)
+    {
+      double ref_chan;
+      for (i = 0; i < nvis; ++i)
       if (data_err[visphioffset + i] > 0)
-        mod_obs[visphioffset + i] = carg(mod_vis[ visin[i] ]);
+      {
+        ref_chan = 0;
+        for(k=0;k<nwavr;k++) // BUG: differential vis require the original number of spectral channels -- need to check that
+        {
+          if(dvisindx[visin[i]][k] != -1 )
+            ref_chan += carg(mod_vis[ dvisindx[i][k] ]);
+          }
+          ref_chan /= dvisnwav[i];
+          //printf("Point: %ld index: %ld ref_chan: %lf\n", i, visin[i], ref_chan);
+        mod_obs[visphioffset + i] -= ref_chan;
+      }
+
+    }
+}
+
 
 }
 
@@ -1749,7 +1774,7 @@ static inline double modsq(double complex input) // __attribute__((always_inline
 /**********************************************************/
 /* Calculate chi^2 for a flat image (for reference)       */
 /**********************************************************/
-double get_flat_chi2(bool benchmark)
+double get_flat_chi2(bool benchmark, const int nwavr)
 {
   long i, rlong, nbench;
   double dummy1, dummy2, dummy3, dummy4, dummy5, startTime, endTime;
@@ -1775,7 +1800,7 @@ double get_flat_chi2(bool benchmark)
   double flat_chi2 = 0;
   startTime = (double) clock() / CLOCKS_PER_SEC;
   for (i = 0; i < nbench; ++i)
-    compute_lLikelihood(&flat_chi2, mod_vis, res, mod_obs, &dummy1, &dummy2, &dummy3, &dummy4, &dummy5);
+    compute_lLikelihood(&flat_chi2, mod_vis, res, mod_obs, &dummy1, &dummy2, &dummy3, &dummy4, &dummy5, nwavr);
 
   endTime = (double) clock() / CLOCKS_PER_SEC;
   if (benchmark == TRUE)
@@ -2271,7 +2296,7 @@ void mcmc_writeoutput(char *file_basename, double *image, const int nchains, con
   // compute chi2s on final image
   double chi2=0, chi2v2=0, chi2t3amp=0, chi2visamp=0, chi2t3phi=0, chi2visphi=0;
 
-  compute_lLikelihood(&chi2, mod_vis, res, mod_obs, &chi2v2, &chi2t3amp, &chi2visamp, &chi2t3phi, &chi2visphi);
+  compute_lLikelihood(&chi2, mod_vis, res, mod_obs, &chi2v2, &chi2t3amp, &chi2visamp, &chi2t3phi, &chi2visphi, nwavr);
   chi2 *= 2.;
   if (nv2 > 0)
     chi2v2     /= (double) nv2;
@@ -2842,7 +2867,7 @@ void initialize_image(int iChain, double *image, unsigned short *element_x, unsi
 }
 
 bool read_commandline(int *argc, char **argv, bool *benchmark, bool *use_v2, bool *use_t3amp, bool *use_t3phi, bool *use_visamp, bool *use_visphi,
-                      bool *use_diffvis, bool *use_tempfitswriting, bool *use_bandwidthsmearing, int *minimization_engine, bool *dumpchain, double *mas_pixel,
+                      bool *diffvis, bool *use_tempfitswriting, bool *use_bandwidthsmearing, int *minimization_engine, bool *dumpchain, double *mas_pixel,
                       unsigned short *axis_len, long *depth, long *niter, long *nelements, double *f_anywhere, double *f_copycat, int *nchains, int *nthreads,
                       double *tempschedc, double *fov, double *chi2_temp, double *chi2_target, double *tmin, double *prob_auto, double *uvtol, char *output_filename,
                       char *init_filename, char *prior_filename, double *v2s, double *v2a, double *t3amps, double *t3ampa, double *t3phia, double *t3phis, double *visamps,
@@ -2924,7 +2949,7 @@ bool read_commandline(int *argc, char **argv, bool *benchmark, bool *use_v2, boo
     }
     else if (strcmp(argv[i], "-diffvis") == 0)
     {
-      *use_diffvis = TRUE; // interpret VIS tables as differential visibilities, not complex visibilities
+      *diffvis = TRUE; // interpret VIS tables as differential visibilities, not complex visibilities
     }
     else if (strcmp(argv[i], "-monitor") == 0)
     {

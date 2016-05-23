@@ -142,14 +142,14 @@ bool read_commandline(int *argc, char **argv, bool *benchmark, bool *use_v2, boo
 
 void print_diagnostics(int iChain, long current_iter, long nvis, long nv2, long nt3, long nt3phi, long nt3amp, long nvisamp, long nvisphi, double chi2v2, double chi2t3amp, double chi2t3phi, double chi2visphi, double chi2visamp, double lPosterior, double lPrior, double lLikelihood, const double *reg_param, const double *reg_value, const double *centroid_image_x, const double *centroid_image_y, long nelements, int nwavr, long niter, const double *temperature, double prob_movement, const double *params, const double *stepsize);
 
-void compute_lLikelihood(double *likelihood, const double complex *__restrict mod_vis, double *__restrict res, double *__restrict mod_obs, double *chi2v2, double *chi2t3amp, double *chi2visamp, double *chi2t3phi, double *chi2visphi);
+void compute_lLikelihood(double *likelihood, const double complex *__restrict mod_vis, double *__restrict res, double *__restrict mod_obs, double *chi2v2, double *chi2t3amp, double *chi2visamp, double *chi2t3phi, double *chi2visphi, const int nwavr);
 void compute_lPrior(double *lPrior, const long chan, const double *reg_param, const double *reg_value);
 
-void vis_to_obs(const double complex *mod_vis, double *mod_obs);
+void vis_to_obs(const double complex *mod_vis, double *mod_obs, const int nwavr);
 void obs_to_res(const double *mod_obs, double *res);
 double residuals_to_chi2(const double *res, double *chi2v2, double *chi2t3amp, double *chi2visamp, double *chi2t3phi, double *chi2visphi) ;
 
-double get_flat_chi2(bool benchmark);
+double get_flat_chi2(bool benchmark, const int nwavr);
 double fill_min_elts(long *min_elts, long depth, long threadnum);
 static inline double dewrap(double diff) __attribute__((always_inline));
 static inline double modsq(double complex input)  __attribute__((always_inline));

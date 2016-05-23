@@ -161,6 +161,7 @@ int import_single_epoch_oifits(char *filename, bool use_v2, bool use_t3amp, bool
         //
 
         // Vis tables
+        // BUG: this version of squeeze supports only all diff VIS or all absolute VIS, i.e. no mixing
         status = 0;
         nvis = 0;
         nvisamp = 0;
@@ -176,6 +177,11 @@ int import_single_epoch_oifits(char *filename, bool use_v2, bool use_t3amp, bool
                 {
                         nvis = nvis + vis_table.numrec * vis_table.nwave;
                         nvis_tables++;
+                        if((diffvis == FALSE ) && (strcmp(vis_table.phityp, "differential") == 0))
+                          {
+                            diffvis=TRUE;
+                            printf("OIFITS import -- Differential visibilities detected\n");
+                          }
                         //printf("Vis Table\t %i\t Points %ld Channels %d\n", nvis_tables, nvis, vis_table.nwave);
                         free_oi_vis(&vis_table);
                         read_next_oi_vis(fptr, &vis_table, &status);
@@ -257,7 +263,7 @@ int import_single_epoch_oifits(char *filename, bool use_v2, bool use_t3amp, bool
         dlambda_vis = malloc(nvis * sizeof(float));
         flag_vis = malloc(nvis * sizeof(char));
 
-        if (use_diffvis == TRUE)
+        if (diffvis == TRUE)
         {
                 dvisnwav = malloc(nvis * sizeof(long));
                 dvisindx = malloc(nvis * sizeof(long *));
@@ -575,22 +581,40 @@ int import_single_epoch_oifits(char *filename, bool use_v2, bool use_t3amp, bool
                                 }
 
 
-                                if (use_diffvis == TRUE)
+                                if (diffvis == TRUE)
+                                // we need to wait for all the uv points to have been defined
+                                // tempindex0 points to the first point in the channel
+                                // tempindex should be at the last point
                                 {
                                         // if dvis can be defined: there are enough wavelengths & no points were flagged/bad
                                         if ((vis_table.nwave > 1) && ((tempindex - tempindex0) == vis_table.nwave))
                                         {
-                                                // go through points
+                                                // go through each points
                                                 for (j = 0; j < vis_table.nwave; j++)
                                                 {
-                                                        dvisnwav[tempindex0 + j] = vis_table.nwave; // number of channels required to compute dvis
-                                                        dvisindx[tempindex0 + j] = (long *) malloc(vis_table.nwave * sizeof(long));
-                                                        for (k = 0; k < vis_table.nwave; k++)
-                                                                dvisindx[tempindex0 + j][k] = uvindex0 + k;
+                                                  // number of channels required to compute reference channel
+                                                  // we just add up whatever is in visrefmap
+                                                  dvisnwav[tempindex0 + j] = 0;
+                                                  for(k=0;k<vis_table.nwave;k++)
+                                                        if((vis_table.record[i]).visrefmap[j*vis_table.nwave+k] !=0)
+                                                          dvisnwav[tempindex0 + j] += 1;
+
+                                                  // indexes of visibilities that are to be averaged to for the reference channels
+                                                  // I chose to keep the full nwave size instead of collapsing it
+                                                  // so an index of -1 means the wavelength is not to be used
+                                                  dvisindx[tempindex0 + j] = (long *) malloc(vis_table.nwave * sizeof(long));
+                                                  for (k = 0; k < vis_table.nwave; k++)
+                                                  {
+                                                      if( (vis_table.record[i]).visrefmap[j*vis_table.nwave+k] !=0)
+                                                        dvisindx[tempindex0 + j][k] = visin[tempindex0 + k];
+                                                      else
+                                                        dvisindx[tempindex0 + j][k] = -1;
+                                                  }
                                                 }
                                         }
                                         else
                                         {
+                                          printf("OOOOPS BUG when reading differential vis!\n");
                                                 for (j = tempindex0; j <= tempindex; j++)
                                                         dvisnwav[j] = -1;  // in effect, dvis computation will be skipped
                                         }
@@ -631,7 +655,7 @@ int import_single_epoch_oifits(char *filename, bool use_v2, bool use_t3amp, bool
 
         if (nvis > 0)
         {
-                if (use_diffvis == TRUE) printf("OIFITS import -- VIS: %ld differential visibilities imported\n", nvis);
+                if (diffvis == TRUE) printf("OIFITS import -- VIS: %ld differential visibilities imported\n", nvis);
                 else printf("OIFITS import -- VIS: %ld complex visibilities imported\n", nvis);
                 printf("OIFITS import --     VISAMP: %ld", nvisamp);
                 if (nvisamp_orphans > 0)

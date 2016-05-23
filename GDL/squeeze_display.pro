@@ -14,7 +14,8 @@
 
 ; This is a GDL viewer for SQUEEZE based on John Monnier's code for MACIM
 ;
-pro squeeze_display, dir
+pro squeeze_display, dir, pow = pow
+
 if not(keyword_set(dir)) then dir ='../' else dir = dir +'/'
 print, 'Monitoring chain00.fits in '+dir
 device,retain=2, decompose=0
@@ -40,6 +41,7 @@ while (1) do begin
  endwhile
  ltime = mtime
  tab_im =  readfits(dir+'chain00.fits',  head, /silent)
+ if keyword_set(pow) then tab_im = tab_im^pow 
  sz = size(tab_im)
 
  if(sz[0] LT 2) then goto, restart
@@ -85,12 +87,14 @@ xv=-xv
 yv=yv-mean(yv)
 wset, 0
 !p.multi=multi_im
+
 for i = 0, nchanr-1 do image_cont_uv, sqrt(reform(tab_im[*,*,i])),xv=xv,yv=yv,tit="Current - Channel"+strcompress(string(i)),xtit="mas",ytit="mas", /asp,/noc
 
 
 if FILE_TEST(dir+'output.fits') NE 1 then goto, skip
 
 tab_mim=readfits(dir+'output.fits', head2,/silent)
+if keyword_set(pow) then tab_mim = tab_mim^pow
 szm = size(tab_mim)
 if(sz[0] LT 2) then goto, skip
 if(szm[0] EQ 2) then nchanrm = 1 else nchanrm = szm[3]
