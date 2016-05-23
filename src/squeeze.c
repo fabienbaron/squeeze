@@ -1130,18 +1130,21 @@ double pipo=0;
 
         /* Modify the visibilities */
         //#pragma omp parallel for simd
+        memcpy(new_im_vis, im_vis, nvis*sizeof(double complex));
         for (j = 0; j < nuv; ++j)
         {
           if (uvwav2chan[j] == chan)
           {
-            new_im_vis[j] = im_vis[j]
-                            + (xtransform[new_x * nuv + j] * ytransform[new_y * nuv + j] - xtransform[old_x * nuv + j] * ytransform[old_y * nuv + j])
+            new_im_vis[j] += (xtransform[new_x * nuv + j] * ytransform[new_y * nuv + j] - xtransform[old_x * nuv + j] * ytransform[old_y * nuv + j])
                             * fluxratio_image[j] / (double) nelements;
           }
-          else
-            new_im_vis[j] = im_vis[j];
-          new_mod_vis[j] = new_im_vis[j] + param_vis[j];
+          //else
         }
+
+        /* Compute overall model visibilities (image + parametric model) */
+        for (j = 0; j < nuv; ++j)
+          new_mod_vis[j] = new_im_vis[j] + param_vis[j];
+
 
         prob_movement *= (1.0 - 1.0 / DAMPING_TIME);
 
@@ -1679,7 +1682,7 @@ if (nvisphi > 0)
             ref_chan += carg(mod_vis[ dvisindx[i][k] ]);
           }
           ref_chan /= dvisnwav[i];
-          //printf("Point: %ld index: %ld ref_chan: %lf\n", i, visin[i], ref_chan);
+      //    printf("Point: %ld index: %ld ref_chan: %lf navg: %d \n", i, visin[i], ref_chan, dvisnwav[i]);
         mod_obs[visphioffset + i] -= ref_chan;
       }
 
