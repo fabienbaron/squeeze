@@ -1130,21 +1130,18 @@ double pipo=0;
 
         /* Modify the visibilities */
         //#pragma omp parallel for simd
-        memcpy(new_im_vis, im_vis, nvis*sizeof(double complex));
-        for (j = 0; j < nuv; ++j)
+       for (j = 0; j < nuv; ++j)
         {
           if (uvwav2chan[j] == chan)
           {
-            new_im_vis[j] += (xtransform[new_x * nuv + j] * ytransform[new_y * nuv + j] - xtransform[old_x * nuv + j] * ytransform[old_y * nuv + j])
+            new_im_vis[j] = im_vis[j]
+                            + (xtransform[new_x * nuv + j] * ytransform[new_y * nuv + j] - xtransform[old_x * nuv + j] * ytransform[old_y * nuv + j])
                             * fluxratio_image[j] / (double) nelements;
           }
-          //else
-        }
-
-        /* Compute overall model visibilities (image + parametric model) */
-        for (j = 0; j < nuv; ++j)
+          else
+            new_im_vis[j] = im_vis[j];
           new_mod_vis[j] = new_im_vis[j] + param_vis[j];
-
+        }
 
         prob_movement *= (1.0 - 1.0 / DAMPING_TIME);
 
