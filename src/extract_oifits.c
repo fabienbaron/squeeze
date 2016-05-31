@@ -301,11 +301,13 @@ int import_single_epoch_oifits(char *filename, bool use_v2, bool use_t3amp, bool
 
                 while (tempindex < nv2)
                 {
-                        // printf("OIFITS import -- Remaining V2 to import %ld\r", nv2);
+                        
                         read_next_oi_vis2(fptr, &vis2_table, &status);
                         read_oi_wavelength(fptr2, vis2_table.insname, &wave, &status2);
+                        printf("Reading V2 tables...\n");
                         for (i = 0; i < vis2_table.numrec; i++)
                         {
+                          
                                 for (j = 0; j < vis2_table.nwave; j++)
                                 {
                                         valid_v2 = (use_v2 == TRUE)
@@ -375,12 +377,14 @@ int import_single_epoch_oifits(char *filename, bool use_v2, bool use_t3amp, bool
                 fits_open_file(&fptr2, filename, READONLY, &status2);
                 while (tempindex < nt3)
                 {
+
                         read_next_oi_t3(fptr, &t3_table, &status);
                         read_oi_wavelength(fptr2, t3_table.insname, &wave, &status2);
-                        //printf("OIFITS import -- Remaining T3 to import %ld\r", nt3);
-                        for (i = 0; i < t3_table.numrec; i++)
+                        printf("Reading T3 tables...\n");
+                        for (i = 0; i < t3_table.numrec; ++i)
                         {
-                                for (j = 0; j < t3_table.nwave; j++)
+                          
+                          for (j = 0; j < t3_table.nwave; ++j)
                                 {
 
                                         // note: negative t3amp such as t3amp = -.01 +/- 0.03 are valid
@@ -512,7 +516,6 @@ int import_single_epoch_oifits(char *filename, bool use_v2, bool use_t3amp, bool
                 {
                         read_next_oi_vis(fptr, &vis_table, &status);
                         read_oi_wavelength(fptr2, vis_table.insname, &wave, &status2);
-                        // printf("OIFITS import -- Remaining VIS to import %ld\r", nvis);
                         for (i = 0; i < vis_table.numrec; i++)
                         {
                                 uvindex0 = uvindex;
@@ -891,16 +894,25 @@ void add_new_uv(long *obs_index, long *uvindex, double new_u, double new_v, doub
         // First check for redundancy
         long i;
         long redundant_index = -1;
+        const double tol = uvtol * uvtol;
 
+        #ifdef _OPENMP
+        #pragma omp parallel
+        #pragma omp for
+        #endif
         for (i = 0; i < *uvindex; i++)
         {
                 // Need to be clever here, as this is a major source of slowdown for very large datasets
 
-                if (((table_u[i] - new_u) * (table_u[i] - new_u) + (table_v[i] - new_v) * (table_v[i] - new_v)  < uvtol * uvtol)&&
-                    fabs((table_uv_lambda[i] - new_uv_lambda) / table_uv_lambda[i]) < 1e-6)
+                if ((table_u[i] - new_u) * (table_u[i] - new_u) + (table_v[i] - new_v) * (table_v[i] - new_v)  < tol)
+                  if  (fabs((table_uv_lambda[i] - new_uv_lambda) / table_uv_lambda[i]) < 1e-6)
                 {
                         redundant_index = i;
+                        #ifdef _OPENMP
+                        #pragma omp cancel for
+                        #else
                         break;
+                        #endif                        
                 }
         }
 

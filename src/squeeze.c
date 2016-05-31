@@ -793,7 +793,7 @@ double pipo=0;
     lPosterior = lLikelihood + lPrior;
     print_diagnostics(iChain, -1, nvis, nv2, nt3, nt3phi, nt3amp, nvisamp, nvisphi, chi2v2, chi2t3amp, chi2t3phi,
                           chi2visphi, chi2visamp, lPosterior, lPrior, lLikelihood, reg_param, reg_value, centroid_image_x, centroid_image_y, nelements, nwavr,
-                          niter, temperature, prob_movement, params, stepsize);
+                      niter, temperature, prob_movement, params, stepsize, burn_in_times);
 
 
     if (minimization_engine == ENGINE_SIMULATED_ANNEALING)
@@ -972,7 +972,7 @@ double pipo=0;
         // PRINT DIAGNOSTICS
         print_diagnostics(iChain, (i / (nwavr * nelements) + 1), nvis, nv2, nt3, nt3phi, nt3amp, nvisamp, nvisphi, chi2v2, chi2t3amp, chi2t3phi,
                           chi2visphi, chi2visamp, lPosterior, lPrior, lLikelihood, reg_param, reg_value, centroid_image_x, centroid_image_y, nelements, nwavr,
-                          niter, temperature, prob_movement, params, stepsize);
+                          niter, temperature, prob_movement, params, stepsize, burn_in_times);
 //getchar();
         if (prob_auto > 0)
           tmin = tmin * (1.0 - .5 * (prob_movement - prob_auto)); // BUG ? should this be here ?
@@ -1408,16 +1408,23 @@ double pipo=0;
       // then we go back through and just use the depth number instead.
       if (nburned == 0)
       {
-        printf("Output -- DID NOT REACH BURN IN ! Writing final image based on depth parameter anyway\n");
-        printf("Output -- DID NOT REACH BURN IN ! Be careful when interpreting the final image.\n");
-	printf("Output -- DID NOT REACH BURN IN ! Setting final image depth to: %ld\n", depth);
-	nburned = depth;
-	for (i = 0; i < nchains; ++i)
-	  burn_in_times[i] = niter - depth ;
+        nburned = (int)(2.*depth/3.);
+        printf("Output -- NO CHAIN REACHED BURN IN ! Writing final image based on 2/3 depth parameter anyway\n");
+        printf("Output -- Be careful when interpreting the final image.\n");
+        printf("Output -- Setting final image depth to: %ld\n", nburned);
+        for (i = 0; i < nchains; ++i)
+          burn_in_times[i] = niter - nburned ;
       }
 
       for (i = 0; i < nchains; ++i)
-	if(burn_in_times[i] < niter - depth) burn_in_times[i] = niter - depth ; // note: we previously ensured depth <= niter
+        {
+          if(burn_in_times[i] == niter)
+            {
+              printf("Output -- Chain %ld did not reach burn in, writing final image based on 2/3 depth \n", i);
+              burn_in_times[i] = niter - (int)(2.*depth/3.);
+            }
+        if(burn_in_times[i] < (niter - depth)) burn_in_times[i] = niter - depth ; // note: we previously ensured depth <= niter so this is safe
+        }
 
       mcmc_results(minimization_engine, output_filename, nchains, burn_in_times, depth, nelements, axis_len, xtransform, ytransform, saved_x, saved_y,
                              saved_params, niter, nwavr, final_params, final_params_std, reg_param, final_reg_value, prior_image, initial_x, initial_y, centroid_image_x,
@@ -3188,7 +3195,7 @@ bool read_commandline(int *argc, char **argv, bool *benchmark, bool *use_v2, boo
 void print_diagnostics(int iChain, long current_iter, long nvis, long nv2, long nt3, long nt3phi, long nt3amp, long nvisamp, long nvisphi, double chi2v2,
                        double chi2t3amp, double chi2t3phi, double chi2visphi, double chi2visamp, double lPosterior, double lPrior, double lLikelihood, const double *reg_param,
                        const double *reg_value, const double *centroid_image_x, const double *centroid_image_y, long nelements, int nwavr, long niter,
-                       const double *temperature, double prob_movement, const double *params, const double *stepsize)
+                       const double *temperature, double prob_movement, const double *params, const double *stepsize, unsigned int* burn_in_times)
 {
   // Note: current_iter = i / (nwavr * nelements) + 1 unless we're printing initialization
 
@@ -3250,8 +3257,8 @@ void print_diagnostics(int iChain, long current_iter, long nvis, long nv2, long 
       diagnostics_used += snprintf(diagnostics + diagnostics_used, maxlength - diagnostics_used, "TS:%5.2f ", reg_param[REG_TRANSPECL2] * reg_value[REG_TRANSPECL2]);
 
     if(current_iter > 0)
-    diagnostics_used += snprintf(diagnostics + diagnostics_used, maxlength - diagnostics_used, "E: %5ld MPr: %4.2f T: %5.2f Iter: %4ld of %4ld", nelements,
-                                 prob_movement, temperature[iChain], current_iter, niter);
+    diagnostics_used += snprintf(diagnostics + diagnostics_used, maxlength - diagnostics_used, "E: %5ld MPr: %4.2f T: %5.2f B:%d Iter: %4ld of %4ld", nelements,
+                                 prob_movement, temperature[iChain], burn_in_times[iChain], current_iter, niter);
     else
        diagnostics_used += snprintf(diagnostics + diagnostics_used, maxlength - diagnostics_used, "E: %5ld MPr: %4.2f T: %5.2f -- INITIAL", nelements,
                                  prob_movement, temperature[iChain]);
