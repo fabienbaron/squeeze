@@ -601,18 +601,22 @@ int import_single_epoch_oifits(char *filename, bool use_v2, bool use_t3amp, bool
                                                   for(k=0;k<vis_table.nwave;k++)
                                                         if((vis_table.record[i]).visrefmap[j*vis_table.nwave+k] !=0)
                                                           dvisnwav[tempindex0 + j] += 1;
-
+                                                  //printf("%ld nwav: %ld\n", tempindex0+j, dvisnwav[tempindex0 + j]);
                                                   // indexes of visibilities that are to be averaged to for the reference channels
                                                   // I chose to keep the full nwave size instead of collapsing it
                                                   // so an index of -1 means the wavelength is not to be used
                                                   dvisindx[tempindex0 + j] = (long *) malloc(vis_table.nwave * sizeof(long));
+                                                  //printf("DVIS: %ld ",tempindex0+j);
                                                   for (k = 0; k < vis_table.nwave; k++)
                                                   {
-                                                      if( (vis_table.record[i]).visrefmap[j*vis_table.nwave+k] !=0)
+
+                                                    if( (vis_table.record[i]).visrefmap[j*vis_table.nwave+k] !=0)
                                                         dvisindx[tempindex0 + j][k] = visin[tempindex0 + k];
                                                       else
                                                         dvisindx[tempindex0 + j][k] = -1;
+                                                    // printf("wav: %ld indx: %ld, ",  k, dvisindx[tempindex0 + j][k]);
                                                   }
+                                                  // printf("\n");
                                                 }
                                         }
                                         else

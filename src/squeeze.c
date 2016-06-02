@@ -1659,7 +1659,7 @@ void vis_to_obs(const double complex *__restrict mod_vis, double *__restrict mod
 
   if (nvisamp > 0)
     //#pragma omp for simd
-    for (i = 0; i < nvis; ++i)
+    for (i = 0; i < nvisamp; ++i)
       if (data_err[visampoffset + i] > 0)
         mod_obs[visampoffset + i] = cabs(mod_vis[ visin[i] ]);
 
@@ -1669,31 +1669,32 @@ if (nvisphi > 0)
     //#pragma omp for simd
     // first we compute the raw vis
     // complex visibilities
-      for (i = 0; i < nvis; ++i)
+  if(diffvis == FALSE)
+    {
+      for (i = 0; i < nvisphi; ++i)
         if (data_err[visphioffset + i] > 0)
           mod_obs[visphioffset + i] = carg(mod_vis[ visin[i] ]);
+    }
 
-    if(diffvis == TRUE)
+  if(diffvis == TRUE)
     {
       double ref_chan;
-      for (i = 0; i < nvis; ++i)
-      if (data_err[visphioffset + i] > 0)
-      {
-        ref_chan = 0;
-        for(k=0;k<nwavr;k++) // BUG: differential vis require the original number of spectral channels -- need to check that
+      for (i = 0; i < nvisphi; ++i)
         {
-          if(dvisindx[visin[i]][k] != -1 )
-            ref_chan += carg(mod_vis[ dvisindx[i][k] ]);
-          }
-          ref_chan /= dvisnwav[i];
-      //    printf("Point: %ld index: %ld ref_chan: %lf navg: %d \n", i, visin[i], ref_chan, dvisnwav[i]);
-        mod_obs[visphioffset + i] -= ref_chan;
-      }
-
+          ref_chan = 0;
+          for(k=0;k<nwavr;k++) // annoying: differential vis require the original number of spectral channels -- need to check that
+            {
+              if(dvisindx[i][k] != -1 )
+                ref_chan += carg(mod_vis[ dvisindx[i][k] ]);
+            }
+          ref_chan /= (double)dvisnwav[i];
+          //    printf("Point: %ld index: %ld ref_chan: %lf navg: %d \n", i, visin[i], ref_chan, dvisnwav[i]);
+          mod_obs[visphioffset + i] = carg(mod_vis[ visin[i] ]) - ref_chan;
+          
+        }
     }
-}
-
-
+ }
+ 
 }
 
 void obs_to_res(const double *__restrict mod_obs, double *__restrict res)
