@@ -108,6 +108,24 @@ double transpec(const int nchan, const long imwidth, const double *image, const 
 }
 
 
+double transpec_diffpoint(long pos, long chan, double diff, const int nchan, const long imsize, const double *image)
+{
+  long w;
+  double temp = 0;
+  for (w = 0; w < nchan; w++)
+    {
+      if(w == chan)
+        temp += (image[w * imsize + pos] + diff) * (image[w * imsize + pos] + diff);
+      else
+        temp += (image[w * imsize + pos]) * (image[w * imsize + pos]);
+    }
+  return sqrt(temp);
+}
+
+
+
+
+
 double TV(const double *x, const double *pr, const double eps, const int nx, const int ny, const double flux)
 {
   // This regularizer is the TOTVAR (p=1.0) on the local gradient

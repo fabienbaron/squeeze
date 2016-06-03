@@ -217,10 +217,11 @@ void atrous_fwd(const double* x, double *wav, const int nx, const int ny, const 
 double entropy_full(const double *x, const double *pr, const double eps, const int nx, const int ny, const double flux);
 double L2(const double *x, const double *pr, const double eps, const int nx, const int ny, const double flux);
 double transpec(const int nchan, const long imwidth, const double *image, const double flux);
+double transpec_diffpoint(long pos, long chan, double diff, const int nchan, const long imwidth, const double *image);
 double cent_change(const int channel, double *centroid_image_x, double *centroid_image_y, const long new_x, const long new_y, const long old_x, const long old_y, const unsigned short axis_len, const double fov, const double cent_mult);
 double reg_prior_image(const double *x, const double *pr, const double eps, const int nx, const int ny, const double flux);
 
-
+void compute_lPrior_allwav(double *lPrior, const long nwavr, const double *reg_param, const double *reg_value);
 double sinc(double x);
 
 inline void swapi(unsigned short *a, unsigned short *b);

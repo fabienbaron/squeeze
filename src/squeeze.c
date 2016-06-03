@@ -731,6 +731,7 @@ double pipo=0;
     double logZ = 0; // chose to have logZ to be a private variable
     double logZ_err = 0;
     bool zerostep; // move selection
+    double temp1 = 0, temp2=0;
     // Randomization
 
     char rngname[80];
@@ -789,7 +790,7 @@ double pipo=0;
 
     //Compute initial values for prior, likelihood, and posterior
     compute_lLikelihood(&lLikelihood, mod_vis, res, mod_obs, &chi2v2, &chi2t3amp, &chi2visamp, &chi2t3phi, &chi2visphi, nwavr);
-    compute_lPrior(&lPrior, chan, reg_param, reg_value);
+    compute_lPrior_allwav(&lPrior, nwavr, reg_param, reg_value);
     lPosterior = lLikelihood + lPrior;
     print_diagnostics(iChain, -1, nvis, nv2, nt3, nt3phi, nt3amp, nvisamp, nvisphi, chi2v2, chi2t3amp, chi2t3phi,
                           chi2visphi, chi2visamp, lPosterior, lPrior, lLikelihood, reg_param, reg_value, centroid_image_x, centroid_image_y, nelements, nwavr,
@@ -1081,6 +1082,14 @@ double pipo=0;
        - (double)(( (image[old_pos]>0.5)&&(image[old_pos]<1.5))?1.0:0.0);
     }
 
+     if (reg_param[REG_TRANSPECL2] > 0.0)
+        new_reg_value[REG_TRANSPECL2] = reg_value[REG_TRANSPECL2]//transpec(nwavr, axis_len, image, (const double) nelements)
+                 - transpec_diffpoint(old_y * axis_len + old_x, chan, 0.0, nwavr, axis_len*axis_len, image) - transpec_diffpoint(new_y * axis_len + new_x, chan, 0.0, nwavr, axis_len*axis_len, image)    // remove old contribution
+                     + transpec_diffpoint(old_y * axis_len + old_x, chan , -1.0, nwavr, axis_len*axis_len, image) + transpec_diffpoint(new_y * axis_len + new_x, chan , 1.0, nwavr, axis_len*axis_len, image);
+
+    
+
+
      // Regularization for which we need to recompute the whole thing
         image[old_pos]--;
         image[new_pos]++;
@@ -1090,30 +1099,32 @@ double pipo=0;
         if (reg_param[REG_TV] > 0.0)
           new_reg_value[chan * NREGULS + REG_TV] = TV(&image[chan * axis_len * axis_len], NULL, 0.0, axis_len, axis_len, (const double) nelements);
 
-	if (reg_param[REG_LAP] > 0.0)
+        if (reg_param[REG_LAP] > 0.0)
           new_reg_value[chan * NREGULS + REG_LAP] = LAP(&image[chan * axis_len * axis_len], NULL, 0.0, axis_len, axis_len, (const double) nelements);
 
-  if (reg_param[REG_L0CDF53] > 0.0)
+        if (reg_param[REG_L0CDF53] > 0.0)
           new_reg_value[chan * NREGULS + REG_L0CDF53] = L0_CDF53(&image[chan * axis_len * axis_len], NULL, 0.0, axis_len, axis_len, (const double) nelements);
-
-	if (reg_param[REG_L1CDF53] > 0.0)
+        
+        if (reg_param[REG_L1CDF53] > 0.0)
           new_reg_value[chan * NREGULS + REG_L1CDF53] = L1_CDF53(&image[chan * axis_len * axis_len], NULL, 0.0, axis_len, axis_len, (const double) nelements);
-
-	if (reg_param[REG_L0CDF97] > 0.0)
+        
+        if (reg_param[REG_L0CDF97] > 0.0)
           new_reg_value[chan * NREGULS + REG_L0CDF97] = L0_CDF97(&image[chan * axis_len * axis_len], NULL, 0.0, axis_len, axis_len, (const double) nelements);
 
-	if (reg_param[REG_L1CDF97] > 0.0)
+        if (reg_param[REG_L1CDF97] > 0.0)
           new_reg_value[chan * NREGULS + REG_L1CDF97] = L1_CDF97(&image[chan * axis_len * axis_len], NULL, 0.0, axis_len, axis_len, (const double) nelements);
-
-	if (reg_param[REG_L0ATROUS] > 0.0)
+        
+        if (reg_param[REG_L0ATROUS] > 0.0)
           new_reg_value[chan * NREGULS + REG_L0ATROUS] = L0_ATROUS(&image[chan * axis_len * axis_len], NULL, 0.0, axis_len, axis_len, (const double) nelements);
-
-	if (reg_param[REG_L1ATROUS] > 0.0)
+        
+        if (reg_param[REG_L1ATROUS] > 0.0)
           new_reg_value[chan * NREGULS + REG_L1ATROUS] = L1_ATROUS(&image[chan * axis_len * axis_len], NULL, 0.0, axis_len, axis_len, (const double) nelements);
+        
 
-        if (reg_param[REG_TRANSPECL2] > 0.0)
-          new_reg_value[REG_TRANSPECL2] = transpec(nwavr, axis_len, image, (const double) nelements);
-
+        //printf("%lf ", fabs(new_reg_value[REG_TRANSPECL2]-transpec(nwavr, axis_len, image, (const double) nelements)));
+        //       if (reg_param[REG_TRANSPECL2] > 0.0)
+        //  new_reg_value[REG_TRANSPECL2] = transpec(nwavr, axis_len, image, (const double) nelements);
+        
         // Go back to current state
         image[old_pos]++;
         image[new_pos]--;
@@ -1171,9 +1182,10 @@ double pipo=0;
       //
 
       compute_lLikelihood(&new_lLikelihood, new_mod_vis, res, mod_obs, &chi2v2, &chi2t3amp, &chi2visamp, &chi2t3phi, &chi2visphi, nwavr);
-      compute_lPrior(&lPrior, chan, reg_param, reg_value);
-      compute_lPrior(&new_lPrior, chan, reg_param, new_reg_value);
-      new_lPosterior = new_lLikelihood + new_lPrior;
+      compute_lPrior_allwav(&lPrior, nwavr, reg_param, reg_value);
+      compute_lPrior_allwav(&new_lPrior, nwavr, reg_param, new_reg_value);
+      
+      new_lPosterior = new_lLikelihood + new_lPrior ;
 
       // BUG: think how to rescale priors with fluxratio_image ?
       transition_test = (new_lLikelihood - lLikelihood) / temperature[iChain] + new_lPrior - lPrior;
@@ -1675,8 +1687,7 @@ if (nvisphi > 0)
         if (data_err[visphioffset + i] > 0)
           mod_obs[visphioffset + i] = carg(mod_vis[ visin[i] ]);
     }
-
-  if(diffvis == TRUE)
+  else
     {
       double ref_chan;
       for (i = 0; i < nvisphi; ++i)
@@ -1768,8 +1779,10 @@ double residuals_to_chi2(const double *res, double *chi2v2, double *chi2t3amp, d
 static inline double dewrap(double diff) //__attribute__((always_inline))
 {
   if (diff < -M_PI)
-    diff += 2. * M_PI;
+       while(diff < -M_PI)
+      diff += 2. * M_PI;
   if (diff > M_PI)
+      while(diff > M_PI)
     diff -= 2. * M_PI;
   return diff;
 }
@@ -3280,5 +3293,13 @@ void print_diagnostics(int iChain, long current_iter, long nvis, long nv2, long 
 void compute_lPrior(double *lPrior, const long chan, const double *reg_param, const double *reg_value)
 { double temp = reg_param[REG_TRANSPECL2] * reg_value[REG_TRANSPECL2];
   for(int i=0; i<NREGULS-1;++i) temp +=reg_param[i] * reg_value[chan * NREGULS + i];
+  *lPrior = temp;
+}
+
+void compute_lPrior_allwav(double *lPrior, const long nwavr, const double *reg_param, const double *reg_value)
+{ double temp = reg_param[REG_TRANSPECL2] * reg_value[REG_TRANSPECL2];
+  for(int w=0;w<nwavr;++w)
+    for(int i=0; i<NREGULS-1;++i)
+      temp +=reg_param[i] * reg_value[w * NREGULS + i];
   *lPrior = temp;
 }
