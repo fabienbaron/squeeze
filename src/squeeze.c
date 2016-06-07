@@ -127,7 +127,7 @@ int main(int argc, char **argv)
 
   int nfound;
   double in_mas_pixel;
-  long nwavi = 1, nwavp = 1;
+  int nwavi = 1, nwavp = 1;
   long *in_naxes;
 
   int nwavr;
@@ -282,9 +282,8 @@ int main(int argc, char **argv)
     if (!strcmp(init_filename, "random"))
     {
       printf("\nInitial image -- Random image common to all parallel chains and wavelengths\n");
-      nwavi = 1; // TBD : implement polychromatic init
-      initial_x = malloc(nelements * sizeof(unsigned short));
-      initial_y = malloc(nelements * sizeof(unsigned short));
+      initial_x = malloc(nchains * nwavr * nelements * sizeof(unsigned short));
+      initial_y = malloc(nchains * nwavr * nelements * sizeof(unsigned short));
 
       RngStream initrng = RngStream_CreateStream("init");
       for (i = 0; i < nelements; ++i)
@@ -292,30 +291,45 @@ int main(int argc, char **argv)
         initial_x[i] = RngStream_RandInt(initrng, 0, 2147483647) % axis_len;
         initial_y[i] = RngStream_RandInt(initrng, 0, 2147483647) % axis_len;
       }
+
+      // copy same random image at
+      for (j = 0; j < nchains; ++j)
+        {
+          for(w=0;w<nwavr;++w)
+            {
+
+                  memcpy(&initial_x[j * nwavr * nelements], &initial_x[j*nwavr*nelements + w * nelements], nelements * sizeof(unsigned short));
+                  memcpy(&initial_y[j * nwavr * nelements], &initial_y[j*nwavr*nelements + w * nelements], nelements * sizeof(unsigned short));
+            
+            }
+        }
+
       RngStream_DeleteStream(&initrng);
     }
     else if (!strcmp(init_filename, "randomthr"))
     {
       printf("\nInitial image -- Random images unique to each parallel chain\n");
-      nwavi = 1; // TBD : implement polychromatic init
-      initial_x = malloc(nchains * nelements * sizeof(unsigned short));
-      initial_y = malloc(nchains * nelements * sizeof(unsigned short));
+      initial_x = malloc(nchains * nwavr * nelements * sizeof(unsigned short));
+      initial_y = malloc(nchains * nwavr * nelements * sizeof(unsigned short));
 
       RngStream initrng = RngStream_CreateStream("init");
       for (j = 0; j < nchains; ++j)
       {
-        for (i = 0; i < nelements; ++i)
-        {
-          initial_x[j * nelements + i] = RngStream_RandInt(initrng, 0, 2147483647) % axis_len;
-          initial_y[j * nelements + i] = RngStream_RandInt(initrng, 0, 2147483647) % axis_len;
-        }
+        for(w=0;w<nwavr;++w)
+          {
+            for (i = 0; i < nelements; ++i)
+              {
+                initial_x[ (j*nwavr+w) * nelements + i] = RngStream_RandInt(initrng, 0, 2147483647) % axis_len;
+                initial_y[ (j*nwavr+w) * nelements + i] = RngStream_RandInt(initrng, 0, 2147483647) % axis_len;
+              }
+          }
       }
       RngStream_DeleteStream(&initrng);
     }
     else
     {
       status = 0;
-      printf("\nInitial image -- Trying to open: '%s'\n", init_filename);
+      printf("\nInitial image -- Opening file : %s\n", init_filename);
       if (fits_open_file(&fptr, init_filename, READONLY, &status))
         printerror(status);
 
@@ -328,17 +342,15 @@ int main(int argc, char **argv)
 
       if (fits_read_keys_lng(fptr, "NAXIS", 1, 3, in_naxes, &nfound, &status))
         printerror(status);
-      //printf("k:%ld nfound: %d in_naxes[0]: %ld in_naxes[1]: %ld in_naxes[2]: %ld \n",k,nfound,in_naxes[0], in_naxes[1], in_naxes[2]);
-
+    
       if ((nwavr > 1) && (k == 3) && (nfound == 3))
       {
-        if (in_naxes[2] == nwavr) // polychromatic reconstruction using polychromatic init
-          nwavi = in_naxes[2];
-        else
-        {
-          printf("\nInitial image -- Error when reading NAXIS3\n");
-          nwavi = 1;
+        if (in_naxes[2] != nwavr) 
+          {
+          printf("\nInitial image -- Mismatch between number of channels for initial image (%ld) and reconstruction (%d)\n", in_naxes[2], nwavr);
+         
         }
+        nwavi = in_naxes[2];
       }
       else
         nwavi = 1;
@@ -392,13 +404,13 @@ int main(int argc, char **argv)
       }
 
       initial_image = malloc(in_naxes[0] * in_naxes[0] * nwavi * sizeof(double));
-      initial_x = malloc(nwavi * nelements * sizeof(unsigned short));
-      initial_y = malloc(nwavi * nelements * sizeof(unsigned short));
+      initial_x = malloc(nchains * nwavr * nelements * sizeof(unsigned short));
+      initial_y = malloc(nchains * nwavr * nelements * sizeof(unsigned short));
 
       if (fits_read_img(fptr, TDOUBLE, 1, in_naxes[0] * in_naxes[0] * nwavi, &nullval, initial_image, &dummy_int, &status))
         printerror(status);
 
-  // Check flux normalization
+      // Check flux normalization
       for (w = 0; w < nwavi; ++w)
       {
         ftot = 0.0;
@@ -465,6 +477,11 @@ int main(int argc, char **argv)
           }
         }
       }
+      for(j=0;j<nchains;++j)
+        {
+          memcpy(&initial_x[j * nwavr * nelements], &initial_x[0], nwavr * nelements * sizeof(unsigned short));
+          memcpy(&initial_y[j * nwavr * nelements], &initial_y[0], nwavr * nelements * sizeof(unsigned short));
+        }
 
       free(in_naxes);
       free(initial_image);
@@ -473,10 +490,10 @@ int main(int argc, char **argv)
   }
   else   /* If we didn't define a starting image, the default is a dirac*/
   {
-    nwavi = 1;
-    initial_x = malloc(nelements * sizeof(unsigned short));
-    initial_y = malloc(nelements * sizeof(unsigned short));
-    for (i = 0; i < nelements; ++i)
+    initial_x = malloc(nchains * nwavr * nelements * sizeof(unsigned short));
+    initial_y = malloc(nchains * nwavr * nelements * sizeof(unsigned short));
+
+    for (i = 0; i < nelements * nwavr * nchains; ++i)
     {
       initial_x[i] = axis_len / 2;
       initial_y[i] = axis_len / 2;
@@ -699,7 +716,7 @@ int main(int argc, char **argv)
     double prob_movement = MPROB_LOW;
     double chi2v2 =0, chi2t3amp=0, chi2t3phi=0, chi2visamp=0, chi2visphi=0;
     double complex *dummy_cpointer = NULL;
-double pipo=0;
+    double pipo=0;
     double *image = malloc(nwavr * axis_len * axis_len * sizeof(double));
     unsigned short *element_x = malloc(nwavr * nelements * sizeof(unsigned short));
     unsigned short *element_y = malloc(nwavr * nelements * sizeof(unsigned short));
@@ -2867,24 +2884,19 @@ void compute_model_visibilities_fromimage(double complex *mod_vis, double comple
 void initialize_image(int iChain, double *image, unsigned short *element_x, unsigned short *element_y, unsigned short *initial_x, unsigned short *initial_y,
                       unsigned short axis_len, int nwavr, long nelements, char *init_filename)
 {
-  long i, k, w;
+  long i, w;
   for (i = 0; i < nwavr * axis_len * axis_len; ++i)
     image[i] = 0;
 
-  // Initial image channels
-  if (!strcmp(init_filename, "randomthr"))
-    k = iChain;
-  else
-    k = 0;
+
+  memcpy(element_x, &initial_x[iChain * nwavr * nelements],nwavr * nelements*sizeof(unsigned short) );
+  memcpy(element_y, &initial_y[iChain * nwavr * nelements],nwavr * nelements*sizeof(unsigned short) );
+  
+
   for (w = 0; w < nwavr; ++w)
-  {
-    for (i = 0; i < nelements; ++i)
-    {
-      element_x[w * nelements + i] = initial_x[k * nelements + i];
-      element_y[w * nelements + i] = initial_y[k * nelements + i];
-      image[w * axis_len * axis_len + initial_y[i] * axis_len + initial_x[i]]++;
-    }
-  }
+     for (i = 0; i < nelements; ++i)
+       image[w * axis_len * axis_len + initial_y[(iChain * nwavr + w ) * nelements + i] * axis_len + initial_x[(iChain * nwavr + w ) * nelements + i]]++;
+ 
 }
 
 bool read_commandline(int *argc, char **argv, bool *benchmark, bool *use_v2, bool *use_t3amp, bool *use_t3phi, bool *use_visamp, bool *use_visphi,

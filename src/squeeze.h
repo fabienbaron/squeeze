@@ -184,7 +184,8 @@ void compute_model_visibilities_fromelements(double complex *mod_vis, double com
 
 void compute_model_visibilities_fromimage(double complex *mod_vis, double complex *im_vis, double complex *param_vis, const double *params, double *fluxratio_image, const double *image, const double complex *xtransform, const double complex *ytransform, double *lPriorModel, long nparams, long nelements, unsigned short axis_len);
 
-void initialize_image(int iChain, double *image, unsigned short *element_x, unsigned short *element_y, unsigned short *initial_x, unsigned short *initial_y, unsigned short axis_len, int nwavr, long nelements, char *init_filename);
+void initialize_image(int iChain, double *image, unsigned short *element_x, unsigned short *element_y, unsigned short *initial_x, unsigned short *initial_y,
+                      unsigned short axis_len, int nwavr,  long nelements, char *init_filename);
 
 /* Function prototype for extract_oifits.c*/
 int import_single_epoch_oifits(char *filename, bool use_v2, bool use_t3amp, bool use_t3phi, bool use_visamp, bool use_visphi,
