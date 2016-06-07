@@ -276,15 +276,15 @@ int main(int argc, char **argv)
   /* Or a FITS image. Unlike the prior image, the starting image is then "converted" into elements */
   /* Note that a FITS starting image may include starting parameters for models */
 
+  initial_x = calloc(nchains * nwavr * nelements, sizeof(unsigned short));
+  initial_y = calloc(nchains * nwavr * nelements, sizeof(unsigned short));
+
   if (init_filename[0] != 0)
   {
 
     if (!strcmp(init_filename, "random"))
     {
       printf("\nInitial image -- Random image common to all parallel chains and wavelengths\n");
-      initial_x = malloc(nchains * nwavr * nelements * sizeof(unsigned short));
-      initial_y = malloc(nchains * nwavr * nelements * sizeof(unsigned short));
-
       RngStream initrng = RngStream_CreateStream("init");
       for (i = 0; i < nelements; ++i)
       {
@@ -309,9 +309,6 @@ int main(int argc, char **argv)
     else if (!strcmp(init_filename, "randomthr"))
     {
       printf("\nInitial image -- Random images unique to each parallel chain\n");
-      initial_x = malloc(nchains * nwavr * nelements * sizeof(unsigned short));
-      initial_y = malloc(nchains * nwavr * nelements * sizeof(unsigned short));
-
       RngStream initrng = RngStream_CreateStream("init");
       for (j = 0; j < nchains; ++j)
       {
@@ -347,15 +344,16 @@ int main(int argc, char **argv)
       {
         if (in_naxes[2] != nwavr) 
           {
-          printf("\nInitial image -- Mismatch between number of channels for initial image (%ld) and reconstruction (%d)\n", in_naxes[2], nwavr);
-         
+          printf(TEXT_COLOR_RED"Initial image -- Mismatch between number of channels for initial image ( = %ld) and reconstruction (= %d)\n"TEXT_COLOR_BLACK, in_naxes[2], nwavr);
+          if(in_naxes[2] <  nwavr)
+            printf(TEXT_COLOR_RED"Initial image -- Channels will be initialized with the first channel of the input image\n"TEXT_COLOR_BLACK);
         }
         nwavi = in_naxes[2];
       }
-      else
+      else // image was 2D, but we want 3D in any case, so we had the extra degenerate dimension
         nwavi = 1;
 
-      printf("Initial image -- reading %ld x %ld pixels x %ld channel(s)\n", in_naxes[0], in_naxes[1], k > 2 ? in_naxes[2] : 1);
+      printf("Initial image -- reading %ld x %ld pixels x %d channel(s)\n", in_naxes[0], in_naxes[1], nwavi);
 
       if (in_naxes[0] != in_naxes[1])
       {
@@ -404,9 +402,6 @@ int main(int argc, char **argv)
       }
 
       initial_image = malloc(in_naxes[0] * in_naxes[0] * nwavi * sizeof(double));
-      initial_x = malloc(nchains * nwavr * nelements * sizeof(unsigned short));
-      initial_y = malloc(nchains * nwavr * nelements * sizeof(unsigned short));
-
       if (fits_read_img(fptr, TDOUBLE, 1, in_naxes[0] * in_naxes[0] * nwavi, &nullval, initial_image, &dummy_int, &status))
         printerror(status);
 
@@ -477,6 +472,18 @@ int main(int argc, char **argv)
           }
         }
       }
+
+      if(nwavi<nwavr)
+        {
+          // Fill in the missing wavelengths
+          for(w=nwavi;w<nwavr;++w)
+            {
+              memcpy(&initial_x[w * nelements], &initial_x[0], nelements * sizeof(unsigned short));
+              memcpy(&initial_y[w * nelements], &initial_y[0], nelements * sizeof(unsigned short));
+            }
+        }
+
+      // Now fill the chains
       for(j=0;j<nchains;++j)
         {
           memcpy(&initial_x[j * nwavr * nelements], &initial_x[0], nwavr * nelements * sizeof(unsigned short));
@@ -485,14 +492,12 @@ int main(int argc, char **argv)
 
       free(in_naxes);
       free(initial_image);
+      printf("Initial image -- Digitized into nelements = %ld\n", nelements);
     }
 
   }
   else   /* If we didn't define a starting image, the default is a dirac*/
   {
-    initial_x = malloc(nchains * nwavr * nelements * sizeof(unsigned short));
-    initial_y = malloc(nchains * nwavr * nelements * sizeof(unsigned short));
-
     for (i = 0; i < nelements * nwavr * nchains; ++i)
     {
       initial_x[i] = axis_len / 2;
@@ -2884,19 +2889,20 @@ void compute_model_visibilities_fromimage(double complex *mod_vis, double comple
 void initialize_image(int iChain, double *image, unsigned short *element_x, unsigned short *element_y, unsigned short *initial_x, unsigned short *initial_y,
                       unsigned short axis_len, int nwavr, long nelements, char *init_filename)
 {
+  printf("debug\n");fflush(stdout);
   long i, w;
   for (i = 0; i < nwavr * axis_len * axis_len; ++i)
     image[i] = 0;
 
-
-  memcpy(element_x, &initial_x[iChain * nwavr * nelements],nwavr * nelements*sizeof(unsigned short) );
-  memcpy(element_y, &initial_y[iChain * nwavr * nelements],nwavr * nelements*sizeof(unsigned short) );
-  
+  memcpy(&element_x[0], &initial_x[iChain * nwavr * nelements],nwavr * nelements*sizeof(unsigned short) );
+  memcpy(&element_y[0], &initial_y[iChain * nwavr * nelements],nwavr * nelements*sizeof(unsigned short) );
 
   for (w = 0; w < nwavr; ++w)
      for (i = 0; i < nelements; ++i)
-       image[w * axis_len * axis_len + initial_y[(iChain * nwavr + w ) * nelements + i] * axis_len + initial_x[(iChain * nwavr + w ) * nelements + i]]++;
- 
+       image[w * axis_len * axis_len + element_y[w * nelements + i] * axis_len + element_x[w * nelements + i]]++;
+
+  printf("debug\n");fflush(stdout);
+
 }
 
 bool read_commandline(int *argc, char **argv, bool *benchmark, bool *use_v2, bool *use_t3amp, bool *use_t3phi, bool *use_visamp, bool *use_visphi,
@@ -2991,7 +2997,7 @@ bool read_commandline(int *argc, char **argv, bool *benchmark, bool *use_v2, boo
     else if (strcmp(argv[i], "-wavauto") == 0)
     {
       // set wavauto
-      printf("Command line -- Automatic wavelength selection");
+      printf("Command line -- Automatic wavelength selection\n");
       *wavauto = TRUE;
     }
     else if (strcmp(argv[i], "-nobws") == 0)
