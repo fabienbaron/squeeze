@@ -298,8 +298,8 @@ int main(int argc, char **argv)
           for(w=0;w<nwavr;++w)
             {
 
-                  memcpy(&initial_x[j * nwavr * nelements], &initial_x[j*nwavr*nelements + w * nelements], nelements * sizeof(unsigned short));
-                  memcpy(&initial_y[j * nwavr * nelements], &initial_y[j*nwavr*nelements + w * nelements], nelements * sizeof(unsigned short));
+              memcpy( &initial_x[j*nwavr*nelements + w * nelements],&initial_x[0], nelements * sizeof(unsigned short));
+              memcpy( &initial_y[j*nwavr*nelements + w * nelements],&initial_y[0], nelements * sizeof(unsigned short));
             
             }
         }
