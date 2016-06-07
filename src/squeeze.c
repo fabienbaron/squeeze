@@ -404,7 +404,7 @@ int main(int argc, char **argv)
       initial_image = malloc(in_naxes[0] * in_naxes[0] * nwavi * sizeof(double));
       if (fits_read_img(fptr, TDOUBLE, 1, in_naxes[0] * in_naxes[0] * nwavi, &nullval, initial_image, &dummy_int, &status))
         printerror(status);
-
+      fits_close_file(fptr, &status);
       // Check flux normalization
       for (w = 0; w < nwavi; ++w)
       {
@@ -1206,7 +1206,6 @@ int main(int argc, char **argv)
       compute_lLikelihood(&new_lLikelihood, new_mod_vis, res, mod_obs, &chi2v2, &chi2t3amp, &chi2visamp, &chi2t3phi, &chi2visphi, nwavr);
       compute_lPrior_allwav(&lPrior, nwavr, reg_param, reg_value);
       compute_lPrior_allwav(&new_lPrior, nwavr, reg_param, new_reg_value);
-      
       new_lPosterior = new_lLikelihood + new_lPrior ;
 
       // BUG: think how to rescale priors with fluxratio_image ?
@@ -2889,7 +2888,7 @@ void compute_model_visibilities_fromimage(double complex *mod_vis, double comple
 void initialize_image(int iChain, double *image, unsigned short *element_x, unsigned short *element_y, unsigned short *initial_x, unsigned short *initial_y,
                       unsigned short axis_len, int nwavr, long nelements, char *init_filename)
 {
-  printf("debug\n");fflush(stdout);
+ 
   long i, w;
   for (i = 0; i < nwavr * axis_len * axis_len; ++i)
     image[i] = 0;
@@ -2901,7 +2900,7 @@ void initialize_image(int iChain, double *image, unsigned short *element_x, unsi
      for (i = 0; i < nelements; ++i)
        image[w * axis_len * axis_len + element_y[w * nelements + i] * axis_len + element_x[w * nelements + i]]++;
 
-  printf("debug\n");fflush(stdout);
+ 
 
 }
 
