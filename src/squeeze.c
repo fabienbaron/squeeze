@@ -300,7 +300,7 @@ int main(int argc, char **argv)
 
               memcpy( &initial_x[j*nwavr*nelements + w * nelements],&initial_x[0], nelements * sizeof(unsigned short));
               memcpy( &initial_y[j*nwavr*nelements + w * nelements],&initial_y[0], nelements * sizeof(unsigned short));
-            
+
             }
         }
 
@@ -339,10 +339,10 @@ int main(int argc, char **argv)
 
       if (fits_read_keys_lng(fptr, "NAXIS", 1, 3, in_naxes, &nfound, &status))
         printerror(status);
-    
+
       if ((nwavr > 1) && (k == 3) && (nfound == 3))
       {
-        if (in_naxes[2] != nwavr) 
+        if (in_naxes[2] != nwavr)
           {
           printf(TEXT_COLOR_RED"Initial image -- Mismatch between number of channels for initial image ( = %ld) and reconstruction (= %d)\n"TEXT_COLOR_BLACK, in_naxes[2], nwavr);
           if(in_naxes[2] <  nwavr)
@@ -1109,7 +1109,7 @@ int main(int argc, char **argv)
                  - transpec_diffpoint(old_y * axis_len + old_x, chan, 0.0, nwavr, axis_len*axis_len, image) - transpec_diffpoint(new_y * axis_len + new_x, chan, 0.0, nwavr, axis_len*axis_len, image)    // remove old contribution
                      + transpec_diffpoint(old_y * axis_len + old_x, chan , -1.0, nwavr, axis_len*axis_len, image) + transpec_diffpoint(new_y * axis_len + new_x, chan , 1.0, nwavr, axis_len*axis_len, image);
 
-    
+
 
 
      // Regularization for which we need to recompute the whole thing
@@ -1126,27 +1126,27 @@ int main(int argc, char **argv)
 
         if (reg_param[REG_L0CDF53] > 0.0)
           new_reg_value[chan * NREGULS + REG_L0CDF53] = L0_CDF53(&image[chan * axis_len * axis_len], NULL, 0.0, axis_len, axis_len, (const double) nelements);
-        
+
         if (reg_param[REG_L1CDF53] > 0.0)
           new_reg_value[chan * NREGULS + REG_L1CDF53] = L1_CDF53(&image[chan * axis_len * axis_len], NULL, 0.0, axis_len, axis_len, (const double) nelements);
-        
+
         if (reg_param[REG_L0CDF97] > 0.0)
           new_reg_value[chan * NREGULS + REG_L0CDF97] = L0_CDF97(&image[chan * axis_len * axis_len], NULL, 0.0, axis_len, axis_len, (const double) nelements);
 
         if (reg_param[REG_L1CDF97] > 0.0)
           new_reg_value[chan * NREGULS + REG_L1CDF97] = L1_CDF97(&image[chan * axis_len * axis_len], NULL, 0.0, axis_len, axis_len, (const double) nelements);
-        
+
         if (reg_param[REG_L0ATROUS] > 0.0)
           new_reg_value[chan * NREGULS + REG_L0ATROUS] = L0_ATROUS(&image[chan * axis_len * axis_len], NULL, 0.0, axis_len, axis_len, (const double) nelements);
-        
+
         if (reg_param[REG_L1ATROUS] > 0.0)
           new_reg_value[chan * NREGULS + REG_L1ATROUS] = L1_ATROUS(&image[chan * axis_len * axis_len], NULL, 0.0, axis_len, axis_len, (const double) nelements);
-        
+
 
         //printf("%lf ", fabs(new_reg_value[REG_TRANSPECL2]-transpec(nwavr, axis_len, image, (const double) nelements)));
         //       if (reg_param[REG_TRANSPECL2] > 0.0)
         //  new_reg_value[REG_TRANSPECL2] = transpec(nwavr, axis_len, image, (const double) nelements);
-        
+
         // Go back to current state
         image[old_pos]++;
         image[new_pos]--;
@@ -1598,13 +1598,13 @@ void printhelp(void)
   printf("                  Example: -wavchan 0 1.2e-6 1.35e-6 1 1.35e-6 1.43e-6 2 1.6e-6 1.8e-6\n\n");
 
   printf("  -diffvis      : Switch forcing VIS tables to be treated as differential visibilities, not complex visibilities.\n");
-  printf("  -novis        : Switch disabling all complex visibility data.\n");
-  printf("  -novisamp     : Switch disabling visibility amplitudes.\n");
-  printf("  -novisphi     : Switch disabling visibility phases.\n");
-  printf("  -not3         : Switch disabling all bispectrum data.\n");
-  printf("  -not3amp      : Switch disabling bispectrum amplitudes.\n");
-  printf("  -not3phi      : Switch disabling bispectrum phases (closure phases).\n");
-  printf("  -nov2         : Switch disabling all powerspectrum data.\n\n");
+  printf("  -novis        : Disable all complex visibility data.\n");
+  printf("  -novisamp     : Disable visibility amplitudes.\n");
+  printf("  -novisphi     : Disable visibility phases.\n");
+  printf("  -not3         : Disable all bispectrum data.\n");
+  printf("  -not3amp      : Disable bispectrum amplitudes.\n");
+  printf("  -not3phi      : Disable bispectrum phases (closure phases).\n");
+  printf("  -nov2         : Disable all powerspectrum data.\n\n");
   printf("  -visamps mult : Scaling factor for visibility amplitude errors.\n");
   printf("  -visampa add  : Additive error to visibility amplitude errors.\n");
   printf("  -visphis mult : Scaling factor for visibility phase/differential phase errors.\n");
@@ -1722,11 +1722,11 @@ if (nvisphi > 0)
           ref_chan /= (double)dvisnwav[i];
           //    printf("Point: %ld index: %ld ref_chan: %lf navg: %d \n", i, visin[i], ref_chan, dvisnwav[i]);
           mod_obs[visphioffset + i] = carg(mod_vis[ visin[i] ]) - ref_chan;
-          
+
         }
     }
  }
- 
+
 }
 
 void obs_to_res(const double *__restrict mod_obs, double *__restrict res)
@@ -2888,7 +2888,7 @@ void compute_model_visibilities_fromimage(double complex *mod_vis, double comple
 void initialize_image(int iChain, double *image, unsigned short *element_x, unsigned short *element_y, unsigned short *initial_x, unsigned short *initial_y,
                       unsigned short axis_len, int nwavr, long nelements, char *init_filename)
 {
- 
+
   long i, w;
   for (i = 0; i < nwavr * axis_len * axis_len; ++i)
     image[i] = 0;
@@ -2900,7 +2900,7 @@ void initialize_image(int iChain, double *image, unsigned short *element_x, unsi
      for (i = 0; i < nelements; ++i)
        image[w * axis_len * axis_len + element_y[w * nelements + i] * axis_len + element_x[w * nelements + i]]++;
 
- 
+
 
 }
 
