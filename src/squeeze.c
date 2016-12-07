@@ -57,7 +57,7 @@ int ntimer;
 bool diffvis = FALSE; // FALSE -> VIS tables = complex vis; TRUE -> VIS tables = differential vis
 long *dvisnwav;
 long **dvisindx;
-
+bool squeeze_quiet = FALSE;
 double *__restrict uv_time;
 double *__restrict uv_lambda;
 double *__restrict uv_dlambda;
@@ -814,7 +814,7 @@ int main(int argc, char **argv)
     compute_lLikelihood(&lLikelihood, mod_vis, res, mod_obs, &chi2v2, &chi2t3amp, &chi2visamp, &chi2t3phi, &chi2visphi, nwavr);
     compute_lPrior_allwav(&lPrior, nwavr, reg_param, reg_value);
     lPosterior = lLikelihood + lPrior;
-    print_diagnostics(iChain, -1, nvis, nv2, nt3, nt3phi, nt3amp, nvisamp, nvisphi, chi2v2, chi2t3amp, chi2t3phi,
+    if (squeeze_quiet == FALSE) print_diagnostics(iChain, -1, nvis, nv2, nt3, nt3phi, nt3amp, nvisamp, nvisphi, chi2v2, chi2t3amp, chi2t3phi,
                           chi2visphi, chi2visamp, lPosterior, lPrior, lLikelihood, reg_param, reg_value, centroid_image_x, centroid_image_y, nelements, nwavr,
                       niter, temperature, prob_movement, params, stepsize, burn_in_times);
 
@@ -993,7 +993,7 @@ int main(int argc, char **argv)
           chi2_temp, chi2_target, mas_pixel, nchains, 0, 0, "", "", &saved_params[iChaintoStorage[iChain] * nparams * niter], NULL);
 
         // PRINT DIAGNOSTICS
-        print_diagnostics(iChain, (i / (nwavr * nelements) + 1), nvis, nv2, nt3, nt3phi, nt3amp, nvisamp, nvisphi, chi2v2, chi2t3amp, chi2t3phi,
+        if (squeeze_quiet == FALSE) print_diagnostics(iChain, (i / (nwavr * nelements) + 1), nvis, nv2, nt3, nt3phi, nt3amp, nvisamp, nvisphi, chi2v2, chi2t3amp, chi2t3phi,
                           chi2visphi, chi2visamp, lPosterior, lPrior, lLikelihood, reg_param, reg_value, centroid_image_x, centroid_image_y, nelements, nwavr,
                           niter, temperature, prob_movement, params, stepsize, burn_in_times);
 //getchar();
@@ -1578,6 +1578,7 @@ void printhelp(void)
   printf("  -o filename     : Squeeze outputs as a FITS image file.\n");
   printf("  -fullchain      : Output the full MCMC chain into the file output.fullchain .\n");
   printf("  -monitor        : Enable continuous writing of chainxx.fits to monitor execution.\n");
+  printf("  -quiet        : Do not print iteration values.\n");
 
   printf("\n***** SIMULTANEOUS MODEL FITTING SETTINGS ***** \n");
   printf("  -P p0 p1...    : Initial parameter input.\n");
@@ -2992,6 +2993,10 @@ bool read_commandline(int *argc, char **argv, bool *benchmark, bool *use_v2, boo
     else if (strcmp(argv[i], "-monitor") == 0)
     {
       *use_tempfitswriting = TRUE; // enable writing chainxx.fits to disc
+    }
+    else if (strcmp(argv[i], "-quiet") == 0)
+    {
+      squeeze_quiet = TRUE; // enable writing chainxx.fits to disc
     }
     else if (strcmp(argv[i], "-wavauto") == 0)
     {
