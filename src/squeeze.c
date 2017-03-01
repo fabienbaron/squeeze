@@ -2771,26 +2771,26 @@ void compute_regularizers(const double *reg_param, double *reg_value, const doub
 //
 //      free(wav);
 
-      double **wav = malloc(sizeof(double *) * nscales);
-     for (int k = 0; k < nscales; k++)
-      wav[k] = malloc(sizeof(double) * axis_len*axis_len);
+  //    double **wav = malloc(sizeof(double *) * nscales);
+    // for (int k = 0; k < nscales; k++)
+    //  wav[k] = malloc(sizeof(double) * axis_len*axis_len);
 
 
-     for (i = 0; i < axis_len*axis_len; i++)
-      wav[0][i] = image[i]/fluxscaling;
+  //   for (i = 0; i < axis_len*axis_len; i++)
+  //    wav[0][i] = image[i]/fluxscaling;
 
 
-     if (a_trous(wav, axis_len, axis_len, nscales, 1) != 0)
-      printf("Error during DWT \n");
+  //   if (a_trous(wav, axis_len, axis_len, nscales, 1) != 0)
+  //    printf("Error during DWT \n");
 
 
-     for (int k = 0; k < nscales; k++)
-     for (int i = 0; i < axis_len*axis_len; i++)
-     	fprintf(pFile, "%lf ", wav[k][i]);
+    // for (int k = 0; k < nscales; k++)
+  //   for (int i = 0; i < axis_len*axis_len; i++)
+  //   	fprintf(pFile, "%lf ", wav[k][i]);
 
-      fclose(pFile);
-      printf("Debug: atrous %f\n", fluxscaling);
-      getchar();
+    //  fclose(pFile);
+    //  printf("Debug: atrous %f\n", fluxscaling);
+    //  getchar();
     }
 
     if (reg_param[REG_L1CDF53] > 0.0)

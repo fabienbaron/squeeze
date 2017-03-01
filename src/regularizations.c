@@ -748,7 +748,7 @@ double L1_ATROUS(const double *x, const double *pr, const double eps, const int 
   const int nscales = 4;
   double* wav = malloc( nscales * nx * ny * sizeof(double));
   atrous_fwd(x, wav, nx, ny, nscales);
-  double reg = L1(wav, NULL, 0, nx, ny, 1.);
+  double reg = L1(wav, NULL, 0, nscales*nx, ny, 1.);
   free(wav);
   return reg;
 }
