@@ -1822,8 +1822,9 @@ double get_flat_chi2(bool benchmark, const int nwavr)
   long i, rlong, nbench;
   double dummy1, dummy2, dummy3, dummy4, dummy5, dummy6, dummy7, startTime, endTime;
   double complex *mod_vis = malloc(nuv * sizeof(double complex));
-  double *res = malloc((nvisamp + nv2 + nt3amp + nt4amp + nvisphi + nt3phi + nt4phi) * sizeof(double));     // current residuals
-  double *mod_obs = malloc((nvisamp + nv2 + nt3amp + nt4amp + nvisphi + nt3phi + nt4phi) * sizeof(double)); // current observables
+  const long ndata = nvisamp + nv2 + nt3amp + nt4amp + nvisphi + nt3phi + nt4phi;
+  double *res = malloc(ndata * sizeof(double));     // current residuals
+  double *mod_obs = malloc(ndata * sizeof(double)); // current observables
   RngStream rngflat = RngStream_CreateStream("flatchi2");
   for (i = 0; i < nuv; ++i)
     {
