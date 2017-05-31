@@ -177,11 +177,12 @@ int import_single_epoch_oifits(char *filename, bool use_visamp, bool use_v2, boo
       {
         nvis = nvis + vis_table.numrec * vis_table.nwave;
         nvis_tables++;
-        if((diffvis == FALSE ) && (strcmp(vis_table.phityp, "differential") == 0))
-        {
-          diffvis=TRUE;
-          printf("OIFITS import -- Differential visibilities detected\n");
-        }
+// TBD: our oifitslib with T4 is not compatible with differential vis
+      //  if((diffvis == FALSE ) && (strcmp(vis_table.phityp, "differential") == 0))
+      //  {
+      //    diffvis=TRUE;
+      //    printf("OIFITS import -- Differential visibilities detected\n");
+      //  }
         //printf("Vis Table\t %i\t Points %ld Channels %d\n", nvis_tables, nvis, vis_table.nwave);
         free_oi_vis(&vis_table);
         read_next_oi_vis(fptr, &vis_table, &status);
@@ -781,10 +782,11 @@ int import_single_epoch_oifits(char *filename, bool use_visamp, bool use_v2, boo
                                   // number of channels required to compute reference channel
                                   // we just add up whatever is in visrefmap
                                   dvisnwav[tempindex0 + j] = 0;
-                                  for(k=0;k<vis_table.nwave;k++)
-                                  if((vis_table.record[i]).visrefmap[j*vis_table.nwave+k] !=0)
-                                  dvisnwav[tempindex0 + j] += 1;
-                                  //printf("%ld nwav: %ld\n", tempindex0+j, dvisnwav[tempindex0 + j]);
+                                  // TBD
+                                //for(k=0;k<vis_table.nwave;k++)
+                                //  if((vis_table.record[i]).visrefmap[j*vis_table.nwave+k] !=0)
+                                //    dvisnwav[tempindex0 + j] += 1;
+
                                   // indexes of visibilities that are to be averaged to for the reference channels
                                   // I chose to keep the full nwave size instead of collapsing it
                                   // so an index of -1 means the wavelength is not to be used
@@ -792,14 +794,12 @@ int import_single_epoch_oifits(char *filename, bool use_visamp, bool use_v2, boo
                                   //printf("DVIS: %ld ",tempindex0+j);
                                   for (k = 0; k < vis_table.nwave; k++)
                                   {
-
-                                    if( (vis_table.record[i]).visrefmap[j*vis_table.nwave+k] !=0)
-                                    dvisindx[tempindex0 + j][k] = visin[tempindex0 + k];
-                                    else
-                                    dvisindx[tempindex0 + j][k] = -1;
-                                    // printf("wav: %ld indx: %ld, ",  k, dvisindx[tempindex0 + j][k]);
+                                    // TBD
+                                  //  if( (vis_table.record[i]).visrefmap[j*vis_table.nwave+k] !=0)
+                                  //    dvisindx[tempindex0 + j][k] = visin[tempindex0 + k];
+                                  //  else
+                                      dvisindx[tempindex0 + j][k] = -1;
                                   }
-                                  // printf("\n");
                                 }
                               }
                               else

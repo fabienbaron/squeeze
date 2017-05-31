@@ -138,16 +138,26 @@ void printerror(int status);
 void intHandler(int signum);
 void printhelp(void);
 
-bool read_commandline(int *argc, char **argv, bool *benchmark, bool *use_v2, bool *use_t3amp, bool *use_t3phi, bool *use_visamp, bool *use_visphi, bool *use_diffvis, bool *use_tempfitswriting, bool *use_bandwidthsmearing, int *minimization_engine, bool *dumpchain, double *mas_pixel, unsigned short *axis_len, long *depth, long *niter, long *nelements, double *f_anywhere, double *f_copycat, int *nchains, int *nthreads, double *tempschedc, double *fov, double *chi2_temp, double *chi2_target, double *tmin, double *prob_auto, double *uvtol, char *output_filename, char *init_filename, char *prior_filename, double *v2s, double *v2a, double *t3amps, double *t3ampa, double *t3phia, double *t3phis, double *visamps, double *visampa, double *visphis, double *visphia, double *fluxs, double *cvfwhm, double *reg_param, double *init_param, double **wavmin, double **wavmax, int *nwavr, bool* wavauto);
+bool read_commandline(int *argc, char **argv, bool *benchmark, bool *use_visamp, bool *use_v2, bool *use_t3amp, bool *use_t4amp, bool *use_visphi, bool *use_t3phi, bool *use_t4phi,
+                      bool *diffvis, bool *use_tempfitswriting, bool *use_bandwidthsmearing, int *minimization_engine, bool *dumpchain, double *mas_pixel,
+                      unsigned short *axis_len, long *depth, long *niter, long *nelements, double *f_anywhere, double *f_copycat, int *nchains, int *nthreads,
+                      double *tempschedc, double *fov, double *chi2_temp, double *chi2_target, double *tmin, double *prob_auto, double *uvtol, char *output_filename,
+                      char *init_filename, char *prior_filename, double *visamps, double *visampa, double *visphis, double *visphia, double *v2s, double *v2a,
+                      double *t3amps, double *t3ampa, double *t3phia, double *t3phis,  double *t4amps, double *t4ampa, double *t4phia, double *t4phis,  double *fluxs, double *cvfwhm, double *reg_param, double *init_param, double **pwavmin,
+                      double **pwavmax, int *nwavr, bool *wavauto);
 
-void print_diagnostics(int iChain, long current_iter, long nvis, long nv2, long nt3, long nt3phi, long nt3amp, long nvisamp, long nvisphi, double chi2v2, double chi2t3amp, double chi2t3phi, double chi2visphi, double chi2visamp, double lPosterior, double lPrior, double lLikelihood, const double *reg_param, const double *reg_value, const double *centroid_image_x, const double *centroid_image_y, long nelements, int nwavr, long niter, const double *temperature, double prob_movement, const double *params, const double *stepsize, unsigned int* burn_in_times);
+void print_diagnostics(int iChain, long current_iter, long nvis, long nv2,  long nt3, long nt4, long nvisamp, long nt3amp, long nt4amp,  long nvisphi, long nt3phi, long nt4phi,
+                      double chi2visamp, double chi2v2, double chi2t3amp, double chi2t4amp, double chi2visphi, double chi2t3phi, double chi2t4phi,
+                                       double lPosterior, double lPrior, double lLikelihood, const double *reg_param,
+                                             const double *reg_value, const double *centroid_image_x, const double *centroid_image_y, long nelements, int nwavr, long niter,
+                                             const double *temperature, double prob_movement, const double *params, const double *stepsize, unsigned int* burn_in_times);
 
-void compute_lLikelihood(double *likelihood, const double complex *__restrict mod_vis, double *__restrict res, double *__restrict mod_obs, double *chi2v2, double *chi2t3amp, double *chi2visamp, double *chi2t3phi, double *chi2visphi, const int nwavr);
+void compute_lLikelihood(double *likelihood, const double complex *__restrict mod_vis, double *__restrict res, double *__restrict mod_obs, double *chi2visamp, double *chi2v2, double *chi2t3amp, double *chi2t4amp, double *chi2visphi, double *chi2t3phi, double *chi2t4phi, const int nwavr);
 void compute_lPrior(double *lPrior, const long chan, const double *reg_param, const double *reg_value);
 
 void vis_to_obs(const double complex *mod_vis, double *mod_obs, const int nwavr);
 void obs_to_res(const double *mod_obs, double *res);
-double residuals_to_chi2(const double *res, double *chi2v2, double *chi2t3amp, double *chi2visamp, double *chi2t3phi, double *chi2visphi) ;
+double residuals_to_chi2(const double *res, double *chi2visamp, double *chi2v2, double *chi2t3amp, double *chi2t4amp, double *chi2visphi, double *chi2t3phi, double *chi2t4phi) ;
 
 double get_flat_chi2(bool benchmark, const int nwavr);
 double fill_min_elts(long *min_elts, long depth, long threadnum);
@@ -156,10 +166,13 @@ static inline double modsq(double complex input)  __attribute__((always_inline))
 
 double fill_iframeburned(long *iframeburned, long depth, long threadnum, long nelements, long niter,  double *saved_lPosterior, double *saved_lLikelihood, double *saved_reg_value);
 int find_reg_param(double *regparam, long *iframeburned, long depth, long niter, long ndf, long nelements);
-int writeasfits(const char *file_basename, double *image, int nwavr, long depth, long min_elt, double chi2, double chi2v2, double chi2t3amp, double chi2t3phi, double chi2visamp, double chi2visphi,
+
+int writeasfits(const char *file, double *image, int nwavr, long depth, long min_elt, double chi2,  double chi2visamp, double chi2v2, double chi2t3amp, double chi2t4amp,  double chi2visphi, double chi2t3phi, double chi2t4phi,
                 double temperature, long nelems, double *regpar, double *regval, long niter,
                 unsigned short axis_len, double ndf, double tmin, double chi2_temp, double chi2_target, double mas_pixel, int nchains, double logZ, double logZ_err,
                 char *init_filename, char *prior_filename, double *params, double *params_std);
+
+
 
 void mcmc_results(int minimization_engine, char *file_basename, const int nchains, const unsigned int *burn_in_times, const long depth, const long nelements, const unsigned short axis_len,
                             const double complex *__restrict xtransform, const double complex *__restrict ytransform,
@@ -188,10 +201,11 @@ void initialize_image(int iChain, double *image, unsigned short *element_x, unsi
                       unsigned short axis_len, int nwavr,  long nelements, char *init_filename);
 
 /* Function prototype for extract_oifits.c*/
-int import_single_epoch_oifits(char *filename, bool use_v2, bool use_t3amp, bool use_t3phi, bool use_visamp, bool use_visphi,
-                               double v2a, double v2s, double t3ampa, double t3amps, double t3phia, double t3phis,
-                               double visampa, double visamps, double visphia, double visphis, double fluxs, double cwhm, double uvtol, int* pnwavr,
-                               double **pwavmin, double **pwavmax, bool wavemode, double *timemin, double *timemax);
+int import_single_epoch_oifits(char *filename, bool use_visamp, bool use_v2, bool use_t3amp, bool use_t4amp, bool use_visphi, bool use_t3phi, bool use_t4phi,
+  double visampa, double visamps,  double v2a, double v2s, double t3ampa, double t3amps, double t4ampa, double t4amps, double visphia, double visphis, double t3phia, double t3phis, double t4phia, double t4phis,
+  double fluxs, double cwhm, double uvtol, int* pnwavr, double **pwavmin, double **pwavmax, bool wavauto, double *timemin, double *timemax);
+
+
 int write_best_oifits(char *filestring, double complex *mod_vis);
 
 /* Function prototype for modelcode.c */
