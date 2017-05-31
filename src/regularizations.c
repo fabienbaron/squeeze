@@ -10,10 +10,11 @@ double cent_change(const int channel, double *centroid_image_x, double *centroid
   old_sumsqr = (centroid_image_x[channel] * centroid_image_x[channel] + centroid_image_y[channel] * centroid_image_y[channel]);
   centroid_image_x[channel] += (double)(new_x - old_x);
   centroid_image_y[channel] += (double)(new_y - old_y);
+  const double centpos = 0.5*((double)axis_len); // rationale: choosing starting dirac has to fall on pixel for even number of pixels
   new_sumsqr = centroid_image_x[channel] * centroid_image_x[channel] + centroid_image_y[channel] * centroid_image_y[channel];
   return ((new_sumsqr - old_sumsqr) * cent_mult
-          + ((double)(new_x - axis_len / 2) * (double)(new_x - axis_len / 2) - (double)(old_x - axis_len / 2) * (double)(old_x - axis_len / 2)
-             + (double)(new_y - axis_len / 2) * (double)(new_y - axis_len / 2) - (double)(old_y - axis_len / 2) * (double)(old_y - axis_len / 2)) * fov * fov)
+          + (((double)new_x - centpos) * ((double)new_x - centpos)   - ((double)old_x - centpos) * ((double)old_x - centpos)
+             + ((double)new_y - centpos) * ((double)new_y - centpos) - ((double)old_y - centpos) * ((double)old_y - centpos)) * fov * fov)
          * 4.0 / (double)(axis_len * axis_len);
 }
 
@@ -25,6 +26,7 @@ double entropy(const double s)
   else
     return lgamma(s);
 }
+
 
 double entropy_full(const double *x, const double *pr, const double eps, const int nx, const int ny, const double flux)
 {
@@ -249,6 +251,20 @@ double L0(const double *x, const double *pr, const double eps, const int nx, con
   }
   return L0l;
 }
+
+double entropy_xlogx(const double *x, const double *pr, const double eps, const int nx, const int ny, const double flux)
+{
+  register int i;
+  double ent = 0;
+  for (i = 0; i < nx * ny; ++i)
+  {
+    if (x[i] > 1e-10)
+      ent += x[i]*log(x[i]) - x[i];
+  }
+  return ent;
+}
+
+
 
 double L0_diff(const double *x, const long new_pos, const long old_pos)
 {
@@ -748,7 +764,7 @@ double L1_ATROUS(const double *x, const double *pr, const double eps, const int 
   const int nscales = 4;
   double* wav = malloc( nscales * nx * ny * sizeof(double));
   atrous_fwd(x, wav, nx, ny, nscales);
-  double reg = L1(wav, NULL, 0, nscales*nx, ny, 1.);
+  double reg = entropy_xlogx(wav, NULL, 0, nscales*nx, ny, 1.);
   free(wav);
   return reg;
 }
