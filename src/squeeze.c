@@ -210,7 +210,6 @@ int main(int argc, char **argv)
   fflush(stdout);
 
   /* Read in oifits file */
-
   if (import_single_epoch_oifits(argv[1], use_visamp, use_v2, use_t3amp, use_t4amp, use_visphi, use_t3phi, use_t4phi, visampa, visamps, v2a, v2s, t3ampa,
                                  t3amps, t4ampa, t4amps, visphia, visphis, t3phia, t3phis, t4phia, t4phis, fluxs, cvfwhm, uvtol, &nwavr, &wavmin, &wavmax,
                                  wavauto, timemin, timemax))
@@ -1760,8 +1759,7 @@ void obs_to_res(const double *__restrict mod_obs, double *__restrict res)
     res[i] = dewrap(mod_obs[i] - data[i]) * data_err[i]; // TBD: improve wrapping
 }
 
-double residuals_to_chi2(const double *res, double *chi2visamp, double *chi2v2, double *chi2t3amp, double *chi2t4amp, double *chi2visphi, double *chi2t3phi,
-                         double *chi2t4phi)
+double residuals_to_chi2(const double *res, double *chi2visamp, double *chi2v2, double *chi2t3amp, double *chi2t4amp, double *chi2visphi, double *chi2t3phi, double *chi2t4phi)
 {
   long i;
   double temp1 = 0, temp2 = 0, temp3 = 0, temp4 = 0, temp5 = 0, temp6 = 0, temp7 = 0; // local accumulator (faster than using chi2)
@@ -1774,52 +1772,25 @@ double residuals_to_chi2(const double *res, double *chi2visamp, double *chi2v2, 
   const long t4phioffset = nvisamp + nv2 + nt3amp + nt4amp + nvisphi + nt3phi;
 
   // TBD: simplify using the new SQUEEZE 3 notation
-
-  //  #pragma omp simd reduction(+:temp1)
-  for (i = 0; i < visampoffset; ++i)
-    {
-      temp1 += res[i] * res[i];
-    }
+  for (i = 0; i < visampoffset; ++i)           temp1 += res[i] * res[i];
   *chi2visamp = temp1;
 
-  // #pragma omp simd reduction(+:temp2)
-  for (i = visampoffset; i < v2offset; ++i)
-    {
-      temp2 += res[i] * res[i];
-    }
+  for (i = visampoffset; i < v2offset; ++i)    temp2 += res[i] * res[i];
   *chi2v2 = temp2;
 
-  //#pragma omp simd reduction(+:temp3)
-  for (i = v2offset; i < t3ampoffset; ++i)
-    {
-      temp3 += res[i] * res[i];
-    }
+  for (i = v2offset; i < t3ampoffset; ++i)     temp3 += res[i] * res[i];
   *chi2t3amp = temp3;
 
-  for (i = t3ampoffset; i < t4ampoffset; ++i)
-    {
-      temp4 += res[i] * res[i];
-    }
+  for (i = t3ampoffset; i < t4ampoffset; ++i)  temp4 += res[i] * res[i];
   *chi2t4amp = temp4;
 
-  //#pragma omp simd reduction(+:temp4)
-  for (i = t4ampoffset; i < visphioffset; ++i)
-    {
-      temp5 += res[i] * res[i];
-    }
+  for (i = t4ampoffset; i < visphioffset; ++i) temp5 += res[i] * res[i];
   *chi2visphi = temp5;
 
-  // #pragma omp simd reduction(+:temp5)
-  for (i = visphioffset; i < t3phioffset; ++i)
-    {
-      temp6 += res[i] * res[i];
-    }
+  for (i = visphioffset; i < t3phioffset; ++i) temp6 += res[i] * res[i];
   *chi2t3phi = temp6;
 
-  for (i = t3phioffset; i < t4phioffset; ++i)
-    {
-      temp7 += res[i] * res[i];
-    }
+  for (i = t3phioffset; i < t4phioffset; ++i)  temp7 += res[i] * res[i];
   *chi2t4phi = temp7;
 
   return temp1 + temp2 + temp3 + temp4 + temp5 + temp6 + temp7;

@@ -910,51 +910,59 @@ int import_single_epoch_oifits(char *filename, bool use_visamp, bool use_v2, boo
   // We are also getting rid of all the bad data detected in previous steps
   // and correcting for zeroflux for amplitudes
   // and converting angles to radians
-  data = malloc((nv2 + nt3amp + nt3phi + nvisamp + nvisphi + nt4amp + nt4phi) * sizeof(double));
-  data_err = malloc((nv2 + nt3amp + nt3phi + nvisamp + nvisphi + nt4amp + nt4phi) * sizeof(double));
+  data     = malloc((nvisamp + nv2 + nt3amp + nt4amp + nt3phi + nvisphi + nt4phi) * sizeof(double));
+  data_err = malloc((nvisamp + nv2 + nt3amp + nt4amp + nt3phi + nvisphi + nt4phi) * sizeof(double));
+  const long visampoffset = 0;
+  const long v2offset = nvisamp;
+  const long t3ampoffset = nvisamp + nv2;
+  const long t4ampoffset = nvisamp + nv2 + nt3amp;
+  const long visphioffset = nvisamp + nv2 + nt3amp + nt4amp;
+  const long t3phioffset = nvisamp + nv2 + nt3amp + nt4amp + nvisphi;
+  const long t4phioffset = nvisamp + nv2 + nt3amp + nt4amp + nvisphi + nt3phi;
+
   if (fluxs != 1.0)
     printf("OIFITS import -- Applying zeroflux scaling factor: %lf\n", fluxs);
 
   for (i = 0; i < nvisamp; i++)
     {
-      data[i] = visamp[i] / fluxs;
-      data_err[i] = visamp_sig[i] * fluxs;
+      data[visampoffset + i] = visamp[i] / fluxs;
+      data_err[visampoffset + i] = visamp_sig[i] * fluxs;
     }
 
   for (i = 0; i < nv2; i++)
     {
-      data[nvisamp + i] = v2[i] / (fluxs * fluxs);
-      data_err[nvisamp + i] = v2_sig[i] * (fluxs * fluxs);
+      data[v2offset + i] = v2[i] / (fluxs * fluxs);
+      data_err[v2offset + i] = v2_sig[i] * (fluxs * fluxs);
     }
 
   for (i = 0; i < nt3amp; i++)
     {
-      data[nvisamp + nv2 + i] = t3amp[i] / (fluxs * fluxs * fluxs);
-      data_err[nvisamp + nv2 + i] = t3amp_sig[i] * (fluxs * fluxs * fluxs);
+      data[t3ampoffset + i] = t3amp[i] / (fluxs * fluxs * fluxs);
+      data_err[t3ampoffset + i] = t3amp_sig[i] * (fluxs * fluxs * fluxs);
     }
 
   for (i = 0; i < nt4amp; i++)
     {
-      data[nvisamp + nv2 + nt3amp + i] = t4amp[i];
-      data_err[nvisamp + nv2 + nt3amp + i] = t4amp_sig[i];
+      data[t4ampoffset + i] = t4amp[i];
+      data_err[t4ampoffset + i] = t4amp_sig[i];
     }
 
   for (i = 0; i < nvisphi; i++)
     {
-      data[nvisamp + nv2 + nt3amp + nt4amp + i] = visphi[i] / 180. * M_PI;
-      data_err[nvisamp + nv2 + nt3amp + nt4amp + i] = visphi_sig[i];
+      data[visphioffset + i] = visphi[i] / 180. * M_PI;
+      data_err[visphioffset + i] = visphi_sig[i];
     }
 
   for (i = 0; i < nt3phi; i++)
     {
-      data[nvisamp + nv2 + nt3amp + nt4amp + nvisphi + i] = t3phi[i] / 180. * M_PI;
-      data_err[nvisamp + nv2 + nt3amp + nt4amp + nvisphi + i] = t3phi_sig[i];
+      data[t3phioffset + i] = t3phi[i] / 180. * M_PI;
+      data_err[t3phioffset + i] = t3phi_sig[i];
     }
 
   for (i = 0; i < nt4phi; i++)
     {
-      data[nvisamp + nv2 + nt3amp + nt4amp + nvisphi + nt3phi + i] = t4phi[i] / 180. * M_PI;
-      data_err[nvisamp + nv2 + nt3amp + nt4amp + nvisphi + nt3phi + i] = t4phi_sig[i];
+      data[t4phioffset + i] = t4phi[i] / 180. * M_PI;
+      data_err[t4phioffset + i] = t4phi_sig[i];
     }
 
   // Error scaling + check for negative errors + convert from degrees to radians
@@ -975,18 +983,10 @@ int import_single_epoch_oifits(char *filename, bool use_visamp, bool use_v2, boo
     printf("OIFITS import -- VISPHI rescaling: mult=%lf add= %lf\n", visphis, visphia);
 
   // TBD: clean this up by using the new datatypes in SQUEEZE 3 -- this shouldn't be longer than a few lines.
-  const long visampoffset = 0;
-  const long v2offset = nvisamp;
-  const long t3ampoffset = nvisamp + nv2;
-  const long t4ampoffset = nvisamp + nv2 + nt3amp;
-  const long visphioffset = nvisamp + nv2 + nt3amp + nt4amp;
-  const long t3phioffset = nvisamp + nv2 + nt3amp + nt4amp + nvisphi;
-  const long t4phioffset = nvisamp + nv2 + nt3amp + nt4amp + nvisphi + nt3phi;
-
   for (i = 0; i < nvisamp; i++) // TBD: depends on whether diff vis !
     {
       if (data_err[visampoffset + i] > 0)
-        temp = (1. / data_err[i] * visamps + visampa);
+        temp = (1. / data_err[visampoffset + i] * visamps + visampa);
       else
         temp = 0;
 
@@ -998,7 +998,7 @@ int import_single_epoch_oifits(char *filename, bool use_visamp, bool use_v2, boo
 
   for (i = 0; i < nv2; i++)
     {
-      if (data_err[i] > 0)
+      if (data_err[v2offset + i] > 0)
         temp = (1. / data_err[v2offset + i] * v2s + v2a);
       else
         temp = 0;
@@ -1011,7 +1011,7 @@ int import_single_epoch_oifits(char *filename, bool use_visamp, bool use_v2, boo
 
   for (i = 0; i < nt3amp; i++)
     {
-      if (data_err[nv2 + i] > 0)
+      if (data_err[t3ampoffset + i] > 0)
         temp = (1. / data_err[t3ampoffset + i] * t3amps + t3ampa);
       else
         temp = 0;
@@ -1037,15 +1037,15 @@ int import_single_epoch_oifits(char *filename, bool use_visamp, bool use_v2, boo
 
   for (i = 0; i < nvisphi; i++)
     {
-      if (data_err[t4ampoffset + i] > 0)
-        temp = (1. / data_err[t4ampoffset + i] * visphis + visphia) / 180. * M_PI;
+      if (data_err[visphioffset + i] > 0)
+        temp = (1. / data_err[visphioffset + i] * visphis + visphia) / 180. * M_PI;
       else
         temp = 0;
 
       if (temp > 0)
-        data_err[t4ampoffset + i] = 1. / temp;
+        data_err[visphioffset + i] = 1. / temp;
       else
-        data_err[t4ampoffset + i] = 0.;
+        data_err[visphioffset + i] = 0.;
     }
 
   for (i = 0; i < nt3phi; i++)
