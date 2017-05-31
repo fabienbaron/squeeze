@@ -1748,14 +1748,15 @@ void vis_to_obs(const double complex *__restrict mod_vis, double *__restrict mod
 void obs_to_res(const double *__restrict mod_obs, double *__restrict res)
 {
   long i;
-  //#pragma omp parallel for simd
-  for (i = 0; i < nvisamp + nv2 + nt3amp + nt4amp; ++i)
+  const long visphioffset = nvisamp + nv2 + nt3amp + nt4amp;
+  const long ndata = nvisamp + nv2 + nt3amp + nt4amp + nvisphi + nt3phi + nt4phi;
+  for (i = 0; i < visphioffset; ++i)
     {
       res[i] = (mod_obs[i] - data[i]) * data_err[i];
     }
 
   // #pragma omp parallel for simd
-  for (i = nvisamp + nv2 + nt3amp + nt4amp; i < nvisamp + nv2 + nt3amp + nt4amp + nvisphi + nt3phi + nt4phi; ++i)
+  for (i = visphioffset; i < ndata; ++i)
     res[i] = dewrap(mod_obs[i] - data[i]) * data_err[i]; // TBD: improve wrapping
 }
 
@@ -1770,27 +1771,28 @@ double residuals_to_chi2(const double *res, double *chi2visamp, double *chi2v2, 
   const long visphioffset = nvisamp + nv2 + nt3amp + nt4amp;
   const long t3phioffset = nvisamp + nv2 + nt3amp + nt4amp + nvisphi;
   const long t4phioffset = nvisamp + nv2 + nt3amp + nt4amp + nvisphi + nt3phi;
+  const long ndata = nvisamp + nv2 + nt3amp + nt4amp + nvisphi + nt3phi + nt4phi;
 
   // TBD: simplify using the new SQUEEZE 3 notation
-  for (i = 0; i < visampoffset; ++i)           temp1 += res[i] * res[i];
+  for (i = visampoffset; i < v2offset; ++i)           temp1 += res[i] * res[i];
   *chi2visamp = temp1;
 
-  for (i = visampoffset; i < v2offset; ++i)    temp2 += res[i] * res[i];
+  for (i = v2offset; i < t3ampoffset; ++i)    temp2 += res[i] * res[i];
   *chi2v2 = temp2;
 
-  for (i = v2offset; i < t3ampoffset; ++i)     temp3 += res[i] * res[i];
+  for (i = t3ampoffset; i < t4ampoffset; ++i)     temp3 += res[i] * res[i];
   *chi2t3amp = temp3;
 
-  for (i = t3ampoffset; i < t4ampoffset; ++i)  temp4 += res[i] * res[i];
+  for (i = t4ampoffset; i < visphioffset; ++i)  temp4 += res[i] * res[i];
   *chi2t4amp = temp4;
 
-  for (i = t4ampoffset; i < visphioffset; ++i) temp5 += res[i] * res[i];
+  for (i = visphioffset; i < t3phioffset; ++i) temp5 += res[i] * res[i];
   *chi2visphi = temp5;
 
-  for (i = visphioffset; i < t3phioffset; ++i) temp6 += res[i] * res[i];
+  for (i = t3phioffset; i < t4phioffset; ++i) temp6 += res[i] * res[i];
   *chi2t3phi = temp6;
 
-  for (i = t3phioffset; i < t4phioffset; ++i)  temp7 += res[i] * res[i];
+  for (i = t4phioffset; i < ndata; ++i)  temp7 += res[i] * res[i];
   *chi2t4phi = temp7;
 
   return temp1 + temp2 + temp3 + temp4 + temp5 + temp6 + temp7;
