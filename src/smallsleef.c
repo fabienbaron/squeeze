@@ -1,8 +1,8 @@
-#include <stdio.h>
-#include <assert.h>
-#include <stdint.h>
-#include <math.h>
 #include "nonnumber.h"
+#include <assert.h>
+#include <math.h>
+#include <stdint.h>
+#include <stdio.h>
 
 #define PI4_A 0.78539816290140151978
 #define PI4_B 4.9604678871439933374e-10
@@ -37,50 +37,20 @@ static inline double longBitsToDouble(int64_t i)
   return tmp.f;
 }
 
-static inline double xfabs(double x)
-{
-  return longBitsToDouble(0x7fffffffffffffffLL & doubleToRawLongBits(x));
-}
+static inline double xfabs(double x) { return longBitsToDouble(0x7fffffffffffffffLL & doubleToRawLongBits(x)); }
 
-static inline double mulsign(double x, double y)
-{
-  return longBitsToDouble(doubleToRawLongBits(x) ^ (doubleToRawLongBits(y) & (1LL << 63)));
-}
+static inline double mulsign(double x, double y) { return longBitsToDouble(doubleToRawLongBits(x) ^ (doubleToRawLongBits(y) & (1LL << 63))); }
 
-static inline double sign(double d)
-{
-  return mulsign(1, d);
-}
-static inline double mla(double x, double y, double z)
-{
-  return x * y + z;
-}
-static inline double xrint(double x)
-{
-  return x < 0 ? (int)(x - 0.5) : (int)(x + 0.5);
-}
+static inline double sign(double d) { return mulsign(1, d); }
+static inline double mla(double x, double y, double z) { return x * y + z; }
+static inline double xrint(double x) { return x < 0 ? (int)(x - 0.5) : (int)(x + 0.5); }
 
-static inline int xisnan(double x)
-{
-  return x != x;
-}
-static inline int xisinf(double x)
-{
-  return x == INFINITY || x == -INFINITY;
-}
-static inline int xisminf(double x)
-{
-  return x == -INFINITY;
-}
-static inline int xispinf(double x)
-{
-  return x == INFINITY;
-}
+static inline int xisnan(double x) { return x != x; }
+static inline int xisinf(double x) { return x == INFINITY || x == -INFINITY; }
+static inline int xisminf(double x) { return x == -INFINITY; }
+static inline int xispinf(double x) { return x == INFINITY; }
 
-static inline double pow2i(int q)
-{
-  return longBitsToDouble(((int64_t)(q + 0x3ff)) << 52);
-}
+static inline double pow2i(int q) { return longBitsToDouble(((int64_t)(q + 0x3ff)) << 52); }
 
 static inline double ldexpk(double x, int q)
 {
@@ -90,7 +60,7 @@ static inline double ldexpk(double x, int q)
   m = (((m + q) >> 9) - m) << 7;
   q = q - (m << 2);
   m += 0x3ff;
-  m = m < 0     ? 0     : m;
+  m = m < 0 ? 0 : m;
   m = m > 0x7ff ? 0x7ff : m;
   u = longBitsToDouble(((int64_t)m) << 52);
   x = x * u * u * u * u;
@@ -115,15 +85,13 @@ typedef struct
 #ifndef NDEBUG
 static int checkfp(double x)
 {
-  if (xisinf(x) || xisnan(x)) return 1;
+  if (xisinf(x) || xisnan(x))
+    return 1;
   return 0;
 }
 #endif
 
-static inline double upper(double d)
-{
-  return longBitsToDouble(doubleToRawLongBits(d) & 0xfffffffff8000000LL);
-}
+static inline double upper(double d) { return longBitsToDouble(doubleToRawLongBits(d) & 0xfffffffff8000000LL); }
 
 static inline double2 dd(double h, double l)
 {
@@ -170,7 +138,8 @@ static inline double2 ddadd_d2_d_d(double x, double y)
   double2 r;
 
 #ifndef NDEBUG
-  if (!(checkfp(x) || checkfp(y) || xfabs(x) >= xfabs(y))) fprintf(stderr, "[ddadd_d2_d_d : %g, %g]", x, y);
+  if (!(checkfp(x) || checkfp(y) || xfabs(x) >= xfabs(y)))
+    fprintf(stderr, "[ddadd_d2_d_d : %g, %g]", x, y);
 #endif
 
   r.x = x + y;
@@ -197,7 +166,8 @@ static inline double2 ddadd_d2_d2_d(double2 x, double y)
   double2 r;
 
 #ifndef NDEBUG
-  if (!(checkfp(x.x) || checkfp(y) || xfabs(x.x) >= xfabs(y))) fprintf(stderr, "[ddadd_d2_d2_d : %g %g]", x.x, y);
+  if (!(checkfp(x.x) || checkfp(y) || xfabs(x.x) >= xfabs(y)))
+    fprintf(stderr, "[ddadd_d2_d2_d : %g %g]", x.x, y);
 #endif
 
   r.x = x.x + y;
@@ -212,7 +182,7 @@ static inline double2 ddadd2_d2_d2_d(double2 x, double y)
 
   double2 r;
 
-  r.x  = x.x + y;
+  r.x = x.x + y;
   double v = r.x - x.x;
   r.y = (x.x - (r.x - v)) + (y - v);
   r.y += x.y;
@@ -227,7 +197,8 @@ static inline double2 ddadd_d2_d_d2(double x, double2 y)
   double2 r;
 
 #ifndef NDEBUG
-  if (!(checkfp(x) || checkfp(y.x) || xfabs(x) >= xfabs(y.x))) fprintf(stderr, "[ddadd_d2_d_d2 : %g %g]", x, y.x);
+  if (!(checkfp(x) || checkfp(y.x) || xfabs(x) >= xfabs(y.x)))
+    fprintf(stderr, "[ddadd_d2_d_d2 : %g %g]", x, y.x);
 #endif
 
   r.x = x + y.x;
@@ -240,7 +211,7 @@ static inline double2 ddadd2_d2_d_d2(double x, double2 y)
 {
   double2 r;
 
-  r.x  = x + y.x;
+  r.x = x + y.x;
   double v = r.x - x;
   r.y = (x - (r.x - v)) + (y.x - v) + y.y;
 
@@ -254,7 +225,8 @@ static inline double2 ddadd_d2_d2_d2(double2 x, double2 y)
   double2 r;
 
 #ifndef NDEBUG
-  if (!(checkfp(x.x) || checkfp(y.x) || xfabs(x.x) >= xfabs(y.x))) fprintf(stderr, "[ddadd_d2_d2_d2 : %g %g]", x.x, y.x);
+  if (!(checkfp(x.x) || checkfp(y.x) || xfabs(x.x) >= xfabs(y.x)))
+    fprintf(stderr, "[ddadd_d2_d2_d2 : %g %g]", x.x, y.x);
 #endif
 
   r.x = x.x + y.x;
@@ -267,7 +239,7 @@ static inline double2 ddadd2_d2_d2_d2(double2 x, double2 y)
 {
   double2 r;
 
-  r.x  = x.x + y.x;
+  r.x = x.x + y.x;
   double v = r.x - x.x;
   r.y = (x.x - (r.x - v)) + (y.x - v);
   r.y += x.y + y.y;
@@ -282,7 +254,8 @@ static inline double2 ddsub_d2_d2_d2(double2 x, double2 y)
   double2 r;
 
 #ifndef NDEBUG
-  if (!(checkfp(x.x) || checkfp(y.x) || xfabs(x.x) >= xfabs(y.x))) fprintf(stderr, "[ddsub_d2_d2_d2 : %g %g]", x.x, y.x);
+  if (!(checkfp(x.x) || checkfp(y.x) || xfabs(x.x) >= xfabs(y.x)))
+    fprintf(stderr, "[ddsub_d2_d2_d2 : %g %g]", x.x, y.x);
 #endif
 
   r.x = x.x - y.x;
@@ -294,16 +267,15 @@ static inline double2 ddsub_d2_d2_d2(double2 x, double2 y)
 static inline double2 dddiv_d2_d2_d2(double2 n, double2 d)
 {
   double t = 1.0 / d.x;
-  double dh  = upper(d.x), dl  = d.x - dh;
-  double th  = upper(t), tl  = t   - th;
+  double dh = upper(d.x), dl = d.x - dh;
+  double th = upper(t), tl = t - th;
   double nhh = upper(n.x), nhl = n.x - nhh;
 
   double2 q;
 
   q.x = n.x * t;
 
-  double u = -q.x + nhh * th + nhh * tl + nhl * th + nhl * tl +
-             q.x * (1 - dh * th - dh * tl - dl * th - dl * tl);
+  double u = -q.x + nhh * th + nhh * tl + nhl * th + nhl * tl + q.x * (1 - dh * th - dh * tl - dl * th - dl * tl);
 
   q.y = t * (n.y - q.x * d.y) + u;
 
@@ -325,7 +297,7 @@ static inline double2 ddmul_d2_d_d(double x, double y)
 static inline double2 ddmul_d2_d2_d(double2 x, double y)
 {
   double xh = upper(x.x), xl = x.x - xh;
-  double yh = upper(y), yl = y   - yh;
+  double yh = upper(y), yl = y - yh;
   double2 r;
 
   r.x = x.x * y;
@@ -374,7 +346,7 @@ static inline double2 ddrec_d2_d2(double2 d)
 {
   double t = 1.0 / d.x;
   double dh = upper(d.x), dl = d.x - dh;
-  double th = upper(t), tl = t   - th;
+  double th = upper(t), tl = t - th;
   double2 q;
 
   q.x = t;
@@ -397,17 +369,17 @@ static inline double atan2k(double y, double x)
   int q = 0;
 
   if (x < 0)
-  {
-    x = -x;
-    q = -2;
-  }
+    {
+      x = -x;
+      q = -2;
+    }
   if (y > x)
-  {
-    t = x;
-    x = y;
-    y = -t;
-    q += 1;
-  }
+    {
+      t = x;
+      x = y;
+      y = -t;
+      q += 1;
+    }
 
   s = y / x;
   t = s * s;
@@ -443,9 +415,12 @@ double xatan2(double y, double x)
   double r = atan2k(xfabs(y), x);
 
   r = mulsign(r, x);
-  if (xisinf(x) || x == 0) r = M_PI / 2 - (xisinf(x) ? (sign(x) * (M_PI  / 2)) : 0);
-  if (xisinf(y)) r = M_PI / 2 - (xisinf(x) ? (sign(x) * (M_PI * 1 / 4)) : 0);
-  if (y == 0) r = (sign(x) == -1 ? M_PI : 0);
+  if (xisinf(x) || x == 0)
+    r = M_PI / 2 - (xisinf(x) ? (sign(x) * (M_PI / 2)) : 0);
+  if (xisinf(y))
+    r = M_PI / 2 - (xisinf(x) ? (sign(x) * (M_PI * 1 / 4)) : 0);
+  if (y == 0)
+    r = (sign(x) == -1 ? M_PI : 0);
 
   return xisnan(x) || xisnan(y) ? NAN : mulsign(r, y);
 }
@@ -457,19 +432,19 @@ static double2 atan2k_u1(double2 y, double2 x)
   int q = 0;
 
   if (x.x < 0)
-  {
-    x.x = -x.x;
-    x.y = -x.y;
-    q = -2;
-  }
+    {
+      x.x = -x.x;
+      x.y = -x.y;
+      q = -2;
+    }
   if (y.x > x.x)
-  {
-    t = x;
-    x = y;
-    y.x = -t.x;
-    y.y = -t.y;
-    q += 1;
-  }
+    {
+      t = x;
+      x = y;
+      y.x = -t.x;
+      y.y = -t.y;
+      q += 1;
+    }
 
   s = dddiv_d2_d2_d2(y, x);
   t = ddsqu_d2_d2(s);
@@ -509,10 +484,12 @@ double xatan2_u1(double y, double x)
   double r = d.x + d.y;
 
   r = mulsign(r, x);
-  if (xisinf(x) || x == 0) r = M_PI / 2 - (xisinf(x) ? (sign(x) * (M_PI  / 2)) : 0);
-  if (xisinf(y)) r = M_PI / 2 - (xisinf(x) ? (sign(x) * (M_PI * 1 / 4)) : 0);
-  if (y == 0) r = (sign(x) == -1 ? M_PI : 0);
+  if (xisinf(x) || x == 0)
+    r = M_PI / 2 - (xisinf(x) ? (sign(x) * (M_PI / 2)) : 0);
+  if (xisinf(y))
+    r = M_PI / 2 - (xisinf(x) ? (sign(x) * (M_PI * 1 / 4)) : 0);
+  if (y == 0)
+    r = (sign(x) == -1 ? M_PI : 0);
 
   return xisnan(x) || xisnan(y) ? NAN : mulsign(r, y);
 }
-
