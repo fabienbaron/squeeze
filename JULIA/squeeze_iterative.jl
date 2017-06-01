@@ -15,7 +15,7 @@ for i=1:maxit
   npix = npixs[i];
   pixellation=pixellations[i];
   element = elements[i];
-  mkdir(string(basedir,npix));
+  mkpath(string(basedir,npix));
   outputbase = string(basedir, npix,"/reconst")
   if(i==1)
     run(`../bin/squeeze $dataname -w $npix -s $pixellation -e $element -o $outputbase -chains $nchains`)
