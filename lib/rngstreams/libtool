@@ -1,4 +1,4 @@
-#! /bin/bash
+#! /bin/sh
 
 # libtoolT - Provide generalized library-building support services.
 # Generated automatically by  (GNU rngstreams 1.0.1)
@@ -30,10 +30,10 @@
 # the same distribution terms that you use for the rest of that program.
 
 # A sed program that does not truncate output.
-SED="/bin/sed"
+SED="/usr/bin/sed"
 
 # Sed that helps us avoid accidentally triggering echo(1) options like -n.
-Xsed="/bin/sed -e 1s/^X//"
+Xsed="/usr/bin/sed -e 1s/^X//"
 
 # The HP-UX ksh and POSIX shell print the target directory to stdout
 # if CDPATH is set.
@@ -47,7 +47,7 @@ available_tags=" CXX F77"
 # Libtool was configured on host voyager:
 
 # Shell to use when invoking shell scripts.
-SHELL="/bin/bash"
+SHELL="/bin/sh"
 
 # Whether or not to build shared libraries.
 build_libtool_libs=no
@@ -94,10 +94,10 @@ CC="gcc"
 with_gcc=yes
 
 # An ERE matcher.
-EGREP="/bin/grep -E"
+EGREP="/usr/bin/grep -E"
 
 # The linker used to build libraries.
-LD="/usr/bin/ld -m elf_x86_64"
+LD="/usr/lib/hardening-wrapper/bin/ld -m elf_x86_64"
 
 # Whether we need hard or soft links.
 LN_S="ln -s"
@@ -329,10 +329,10 @@ variables_saved_for_relink="PATH LD_LIBRARY_PATH LD_RUN_PATH GCC_EXEC_PREFIX COM
 link_all_deplibs=unknown
 
 # Compile-time system search path for libraries
-sys_lib_search_path_spec="/usr/lib/gcc/x86_64-linux-gnu/5 /usr/lib/x86_64-linux-gnu /usr/lib /lib/x86_64-linux-gnu /lib"
+sys_lib_search_path_spec="/usr/lib/hardening-wrapper/bin /usr/lib/gcc/x86_64-pc-linux-gnu/7.1.1 /usr/lib /lib"
 
 # Run-time system search path for libraries
-sys_lib_dlsearch_path_spec="/lib /usr/lib /usr/lib/x86_64-linux-gnu/libfakeroot /lib/i386-linux-gnu /usr/lib/i386-linux-gnu /lib/i686-linux-gnu /usr/lib/i686-linux-gnu /usr/local/lib /lib/x86_64-linux-gnu /usr/lib/x86_64-linux-gnu /usr/lib/nvidia-361 /usr/lib32/nvidia-361 /usr/lib/nvidia-361 /usr/lib32/nvidia-361 /usr/lib/x86_64-linux-gnu/mir/client8driver/mesa /lib64 /usr/lib64 /lib32 /usr/lib32 /libx32 /usr/libx32 "
+sys_lib_dlsearch_path_spec="/lib /usr/lib /usr/lib/libfakeroot /usr/lib/ /usr/lib/ffmpeg2.8/ /usr/lib/julia /usr/lib32 /usr/lib/octave/4.2.1 /usr/lib/opencollada /usr/lib/openmpi "
 
 # Fix the shell variable $srcfile for the compiler.
 fix_srcfile_path=""
@@ -7334,7 +7334,7 @@ disable_libs=static
 # Libtool was configured on host voyager:
 
 # Shell to use when invoking shell scripts.
-SHELL="/bin/bash"
+SHELL="/bin/sh"
 
 # Whether or not to build shared libraries.
 build_libtool_libs=no
@@ -7381,10 +7381,10 @@ CC="g++"
 with_gcc=yes
 
 # An ERE matcher.
-EGREP="/bin/grep -E"
+EGREP="/usr/bin/grep -E"
 
 # The linker used to build libraries.
-LD="/usr/bin/ld -m elf_x86_64"
+LD="/usr/lib/hardening-wrapper/bin/ld -m elf_x86_64"
 
 # Whether we need hard or soft links.
 LN_S="ln -s"
@@ -7513,11 +7513,11 @@ striplib="strip --strip-unneeded"
 
 # Dependencies to place before the objects being linked to create a
 # shared library.
-predep_objects="/usr/lib/gcc/x86_64-linux-gnu/5/../../../x86_64-linux-gnu/crti.o /usr/lib/gcc/x86_64-linux-gnu/5/crtbeginS.o"
+predep_objects="/usr/lib/gcc/x86_64-pc-linux-gnu/7.1.1/../../../../lib/crti.o /usr/lib/gcc/x86_64-pc-linux-gnu/7.1.1/crtbeginS.o"
 
 # Dependencies to place after the objects being linked to create a
 # shared library.
-postdep_objects="/usr/lib/gcc/x86_64-linux-gnu/5/crtendS.o /usr/lib/gcc/x86_64-linux-gnu/5/../../../x86_64-linux-gnu/crtn.o"
+postdep_objects="/usr/lib/gcc/x86_64-pc-linux-gnu/7.1.1/crtendS.o /usr/lib/gcc/x86_64-pc-linux-gnu/7.1.1/../../../../lib/crtn.o"
 
 # Dependencies to place before the objects being linked to create a
 # shared library.
@@ -7529,11 +7529,11 @@ postdeps="-lstdc++ -lm -lgcc_s -lc -lgcc_s"
 
 # The directories searched by this compiler when creating a shared
 # library
-compiler_lib_search_dirs="/usr/lib/gcc/x86_64-linux-gnu/5 /usr/lib/gcc/x86_64-linux-gnu/5/../../../x86_64-linux-gnu /usr/lib/gcc/x86_64-linux-gnu/5/../../../../lib /lib/x86_64-linux-gnu /lib/../lib /usr/lib/x86_64-linux-gnu /usr/lib/../lib /usr/lib/gcc/x86_64-linux-gnu/5/../../.."
+compiler_lib_search_dirs="/usr/lib/hardening-wrapper/bin /usr/lib/gcc/x86_64-pc-linux-gnu/7.1.1 /usr/lib/gcc/x86_64-pc-linux-gnu/7.1.1/../../../../lib /lib/../lib /usr/lib/../lib /usr/lib/gcc/x86_64-pc-linux-gnu/7.1.1/../../.."
 
 # The library search path used internally by the compiler when linking
 # a shared library.
-compiler_lib_search_path="-L/usr/lib/gcc/x86_64-linux-gnu/5 -L/usr/lib/gcc/x86_64-linux-gnu/5/../../../x86_64-linux-gnu -L/usr/lib/gcc/x86_64-linux-gnu/5/../../../../lib -L/lib/x86_64-linux-gnu -L/lib/../lib -L/usr/lib/x86_64-linux-gnu -L/usr/lib/../lib -L/usr/lib/gcc/x86_64-linux-gnu/5/../../.."
+compiler_lib_search_path="-L/usr/lib/hardening-wrapper/bin -L/usr/lib/gcc/x86_64-pc-linux-gnu/7.1.1 -L/usr/lib/gcc/x86_64-pc-linux-gnu/7.1.1/../../../../lib -L/lib/../lib -L/usr/lib/../lib -L/usr/lib/gcc/x86_64-pc-linux-gnu/7.1.1/../../.."
 
 # Method to check whether dependent libraries are shared objects.
 deplibs_check_method="pass_all"
@@ -7613,10 +7613,10 @@ variables_saved_for_relink="PATH LD_LIBRARY_PATH LD_RUN_PATH GCC_EXEC_PREFIX COM
 link_all_deplibs=unknown
 
 # Compile-time system search path for libraries
-sys_lib_search_path_spec="/usr/lib/gcc/x86_64-linux-gnu/5 /usr/lib/x86_64-linux-gnu /usr/lib /lib/x86_64-linux-gnu /lib"
+sys_lib_search_path_spec="/usr/lib/hardening-wrapper/bin /usr/lib/gcc/x86_64-pc-linux-gnu/7.1.1 /usr/lib /lib"
 
 # Run-time system search path for libraries
-sys_lib_dlsearch_path_spec="/lib /usr/lib /usr/lib/x86_64-linux-gnu/libfakeroot /lib/i386-linux-gnu /usr/lib/i386-linux-gnu /lib/i686-linux-gnu /usr/lib/i686-linux-gnu /usr/local/lib /lib/x86_64-linux-gnu /usr/lib/x86_64-linux-gnu /usr/lib/nvidia-361 /usr/lib32/nvidia-361 /usr/lib/nvidia-361 /usr/lib32/nvidia-361 /usr/lib/x86_64-linux-gnu/mir/client8driver/mesa /lib64 /usr/lib64 /lib32 /usr/lib32 /libx32 /usr/libx32 "
+sys_lib_dlsearch_path_spec="/lib /usr/lib /usr/lib/libfakeroot /usr/lib/ /usr/lib/ffmpeg2.8/ /usr/lib/julia /usr/lib32 /usr/lib/octave/4.2.1 /usr/lib/opencollada /usr/lib/openmpi "
 
 # Fix the shell variable $srcfile for the compiler.
 fix_srcfile_path=""
@@ -7643,7 +7643,7 @@ include_expsyms=""
 # Libtool was configured on host voyager:
 
 # Shell to use when invoking shell scripts.
-SHELL="/bin/bash"
+SHELL="/bin/sh"
 
 # Whether or not to build shared libraries.
 build_libtool_libs=no
@@ -7684,16 +7684,16 @@ LTCC="gcc"
 LTCFLAGS="-g -O2"
 
 # A language-specific compiler.
-CC="f77"
+CC="gfortran"
 
 # Is the compiler the GNU C compiler?
 with_gcc=yes
 
 # An ERE matcher.
-EGREP="/bin/grep -E"
+EGREP="/usr/bin/grep -E"
 
 # The linker used to build libraries.
-LD="/usr/bin/ld -m elf_x86_64"
+LD="/usr/lib/hardening-wrapper/bin/ld -m elf_x86_64"
 
 # Whether we need hard or soft links.
 LN_S="ln -s"
@@ -7767,7 +7767,7 @@ dlopen_self=unknown
 dlopen_self_static=unknown
 
 # Compiler flag to prevent dynamic linking.
-link_static_flag="-static"
+link_static_flag=""
 
 # Compiler flag to turn off builtin functions.
 no_builtin_flag=""
@@ -7925,10 +7925,10 @@ variables_saved_for_relink="PATH LD_LIBRARY_PATH LD_RUN_PATH GCC_EXEC_PREFIX COM
 link_all_deplibs=unknown
 
 # Compile-time system search path for libraries
-sys_lib_search_path_spec="/usr/lib/gcc/x86_64-linux-gnu/5 /usr/lib/x86_64-linux-gnu /usr/lib /lib/x86_64-linux-gnu /lib"
+sys_lib_search_path_spec="/usr/lib/hardening-wrapper/bin /usr/lib/gcc/x86_64-pc-linux-gnu/7.1.1 /usr/lib /lib"
 
 # Run-time system search path for libraries
-sys_lib_dlsearch_path_spec="/lib /usr/lib /usr/lib/x86_64-linux-gnu/libfakeroot /lib/i386-linux-gnu /usr/lib/i386-linux-gnu /lib/i686-linux-gnu /usr/lib/i686-linux-gnu /usr/local/lib /lib/x86_64-linux-gnu /usr/lib/x86_64-linux-gnu /usr/lib/nvidia-361 /usr/lib32/nvidia-361 /usr/lib/nvidia-361 /usr/lib32/nvidia-361 /usr/lib/x86_64-linux-gnu/mir/client8driver/mesa /lib64 /usr/lib64 /lib32 /usr/lib32 /libx32 /usr/libx32 "
+sys_lib_dlsearch_path_spec="/lib /usr/lib /usr/lib/libfakeroot /usr/lib/ /usr/lib/ffmpeg2.8/ /usr/lib/julia /usr/lib32 /usr/lib/octave/4.2.1 /usr/lib/opencollada /usr/lib/openmpi "
 
 # Fix the shell variable $srcfile for the compiler.
 fix_srcfile_path=""
