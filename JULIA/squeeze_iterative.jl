@@ -31,3 +31,5 @@ for i=1:maxit
   end
   imdisp(avg)
 end
+
+readline()
