@@ -1,17 +1,16 @@
 using FITSIO
-function chain_average(dir)
+function chain_average(outputbase)
 #get size
-file = string(dir, "output_MEAN_chain0.fits");
+file = string(outputbase, "_MEAN_chain0.fits");
 f = FITS(file);
-im = read(f[1]);
+sz = size(read(f[1]));
 header = read_header(f[1]);
-sz = size(im);
 nchains = header["NCHAINS"];
 
 fullchain = zeros(sz[1], sz[2], sz[3], nchains);
 
 for ichain=1:nchains
-  file = string(dir, "output_MEAN_chain",ichain-1,".fits");
+  file = string(outputbase, "_MEAN_chain",ichain-1,".fits");
   f = FITS(file);
   fullchain[:,:,:,ichain] = read(f[1]);
 end
@@ -24,4 +23,15 @@ if(sz[3] == 1)
 end
 
 return (avg, err)
+end
+
+function gridx2(image)
+sz=size(image)
+extrapol = zeros(2*sz[1], 2*sz[2])
+for i=1:sz[1]
+  for j=1:sz[2]
+    extrapol[2*i-1:2*i,2*j-1:2*j]= image[i,j];
+  end
+end
+return extrapol
 end
