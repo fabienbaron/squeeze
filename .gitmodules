@@ -1,4 +1,0 @@
-[submodule "lib/oifitslib"]
-        path = lib/oifitslib
-        url = https://github.com/fabienbaron/oifitslib.git
-        branch = T4
