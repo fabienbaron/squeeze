@@ -610,16 +610,16 @@ int import_single_epoch_oifits(char *filename, bool use_visamp, bool use_v2, boo
                                  u, v, uv_lambda, uv_dlambda, uv_time, uvtol);
 
                       add_new_uv(&t4in3[tempindex], &uvindex,
-                                 ((t4_table.record[i]).u1coord + (t4_table.record[i]).u2coord) / lambda_t4[tempindex], // new_u
-                                 ((t4_table.record[i]).v1coord + (t4_table.record[i]).v2coord) / lambda_t4[tempindex], // new_v
+                                 (t4_table.record[i]).u3coord / lambda_t4[tempindex], // new_u
+                                 (t4_table.record[i]).v3coord / lambda_t4[tempindex], // new_v
                                  wave.eff_wave[j],                                                                     // new_uv_lambda
                                  wave.eff_band[j],                                                                     // new_uv_dlambda
                                  (t4_table.record[i]).mjd,                                                             // new_uvtime
                                  u, v, uv_lambda, uv_dlambda, uv_time, uvtol);
 
                       add_new_uv(&t4in4[tempindex], &uvindex,
-                                 ((t4_table.record[i]).u1coord + (t4_table.record[i]).u2coord) / lambda_t4[tempindex], // new_u
-                                 ((t4_table.record[i]).v1coord + (t4_table.record[i]).v2coord) / lambda_t4[tempindex], // new_v
+                                 ((t4_table.record[i]).u1coord + (t4_table.record[i]).u2coord + (t4_table.record[i]).u3coord) / lambda_t4[tempindex], // new_u
+                                 ((t4_table.record[i]).v1coord + (t4_table.record[i]).v2coord + (t4_table.record[i]).v3coord) / lambda_t4[tempindex], // new_v
                                  wave.eff_wave[j],                                                                     // new_uv_lambda
                                  wave.eff_band[j],                                                                     // new_uv_dlambda
                                  (t4_table.record[i]).mjd,                                                             // new_uvtime
