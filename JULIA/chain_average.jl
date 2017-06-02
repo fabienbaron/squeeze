@@ -27,10 +27,20 @@ end
 
 function gridx2(image)
 sz=size(image)
-extrapol = zeros(2*sz[1], 2*sz[2])
-for i=1:sz[1]
-  for j=1:sz[2]
-    extrapol[2*i-1:2*i,2*j-1:2*j]= image[i,j];
+
+if (ndims(image) == 2)
+  extrapol = zeros(2*sz[1], 2*sz[2])
+  for i=1:sz[1]
+    for j=1:sz[2]
+      extrapol[2*i-1:2*i,2*j-1:2*j]= image[i,j];
+    end
+  end
+else
+  extrapol = zeros(2*sz[1], 2*sz[2], sz[3])
+  for i=1:sz[1]
+    for j=1:sz[2]
+      extrapol[2*i-1:2*i,2*j-1:2*j, :]= image[i,j, :];
+    end
   end
 end
 return extrapol

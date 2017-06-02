@@ -5,7 +5,7 @@ dataname = "../sample_data/2004-data1.oifits";
 
 maxit = 4
 npixs = [16, 32, 64, 128];
-pixellations = [1.2, 0.6, 0.3, 0.15];
+pixellations = [0.8, 0.4, 0.2, 0.1];
 elements = [200, 500, 1000, 4000];
 basedir = "../fake/";
 nchains = 10;
@@ -28,6 +28,11 @@ for i=1:maxit
   if (i<maxit)
     avgx2 = gridx2(avg);
     f = FITS(string(basedir,"start",npixs[i+1], ".fits"), "w"); write(f, avgx2); close(f);
+  else
+    f = FITS(string(basedir,"avg",npixs[i], ".fits"), "w"); write(f, avg); close(f);
+    f = FITS(string(basedir,"err",npixs[i], ".fits"), "w"); write(f, avg); close(f);
+    f = FITS(string(basedir,"low",npixs[i], ".fits"), "w"); write(f, avg-err); close(f);
+    f = FITS(string(basedir,"hi",npixs[i], ".fits"), "w"); write(f, avg+err); close(f);
   end
   imdisp(avg)
 end
