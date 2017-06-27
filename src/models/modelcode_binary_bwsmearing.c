@@ -25,10 +25,11 @@ with parameters :
  params(7) = environment index
  params(8) = reference wavelength for above parameters
  Globals: nparams, nbaselines, u, v */
-
+extern double j1(double);
 int model_vis(const double *params, double complex *modvis, double *lPriorModel, double *flux_frac) {
   int status = 0;
   long i;
+  double lPriorParams[8];
   double tempd, vis_secondary = 1.0, vis_primary = 1.0, vis_bw = 1.0;
   double complex phase_factor;
   double fenv_ref, fenv;
@@ -40,31 +41,33 @@ int model_vis(const double *params, double complex *modvis, double *lPriorModel,
   double ud_secondary = params[5];
   double bws = params[6];
   double env_ind = params[7];
+  double lambda_ref = params[8];
+double fs_primary, fs_secondary;
 
   for(i = 0; i < nuv; i++)
         {
             // Compute visibilities for unity fluxes
             if (ud_primary > 0)
             {
-                   tempd = PI * ud_primary / MAS_RAD * sqrt(u[i] * u[i] + v[i] * v[i]) + 1e-15;
+                   tempd = M_PI * ud_primary / MAS_RAD * sqrt(u[i] * u[i] + v[i] * v[i]) + 1e-15;
                    vis_primary = 2.0 * j1(tempd) / tempd;
             }
             else
                  vis_primary = 1.0;
 
             if (ud_secondary > 0) {
-               tempd = PI * ud_secondary / MAS_RAD * sqrt(u[i] * u[i] + v[i] * v[i]) + 1e-15;
+               tempd = M_PI * ud_secondary / MAS_RAD * sqrt(u[i] * u[i] + v[i] * v[i]) + 1e-15;
                vis_secondary = 2.0 * j1(tempd) / tempd;
              } else
                vis_secondary = 1.0;
 
              if (bws > 0) {
-               tempd = PI * bws * (u[i] * delta_ra + v[i] * delta_dec) + 1e-15;
+               tempd = M_PI * bws * (u[i] * delta_ra + v[i] * delta_dec) + 1e-15;
                vis_bw = sin(tempd) / tempd;
              } else
                vis_bw = 1.0;
             // offset the secondary (bandwidth smearing + phase shift)
-            vis_secondary *= vis_bw * cexp(-2.0 * PI * (u[i] * delta_ra + v[i] * delta_dec);
+            vis_secondary *= vis_bw * cexp(-2.0 * M_PI * (u[i] * delta_ra + v[i] * delta_dec));
 
             // Compute fluxes
             fs_primary = fs_primary_ref * pow((uv_lambda[i] / lambda_ref), -4.); // Stellar flux primary
