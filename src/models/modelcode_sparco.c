@@ -3,8 +3,11 @@
    SQUEEZE 2 - Image reconstruction software for optical interferometry,
    based on Monte-Carlo Markov Chain algorithms.
 
-   Copyright (c) 2006-2015 Fabien Baron, John Monnier, Michael Ireland
-   Copyright (c) 2012-2015 Jacques Kluska for SPARCO
+   Copyright (c) 2006-2013 Fabien Baron, John Monnier, Michael Ireland, Jacques Kluska
+
+   Based on MACIM written by Dr. Michael Ireland (Macquarie University) and
+   Pr. John Monnier (University of Michigan).
+   Also based on SQUEEZE 1.2 written by Pr. Fabien Baron (Georgia State University).
 
    SQUEEZE is free software: you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -27,10 +30,10 @@ V_tot = ------------------------------------------------------------------------
         fs0 (lambda/ lambda_0)^-4 + (1-fs0)*(lambda/lambda_0)^d_ind
 
 with parameters :
-       lambda_0 : reference wavelenght (H band)
+       lambda_0 : reference wavelength (H band)
        fs0 : the stellar flux fraction at lambda_0
        diam : the size of the uniform disc at lambda_0 in mas
-       d_ind : the flux power law index for the environement (here the image)
+       d_ind : the flux power law index for the environement (here, the image)
 
 Notes:
        V_env : the visibilities of the environment (here the image)
@@ -39,8 +42,8 @@ Notes:
 
 ------------------------------
 Globals: nparams, nbaselines, u, v*/
-
-int model_vis(double *params, double complex *modvis, double *lPriorModel, double *flux_frac_0)
+extern double j1(double);
+int model_vis(const double *params, double complex *modvis, double *lPriorModel, double *flux_frac_0)
 {
     int status = 0;
     long i;
@@ -65,7 +68,7 @@ int model_vis(double *params, double complex *modvis, double *lPriorModel, doubl
     // Compute model visibilities
     for(i = 0; i < nuv; i++)
         {
-            tempd = PI * diam / MAS_RAD * sqrt(u[i] * u[i] + v[i] * v[i]) + 1e-15;
+            tempd = M_PI * diam / MAS_RAD * sqrt(u[i] * u[i] + v[i] * v[i]) + 1e-15;
             //    tempd = PI*params[4]*(u[i]*delta_ra+v[i]*delta_dec)+1e-15;
             //    vis_bw=sin(tempd)/tempd;
             modvis[i] = 2. * (1. - flux_frac_0[i]) * j1(tempd) / tempd;
@@ -91,8 +94,14 @@ int model_vis(double *params, double complex *modvis, double *lPriorModel, doubl
     else
         lPriorParams[2] = 1e99;
 
-    *lPriorModel = lPriorParams[0] + lPriorParams[1] + lPriorParams[2] ;
+
+    if(fabs(params[3]) >= 10)
+        lPriorParams[3] = 1e99;
+    else
+        lPriorParams[3] = 0;
+
+
+    *lPriorModel = lPriorParams[0] + lPriorParams[1] + lPriorParams[2] +lPriorParams[3] ;
 
     return (status != 0);
 }
-
