@@ -71,7 +71,8 @@ double *__restrict data;
 double *__restrict data_err;
 
 /* Parametric Model Fitting*/
-long nparams;
+long nparams, nparams_free;
+int *params_free;
 double init_params[MAX_PARAMS], init_stepsize[MAX_PARAMS];
 
 /* Wavelet definitions */
@@ -357,15 +358,19 @@ int main(int argc, char **argv) {
       }
 
       /* read in model parameters, if there are any... */
-      if (nparams > 0) {
+      if (nparams > 0)
+      {
         status = 0;
-        for (i = 0; i < nparams; ++i) {
+        for (i = 0; i < nparams; ++i)
+        {
           sprintf(param_string, "MNPARAM%1ld", i + 1);
-          if (!fits_read_key_dbl(fptr, param_string, &init_params[i], dummy_char, &status)) {
+          if (!fits_read_key_dbl(fptr, param_string, &init_params[i], dummy_char, &status))
+          {
             status = 0;
             printf("Initial image -- Could not find MNPARAM%1ld in header\n", i);
           }
-        }
+          // TO DO: import other parameter variables - steps, lo/hi bounds
+      }
         status = 0;
       }
 
@@ -515,7 +520,7 @@ int main(int argc, char **argv) {
   /* Set the derived parameters - number of degrees of freedom and the chi^2 for a random image... */
   /* Note that adding nparams to ndf is only valid if the parameters are free AND
    *    there is some a-priori information for each parameter in reg_value[REG_MODELPARAM]... */
-  ndf = (double)(nvisamp + nvisphi + nt3amp + nt3phi + nv2 + nparams);
+  ndf = (double)(nvisamp + nvisphi + nt3amp + nt3phi + nv2 + nparams_free);
 
   //
   // MODIFICATIONS TO CENTERING
@@ -614,8 +619,8 @@ int main(int argc, char **argv) {
                                                 use_tempfitswriting, init_filename, ctrlcpressed, f_anywhere, f_copycat, prob_auto, tmin, chi2_target,         \
                                                 mas_pixel, niter, chi2_temp, flat_chi2, axis_len, lLikelihood_expectation, lLikelihood_deviation, nwavr,       \
                                                 nelements, nchains, tempschedc, uvwav2chan, uvtime2chan, nuv, nv2, nt3amp, nt3phi, nvisamp, nvisphi,           \
-                                                init_params, init_stepsize, initial_x, initial_y, reg_param, prior_image, cent_mult, fov, nparams, xtransform, \
-                                                ytransform, ndf)
+                                                init_params, init_stepsize, initial_x, initial_y, reg_param, prior_image, cent_mult, fov, nparams,             \
+                                                xtransform, ytransform, ndf)
 #endif
   {
 /* The current system state */
@@ -927,10 +932,10 @@ int main(int argc, char **argv) {
       } else
         chan = 0;
 
-      current_elt = rlong % (nelements + nparams * PARAMS_PER_ELT);
-      rlong /= (nelements + nparams * PARAMS_PER_ELT);
+      current_elt = rlong % (nelements + nparams_free * PARAMS_PER_ELT);
+      rlong /= (nelements + nparams_free * PARAMS_PER_ELT);
 
-      if ((nparams == 0) || (current_elt < nelements)) /* Attempt image movement rather than parametric model movement */
+      if(current_elt < nelements) /* Attempt image movement rather than parametric model movement */
       {
 
         zerostep = TRUE;
@@ -1086,7 +1091,7 @@ int main(int argc, char **argv) {
       {
         xstep = rlong % 2; /* The type of step to be taken, plus or minus */
         rlong /= 2;
-        j = (current_elt - nelements) / PARAMS_PER_ELT; /* the paramater to be changed */
+        j = params_free[(current_elt - nelements) / PARAMS_PER_ELT]; /* Parameter to vary */
         for (k = 0; k < nparams; k++)
           new_params[k] = params[k];
         new_params[j] = params[j] + stepsize[j] * (xstep * 2.0 - 1.0);
@@ -1144,7 +1149,7 @@ int main(int argc, char **argv) {
         }
         /* For parameter movement, update parameters */
         else {
-          j = (current_elt - nelements) / PARAMS_PER_ELT;
+          j = params_free[(current_elt - nelements) / PARAMS_PER_ELT];
           prob_pmovement[j] += 1.0 / PARAM_DAMPING_TIME;
           /* Swap param_vis and new_param_vis */
           dummy_cpointer = param_vis;
@@ -1185,8 +1190,8 @@ int main(int argc, char **argv) {
         } else // parameter movement was attempted and rejected
         {
           // error checking
-          if (stepsize[(current_elt - nelements) / PARAMS_PER_ELT] == 0)
-            printf("Failed parameter movement of 0 stepsize! %ld %6.3lf Iter: %ld P: %6.4lf %6.3lf \n", (current_elt - nelements) / PARAMS_PER_ELT,
+          if (stepsize[params_free[(current_elt - nelements) / PARAMS_PER_ELT]] == 0)
+            printf("Failed parameter movement of 0 stepsize: %d %6.3lf Iter: %ld P: %6.4lf %6.3lf \n", params_free[(current_elt - nelements) / PARAMS_PER_ELT],
                    2. * (new_lLikelihood - lLikelihood), i, params[0], new_params[0]);
         }
       }
@@ -1449,13 +1454,10 @@ void printhelp(void) {
 
   printf("\n***** SIMULTANEOUS MODEL FITTING SETTINGS ***** \n");
   printf("  -P p0 p1...    : Initial parameter input.\n");
-  printf("  -S s0 s1...    : Initial parameter step sizes (NB: must come after -P option).\n");
-  printf("     Current model implemented = polychromatic uniform disc \n");
-  printf("     For this model the parameters are in the following order:\n");
-  printf("         lambda_0 : the reference wavelength \n");
-  printf("         fs_0     : the stellar flux fraction at the reference wavelength \n");
-  printf("         diam     : diameter of the uniform disc\n");
-  printf("         d_ind    : the flux power law index for the environment \n");
+//  printf("  -SP s0 s1...   : Initial parameter step sizes (NB: must come after -P option).\n");
+  printf("  -LP lp0 lp1... : lower bounds on parameters (NB: must come after -P option).\n");
+  printf("  -HP hp0 hp1... : upper bounds on paramaters (NB: must come after -P option).\n");
+  printf("  To change the model, change modelcode.c in src/models \n");
 
   printf("\n***** OIFITS IMPORT SETTINGS ***** \n");
 
@@ -2832,11 +2834,45 @@ bool read_commandline(int *argc, char **argv, bool *benchmark, bool *use_v2, boo
           sscanf(argv[i + 1 + j], "%lf", &(init_params[j]));
         i += nparams - 1;
       } else if (strcmp(argv[i], "-S") == 0) {
-        /* NB the way this is set up, the -P option must come before a -S option */
+        // the way this is set up, the -P option must come before a -S option
+        if(nparams < 1) printf("Error, must call -P option before -S\n");
+        nparams_free = nparams;
         for (j = 0; j < nparams; ++j)
-          sscanf(argv[i + 1 + j], "%lf", &(init_stepsize[j]));
+          {
+            sscanf(argv[i + 1 + j], "%lf", &(init_stepsize[j]));
+            if(init_stepsize[j] ==0)
+              nparams_free--;
+          }
+        printf("Command line -- Number of free parameters: %li\n", nparams_free);
+        // Create lookup array for free parameters
+        k=0;
+        params_free = malloc(nparams_free*sizeof(int));
+        for (j = 0; j < nparams; ++j)
+          {
+            if(init_stepsize[j] !=0)
+            {
+             params_free[k] = j;
+             k++;
+            }
+          }
         i += nparams - 1;
-      } else if ((strcmp(argv[i], "-wavchan") == 0) && (*wavauto == FALSE)) {
+      }
+/*
+      else if (strcmp(argv[i], "-PLB") == 0) {
+        for (j = 0; j < nparams; ++j)
+          {
+            sscanf(argv[i + 1 + j], "%lf", &(init_lowerbounds[j]));
+          }
+        i += nparams - 1;
+      } else if (strcmp(argv[i], "-PHB") == 0) {
+          for (j = 0; j < nparams; ++j)
+            {
+              sscanf(argv[i + 1 + j], "%lf", &(init_upperbounds[j]));
+            }
+          i += nparams - 1;
+      }
+*/
+       else if ((strcmp(argv[i], "-wavchan") == 0) && (*wavauto == FALSE)) {
         int wavchaninfo = 0;
         for (j = i + 1; j < *argc; ++j) {
           /* If the next parameter is "-" followed by a non-numeric character,
@@ -2963,9 +2999,9 @@ void print_diagnostics(int iChain, long current_iter, long nvis, long nv2, long 
   fflush(stdout);
 
   if (nparams > 0) {
-    printf("Chain: %d Model Parameters: ", iChain);
+    printf("Chain: %d Model Parameters: \n", iChain);
     for (j = 0; j < nparams; ++j)
-      printf("P[%ld]: %7.5g +/- %7.5g  ", j, params[j], stepsize[j]);
+      printf("P[%ld]: %7.5g +/- %7.5g\n", j, params[j], stepsize[j]);
     printf("\n");
   }
 }

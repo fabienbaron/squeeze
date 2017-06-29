@@ -32,17 +32,18 @@ int model_vis(const double *params, double complex *modvis, double *lPriorModel,
   double lPriorParams[8];
   double tempd, vis_secondary = 1.0, vis_primary = 1.0, vis_bw = 1.0;
   double complex phase_factor;
-  double fenv_ref, fenv;
+  double fenv;
   double delta_ra = params[0] / (double)206264806.2;
   double delta_dec = params[1] / (double)206264806.2;
   double fs_primary_ref =  params[2];
   double fs_secondary_ref = params[3];
+  double fenv_ref= 1.-fs_primary_ref-fs_secondary_ref;
   double ud_primary = params[4];
   double ud_secondary = params[5];
   double bws = params[6];
   double env_ind = params[7];
   double lambda_ref = params[8];
-double fs_primary, fs_secondary;
+  double fs_primary, fs_secondary;
 
   for(i = 0; i < nuv; i++)
         {
@@ -70,11 +71,10 @@ double fs_primary, fs_secondary;
             vis_secondary *= vis_bw * cexp(-2.0 * M_PI * (u[i] * delta_ra + v[i] * delta_dec));
 
             // Compute fluxes
-            fs_primary = fs_primary_ref * pow((uv_lambda[i] / lambda_ref), -4.); // Stellar flux primary
-            fs_secondary = fs_secondary_ref * pow((uv_lambda[i] / lambda_ref), -4.); // Stellar flux primary
-            fenv = fenv_ref * pow((uv_lambda[i] / lambda_ref), env_ind); // environment flux
+            fs_primary = fs_primary_ref * pow(uv_lambda[i] / lambda_ref, -4.); // Stellar flux primary
+            fs_secondary = fs_secondary_ref * pow(uv_lambda[i] / lambda_ref, -4.); // Stellar flux primary
+            fenv = fenv_ref * pow(uv_lambda[i] / lambda_ref, env_ind); // environment flux
             flux_frac[i] = fenv / (fs_primary + fs_secondary + fenv); // Flux ratio Disc/Total flux = Flux ratio Image/(Image + Model)
-
             // Visibilities for the model
             modvis[i] = (fs_primary * vis_primary + fs_secondary * vis_secondary) / (fs_primary + fs_secondary + fenv);
         }
@@ -84,29 +84,29 @@ double fs_primary, fs_secondary;
   lPriorParams[1] = 0;
 
   // Flux ratios (strictly positive and <=1 )
-  if (params[2] > 0 && params[2] <= 1)
+  if (params[2] >= 0 && params[2] <= 1)
     lPriorParams[2] = 0;
   else
     lPriorParams[2] = 1e99;
 
-  if (params[3] > 0 && params[3] <= 1)
+  if (params[3] >= 0 && params[3] <= 1)
     lPriorParams[3] = 0;
   else
     lPriorParams[3] = 1e99;
 
   // Diameters
-  if (params[4] > 0)
+  if (params[4] >= 0)
     lPriorParams[4] = 0;
   else
     lPriorParams[4] = 1e99;
 
-  if (params[5] > 0)
+  if (params[5] >= 0)
     lPriorParams[5] = 0;
   else
     lPriorParams[5] = 1e99;
 
   // Fractional bandwidth
-  if (params[6] > 0 && params[6] <= 1)
+  if (params[6] >= 0 && params[6] <= 1)
     lPriorParams[6] = 0;
   else
     lPriorParams[6] = 1e99;
