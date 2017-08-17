@@ -571,9 +571,9 @@ int main(int argc, char **argv) {
 
     if (use_bandwidthsmearing == TRUE) {
       for (j = 0; j < axis_len; ++j) {
-        xtransform[j * nuv + k] = sinc(uv_dlambda[k] / uv_lambda[k] * (j - axis_len / 2) * u[k] * mas_pixel / MAS_RAD) *
+        xtransform[j * nuv + k] = sinc(M_PI * uv_dlambda[k] / uv_lambda[k] * (j - axis_len / 2) * u[k] * mas_pixel / MAS_RAD) *
                                   cexp(I * (j - axis_len / 2) * 2.0 * M_PI * u[k] * mas_pixel / MAS_RAD);
-        ytransform[j * nuv + k] = sinc(uv_dlambda[k] / uv_lambda[k] * (j - axis_len / 2) * v[k] * mas_pixel / MAS_RAD) *
+        ytransform[j * nuv + k] = sinc(M_PI * uv_dlambda[k] / uv_lambda[k] * (j - axis_len / 2) * v[k] * mas_pixel / MAS_RAD) *
                                   cexp(I * (j - axis_len / 2) * 2.0 * M_PI * -v[k] * mas_pixel / MAS_RAD);
       }
     } else {

@@ -1,4 +1,4 @@
-This is rngstreams.info, produced by makeinfo version 6.1 from
+This is rngstreams.info, produced by makeinfo version 6.4 from
 rngstreams.texi.
 
 This manual is for RngStreams, a package for generating multiple
@@ -92,7 +92,7 @@ File: rngstreams.info,  Node: Interface,  Next: Example,  Prev: Install,  Up: To
      defined as
 
      typedef struct RngStream_InfoState * RngStream;
-
+     
      struct RngStream_InfoState {
         double Cg[6], Bg[6], Ig[6];
         int Anti;
@@ -244,6 +244,6 @@ Tag Table:
 Node: Top597
 Node: Install1278
 Node: Interface2183
-Node: Example8323
+Node: Example8328
 
 End Tag Table
