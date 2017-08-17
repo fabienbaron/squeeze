@@ -623,6 +623,11 @@ int main(int argc, char **argv)
   /* Now make big matrix - we'll just make this a big chunk of
   *    memory. */
   double complex *__restrict dft_transform = malloc(axis_len * axis_len * nuv * sizeof(double complex));
+  if(dft_transform == NULL)
+  {
+    printf("Not enough memory to allocate the full DFT space -- you should use the specific SQUEEZE branch adapted to this case\n");
+    return 1;
+  }
   if (use_bandwidthsmearing == TRUE)
     {
       for (j = 0; j < axis_len; ++j)
