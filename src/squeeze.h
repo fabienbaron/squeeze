@@ -162,7 +162,7 @@ int writeasfits(const char *file_basename, double *image, int nwavr, long depth,
                 char *init_filename, char *prior_filename, double *params, double *params_std);
 
 void mcmc_results(int minimization_engine, char *file_basename, const int nchains, const unsigned int *burn_in_times, const long depth, const long nelements, const unsigned short axis_len,
-                            const double complex *__restrict xtransform, const double complex *__restrict ytransform,
+                            const double complex *__restrict dft_transform,
                             const unsigned short *saved_x, const unsigned short *saved_y, const double *saved_params, const long niter,
                             const int nwavr, double *final_params, double *final_params_std,
                             double *reg_param, double *final_reg_value, const double *prior_image, const unsigned short *initial_x, const unsigned short *initial_y,
@@ -180,9 +180,10 @@ void compute_regularizers(const double *reg_param, double *reg_value, const doub
                           const long nelements, double *centroid_image_x, double *centroid_image_y, const double fov,
                           const double cent_mult);
 
-void compute_model_visibilities_fromelements(double complex *mod_vis, double complex *im_vis, double complex *param_vis, double *params, double *fluxratio_image, const unsigned short *element_x, const unsigned short *element_y, const double complex *xtransform, const double complex *ytransform, double *lPriorModel, long nparams, long nelements);
+void compute_model_visibilities_fromelements(double complex *mod_vis, double complex *im_vis, double complex *param_vis, double *params, double *fluxratio_image, const unsigned short *element_x, const unsigned short *element_y, const double complex *dft_transform,
+  double *lPriorModel, long nparams, long nelements, short axis_len);
 
-void compute_model_visibilities_fromimage(double complex *mod_vis, double complex *im_vis, double complex *param_vis, const double *params, double *fluxratio_image, const double *image, const double complex *xtransform, const double complex *ytransform, double *lPriorModel, long nparams, long nelements, unsigned short axis_len);
+void compute_model_visibilities_fromimage(double complex *mod_vis, double complex *im_vis, double complex *param_vis, const double *params, double *fluxratio_image, const double *image, const double complex *dft_transform, double *lPriorModel, long nparams, long nelements, unsigned short axis_len);
 
 void initialize_image(int iChain, double *image, unsigned short *element_x, unsigned short *element_y, unsigned short *initial_x, unsigned short *initial_y,
                       unsigned short axis_len, int nwavr,  long nelements, char *init_filename);
