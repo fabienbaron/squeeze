@@ -45,7 +45,7 @@ visibilities can be returned based on a combinarion of up to MAX_PARAMS
 
 /* Globals: nparams, nbaselines, u, v*/
 
-int model_vis(double *params, double complex *modvis, double *logl, double *flux_frac)
+int model_vis(const double *params, double complex *modvis, double *logl, double *flux_frac)
 {
     int status = 0;
     long i;

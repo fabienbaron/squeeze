@@ -831,7 +831,7 @@ int main(int argc, char **argv)
     *    ----------------------------*/
     for (i = 0; i < niter * nwavr * nelements; ++i)
       {
-        //  new regularizer values
+    //  new regularizer values
         for (w = 0; w < nwavr; ++w)
           for (j = 0; j < NREGULS; ++j)
             new_reg_value[w * NREGULS + j] = reg_value[w * NREGULS + j];
@@ -1067,9 +1067,13 @@ int main(int argc, char **argv)
                   } // end switch statement
 
                 if ((xstep != 0) || (ystep != 0))
-                  zerostep = FALSE;
+                zerostep = FALSE;
+
                 else // old position == new position --> we want to redraw
-                  rlong = RngStream_RandInt(rng, 0, 2147483647);
+                {
+                    rlong = RngStream_RandInt(rng, 0, 2147483647);
+                //    printf("Stuck, steptype = %d\n", steptype);
+                    }
               } // end while statement
 
             old_x = element_x[chan * nelements + current_elt];
@@ -1671,6 +1675,7 @@ void vis_to_obs(const double complex *__restrict mod_vis, double *__restrict mod
         if (data_err[t3phioffset + i] > 0)
           // mod_obs[t3phioffset + i] = xatan2(cimag(modt3), creal(modt3));
           mod_obs[t3phioffset + i] = carg(modt3);
+          //printf("%d %lf\n", i, mod_obs[t3phioffset + i]/M_PI*180.);
     }
 
   if (nvisamp > 0)

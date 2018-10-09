@@ -113,7 +113,7 @@ Note: SQUEEZE help can be invoked by typing 'squeeze -h'.
 ```
 *    Polychromatic imaging, e.g. 3 channels (1.2 to 1.35 microns, 1.35-1.43 microns, and 1.6-1.8 microns).
 ```
-./bin/squeeze mydata.oifits -w 64 -s 0.2 -chan 0 1.2e-6 1.35e-6 1 1.35e-6 1.43e-6 2 1.6e-6 1.8e-6
+./bin/squeeze mydata.oifits -w 64 -s 0.2 -wavchan 0 1.2e-6 1.35e-6 1 1.35e-6 1.43e-6 2 1.6e-6 1.8e-6
 ```
 *    SPARCO imaging (= spectrally grey image and polychromatic modeling)
 ```

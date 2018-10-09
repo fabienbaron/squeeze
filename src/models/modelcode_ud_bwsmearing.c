@@ -1,7 +1,7 @@
 /*   modelcode_ud bwsmearing.c: An offset UD with bw smearing parameter
   JDM (MACIM) + FB (SQUEEZE port)
 
- model_UD: Uniform Disk model centered at (0,0)
+ model_UD: Uniform Disk model
  params: visib at uv=0, diameter in milliarcseconds, unresolved flux
  inputs: u,v, are in the wavelengths.
  logl is the a priori -log likelihood of the parameter combination.
@@ -21,7 +21,7 @@ Globals: nparams, nbaselines, u, v
 */
 extern double j1(double);
 
-int model_vis(double *params, double complex *modvis, double *lPriorModel, double *flux_frac_0)
+int model_vis(const double *params, double complex *modvis, double *lPriorModel, double *flux_frac_0)
 {
     int status = 0;
     long i;
@@ -70,7 +70,7 @@ int model_vis(double *params, double complex *modvis, double *lPriorModel, doubl
         lPriorParams[2] = 1e99;
 
     // Diameter (strictly positive)
-    if(params[3] > 0)
+    if(params[3] >= 0)
         lPriorParams[3] = 0;
     else
         lPriorParams[3] = 1e99;
@@ -85,5 +85,3 @@ int model_vis(double *params, double complex *modvis, double *lPriorModel, doubl
 
     return (status != 0);
 }
-
-
