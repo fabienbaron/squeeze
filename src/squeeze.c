@@ -672,8 +672,8 @@ int main(int argc, char **argv) {
     double *new_params = malloc(MAX_PARAMS * sizeof(double));
     double *stepsize = malloc(MAX_PARAMS * sizeof(double));
     double *prob_pmovement = malloc(MAX_PARAMS * sizeof(double));
-    double *res = malloc((nv2 + nt3amp + nt3phi + nvisamp + nvisphi) * sizeof(double));     // current residuals
-    double *mod_obs = malloc((nv2 + nt3amp + nt3phi + nvisamp + nvisphi) * sizeof(double)); // current observables
+    double *res = calloc((nv2 + nt3amp + nt3phi + nvisamp + nvisphi), sizeof(double));     // current residuals
+    double *mod_obs = calloc((nv2 + nt3amp + nt3phi + nvisamp + nvisphi), sizeof(double)); // current observables
     double *centroid_image_x = malloc(nwavr * sizeof(double));
     double *centroid_image_y = malloc(nwavr * sizeof(double));
     double *reg_value = malloc(nwavr * NREGULS * sizeof(double));
@@ -1548,11 +1548,11 @@ void vis_to_obs(const double complex *__restrict mod_vis, double *__restrict mod
   for (i = 0; i < nt3; ++i) {
     modt3 = mod_vis[t3in1[i]] * mod_vis[t3in2[i]] * conj(mod_vis[t3in3[i]]);
 
-    if (nt3amp > 0) // as many instruments only have closure phases, useful check to gain cycles
+    if (i < nt3amp) // as many instruments only have closure phases, useful check to gain cycles
       if (data_err[t3ampoffset + i] > 0)
         mod_obs[t3ampoffset + i] = cabs(modt3);
 
-    if (nt3phi > 0)
+    if (i < nt3phi)
       if (data_err[t3phioffset + i] > 0)
         // mod_obs[t3phioffset + i] = xatan2(cimag(modt3), creal(modt3));
         mod_obs[t3phioffset + i] = carg(modt3);
@@ -1669,8 +1669,8 @@ double get_flat_chi2(bool benchmark, const int nwavr) {
   long i, rlong, nbench;
   double dummy1, dummy2, dummy3, dummy4, dummy5, startTime, endTime;
   double complex *mod_vis = malloc(nuv * sizeof(double complex));
-  double *res = malloc((nv2 + nt3amp + nt3phi + nvisamp + nvisphi) * sizeof(double));     // current residuals
-  double *mod_obs = malloc((nv2 + nt3amp + nt3phi + nvisamp + nvisphi) * sizeof(double)); // current observables
+  double *res = calloc((nv2 + nt3amp + nt3phi + nvisamp + nvisphi), sizeof(double));     // current residuals
+  double *mod_obs = calloc((nv2 + nt3amp + nt3phi + nvisamp + nvisphi), sizeof(double)); // current observables
   RngStream rngflat = RngStream_CreateStream("flatchi2");
   for (i = 0; i < nuv; ++i) {
     rlong = RngStream_RandInt(rngflat, 0, 2147483647);
@@ -2135,12 +2135,9 @@ void mcmc_writeoutput(char *file_basename, double *image, const int nchains, con
   compute_model_visibilities_fromimage(mod_vis, im_vis, param_vis, params, fluxratio_image, image, xtransform, ytransform, &lPriorModel, nparams, nelements,
                                        axis_len);
 
-  double *res = malloc((nv2 + nt3amp + nt3phi + nvisamp + nvisphi) * sizeof(double));     // current residuals
-  double *mod_obs = malloc((nv2 + nt3amp + nt3phi + nvisamp + nvisphi) * sizeof(double)); // current observables
-  for (i = 0; i < (nv2 + nt3amp + nt3phi + nvisamp + nvisphi); ++i) {
-    res[i] = 0;
-    mod_obs[i] = 0;
-  }
+  double *res = calloc((nv2 + nt3amp + nt3phi + nvisamp + nvisphi), sizeof(double));     // current residuals
+  double *mod_obs = calloc((nv2 + nt3amp + nt3phi + nvisamp + nvisphi), sizeof(double)); // current observables
+
   // compute chi2s on final image
   double chi2 = 0, chi2v2 = 0, chi2t3amp = 0, chi2visamp = 0, chi2t3phi = 0, chi2visphi = 0;
 
