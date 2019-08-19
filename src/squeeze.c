@@ -367,7 +367,7 @@ int main(int argc, char **argv) {
           if (!fits_read_key_dbl(fptr, param_string, &init_params[i], dummy_char, &status))
           {
             status = 0;
-            printf("Initial image -- Could not find MNPARAM%1ld in header\n", i);
+            printf("Initial image -- Could not find MNPARAM%1ld in header\n", i+1);
           }
           // TO DO: import other parameter variables - steps, lo/hi bounds
       }
@@ -1454,9 +1454,9 @@ void printhelp(void) {
 
   printf("\n***** SIMULTANEOUS MODEL FITTING SETTINGS ***** \n");
   printf("  -P p0 p1...    : Initial parameter input.\n");
-//  printf("  -SP s0 s1...   : Initial parameter step sizes (NB: must come after -P option).\n");
-  printf("  -LP lp0 lp1... : lower bounds on parameters (NB: must come after -P option).\n");
-  printf("  -HP hp0 hp1... : upper bounds on paramaters (NB: must come after -P option).\n");
+  printf("  -SP s0 s1...   : Initial parameter step sizes (NB: must come after -P option).\n");
+//  printf("  -LP lp0 lp1... : lower bounds on parameters (NB: must come after -P option).\n");
+//  printf("  -HP hp0 hp1... : upper bounds on paramaters (NB: must come after -P option).\n");
   printf("  To change the model, change modelcode.c in src/models \n");
 
   printf("\n***** OIFITS IMPORT SETTINGS ***** \n");

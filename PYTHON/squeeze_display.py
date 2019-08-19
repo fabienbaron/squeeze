@@ -30,7 +30,7 @@ power = args.power
 #If no directory given, default to parent one
 if dir_mon is None:
     dir_mon = os.path.pardir
-print "\nMonitoring chain00.fits in "+dir_mon+"\n"
+print("\nMonitoring chain00.fits in "+dir_mon+"\n")
 
 #Rgulation methods
 reg_names = np.array(['PARAM', 'CENT', 'IMPRIOR', 'ENT', 'DEN', 'TV', 'SPOT', 'LAP', 'L0', 'TRANSPEC'])
@@ -57,7 +57,7 @@ while loop1:
             mtime = os.path.getmtime(os.path.join(dir_mon, "chain00.fits"))
             mtime = datetime.fromtimestamp(mtime)
         except OSError:
-            print "\nTrouble opening file (ignore if occasional message only)"
+            print("\nTrouble opening file (ignore if occasional message only)")
 
         #Update or not ?
         if mtime > ltime:
@@ -172,4 +172,4 @@ while loop1:
 
     #In case the .fits was being written
     except IOError:
-        print "\nTrouble opening file (ignore if occasional message only)"
+        print("\nTrouble opening file (ignore if occasional message only)")
