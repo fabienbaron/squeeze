@@ -540,8 +540,8 @@ int main(int argc, char **argv) {
     printf(TEXT_COLOR_RED "Reconst setup -- There is a prior image, consider disabling centering\n" TEXT_COLOR_BLACK);
   }
 
-  if ((reg_param[REG_TRANSPECL2] > 0.0) && (reg_param[REG_CENTERING] > 0)) {
-    printf(TEXT_COLOR_RED "Reconst setup -- Transpectral regularization, consider disabling centering except on first channel\n" TEXT_COLOR_BLACK);
+  if ((reg_param[REG_TRANSPECL1] > 0.0) && (reg_param[REG_CENTERING] > 0)) {
+    printf(TEXT_COLOR_RED "Reconst setup -- Transpectral TV regularization, consider disabling centering except on first channel\n" TEXT_COLOR_BLACK);
   }
 
   printf("Reconst setup -- Degrees of freedom:\t%ld\n", (long)round(ndf));
@@ -1025,12 +1025,18 @@ int main(int argc, char **argv) {
                                           + transpec_diffpoint(old_y * axis_len + old_x, chan, -1.0, nwavr, axis_len * axis_len, image) +
                                           transpec_diffpoint(new_y * axis_len + new_x, chan, 1.0, nwavr, axis_len * axis_len, image);
 
+
+        if (reg_param[REG_TRANSPECL1] > 0.0)
+          new_reg_value[REG_TRANSPECL1] = reg_value[REG_TRANSPECL1] + tvsqspec_diff(old_y * axis_len + old_x, new_y * axis_len + new_x, chan, nwavr, axis_len * axis_len, image);
+          
+
         // Regularization for which we need to recompute the whole thing
         image[old_pos]--;
         image[new_pos]++;
 
         if (reg_param[REG_SPOT] > 0.0)
           new_reg_value[chan * NREGULS + REG_SPOT] = UDreg(&image[chan * axis_len * axis_len], NULL, 0.0, axis_len, axis_len, (const double)nelements);
+
         if (reg_param[REG_TV] > 0.0)
           new_reg_value[chan * NREGULS + REG_TV] = TV(&image[chan * axis_len * axis_len], NULL, 0.0, axis_len, axis_len, (const double)nelements);
 
@@ -1055,9 +1061,6 @@ int main(int argc, char **argv) {
         if (reg_param[REG_L1ATROUS] > 0.0)
           new_reg_value[chan * NREGULS + REG_L1ATROUS] = L1_ATROUS(&image[chan * axis_len * axis_len], NULL, 0.0, axis_len, axis_len, (const double)nelements);
 
-        // printf("%lf ", fabs(new_reg_value[REG_TRANSPECL2]-transpec(nwavr, axis_len, image, (const double) nelements)));
-        //       if (reg_param[REG_TRANSPECL2] > 0.0)
-        //  new_reg_value[REG_TRANSPECL2] = transpec(nwavr, axis_len, image, (const double) nelements);
 
         // Go back to current state
         image[old_pos]++;
@@ -1454,7 +1457,7 @@ void printhelp(void) {
 
   printf("\n***** SIMULTANEOUS MODEL FITTING SETTINGS ***** \n");
   printf("  -P p0 p1...    : Initial parameter input.\n");
-  printf("  -SP s0 s1...   : Initial parameter step sizes (NB: must come after -P option).\n");
+  printf("  -S s0 s1...   : Initial parameter step sizes (NB: must come after -P option).\n");
 //  printf("  -LP lp0 lp1... : lower bounds on parameters (NB: must come after -P option).\n");
 //  printf("  -HP hp0 hp1... : upper bounds on paramaters (NB: must come after -P option).\n");
   printf("  To change the model, change modelcode.c in src/models \n");
@@ -1502,7 +1505,8 @@ void printhelp(void) {
   printf("  -tv param     : Total variation regularization multiplier.\n");
   printf("  -la param     : Laplacian regularization multiplier.\n");
   printf("  -l0 param     : L0 sparsity norm multiplier.\n");
-  printf("  -ts param     : Transpectral L2 regularization for polychromatic reconstructions.\n");
+  printf("  -ts param     : Structured norm spectral regularization for polychromatic reconstructions.\n");
+  printf("  -tvs param    : Total square spectral regularization for polychromatic reconstructions.\n");
   printf("  -fv param     : Field of view regularizer.\n");
   printf("  -p file.fits  : Prior image. Log of this is the regularization.\n");
   printf("  -ps param     : Prior image regularization multiplier.\n");
@@ -2579,6 +2583,10 @@ void compute_regularizers(const double *reg_param, double *reg_value, const doub
 
   if (reg_param[REG_TRANSPECL2] > 0.0)
     reg_value[REG_TRANSPECL2] = transpec(nwavr, axis_len, image, fluxscaling);
+
+  if (reg_param[REG_TRANSPECL1] > 0.0)
+      reg_value[REG_TRANSPECL1] = tvsqspec(nwavr, axis_len, image, fluxscaling);
+
 }
 
 void compute_model_visibilities_fromelements(double complex *mod_vis, double complex *im_vis, double complex *param_vis, double *params,
@@ -2760,6 +2768,8 @@ bool read_commandline(int *argc, char **argv, bool *benchmark, bool *use_v2, boo
         sscanf(argv[i + 1], "%lf", &reg_param[REG_L0]);
       else if (strcmp(argv[i], "-ts") == 0)
         sscanf(argv[i + 1], "%lf", &reg_param[REG_TRANSPECL2]);
+      else if (strcmp(argv[i], "-tvspec") == 0)
+        sscanf(argv[i + 1], "%lf", &reg_param[REG_TRANSPECL1]);
       else if (strcmp(argv[i], "-f_any") == 0)
         sscanf(argv[i + 1], "%lf", f_anywhere);
       else if (strcmp(argv[i], "-f_copy") == 0)
@@ -2984,6 +2994,11 @@ void print_diagnostics(int iChain, long current_iter, long nvis, long nv2, long 
       diagnostics_used +=
           snprintf(diagnostics + diagnostics_used, maxlength - diagnostics_used, "TS:%5.2f ", reg_param[REG_TRANSPECL2] * reg_value[REG_TRANSPECL2]);
 
+    if (reg_param[REG_TRANSPECL1] > 0)
+            diagnostics_used +=
+                snprintf(diagnostics + diagnostics_used, maxlength - diagnostics_used, "TVS:%5.2f ", reg_param[REG_TRANSPECL1] * reg_value[REG_TRANSPECL1]);
+
+
     if (current_iter > 0)
       diagnostics_used += snprintf(diagnostics + diagnostics_used, maxlength - diagnostics_used, "E: %5ld MPr: %4.2f T: %5.2f B:%d Iter: %4ld of %4ld",
                                    nelements, prob_movement, temperature[iChain], burn_in_times[iChain], current_iter, niter);
@@ -3004,14 +3019,14 @@ void print_diagnostics(int iChain, long current_iter, long nvis, long nv2, long 
 }
 
 void compute_lPrior(double *lPrior, const long chan, const double *reg_param, const double *reg_value) {
-  double temp = reg_param[REG_TRANSPECL2] * reg_value[REG_TRANSPECL2];
+  double temp = reg_param[REG_TRANSPECL2] * reg_value[REG_TRANSPECL2] + reg_param[REG_TRANSPECL1] * reg_value[REG_TRANSPECL1] ;
   for (int i = 0; i < NREGULS - 1; ++i)
     temp += reg_param[i] * reg_value[chan * NREGULS + i];
   *lPrior = temp;
 }
 
 void compute_lPrior_allwav(double *lPrior, const long nwavr, const double *reg_param, const double *reg_value) {
-  double temp = reg_param[REG_TRANSPECL2] * reg_value[REG_TRANSPECL2];
+  double temp = reg_param[REG_TRANSPECL2] * reg_value[REG_TRANSPECL2] + reg_param[REG_TRANSPECL1] * reg_value[REG_TRANSPECL1] ;
   for (int w = 0; w < nwavr; ++w)
     for (int i = 0; i < NREGULS - 1; ++i)
       temp += reg_param[i] * reg_value[w * NREGULS + i];

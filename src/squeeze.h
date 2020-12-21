@@ -31,7 +31,7 @@
 #define ENGINE_PARALLEL_TEMPERING 2
 
 // Regularizers
-#define NREGULS 16
+#define NREGULS 17
 #define REG_MODELPARAM 0
 #define REG_CENTERING 1
 #define REG_PRIORIMAGE 2
@@ -48,8 +48,9 @@
 #define REG_L0ATROUS 13
 #define REG_L1ATROUS 14
 #define REG_TRANSPECL2 15
+#define REG_TRANSPECL1 16
 
-const char *reg_names[NREGULS] = {"PARAM", "C", "PRI", "ENT", "DEN", "TV", "UD", "LAP", "L0", "L0CDF53","L1CDF53", "L0CDF97", "L1CDF97",  "L0ATROUS", "L1ATROUS", "TS"};
+const char *reg_names[NREGULS] = {"PARAM", "C", "PRI", "ENT", "DEN", "TV", "UD", "LAP", "L0", "L0CDF53","L1CDF53", "L0CDF97", "L1CDF97",  "L0ATROUS", "L1ATROUS", "TS","TVS"};
 
 // Mathematical constants
 #define MAS_RAD          206264806.2
@@ -213,12 +214,12 @@ double L0_ATROUS(const double *x, const double *pr, const double eps, const int 
 double L1_ATROUS(const double *x, const double *pr, const double eps, const int nx, const int ny, const double flux);
 void atrous_set(int idx); // a trous setup
 void atrous_fwd(const double* x, double *wav, const int nx, const int ny, const int nscales);// a trous main
-
-
 double entropy_full(const double *x, const double *pr, const double eps, const int nx, const int ny, const double flux);
 double L2(const double *x, const double *pr, const double eps, const int nx, const int ny, const double flux);
 double transpec(const int nchan, const long imwidth, const double *image, const double flux);
+double tvsqspec(const int nchan, const long imwidth, const double *image, const double flux);
 double transpec_diffpoint(long pos, long chan, double diff, const int nchan, const long imwidth, const double *image);
+double tvsqspec_diff(long oldpos, long newpos, long chan, const int nchan, const long imsize, const double *image);
 double cent_change(const int channel, double *centroid_image_x, double *centroid_image_y, const long new_x, const long new_y, const long old_x, const long old_y, const unsigned short axis_len, const double fov, const double cent_mult);
 double reg_prior_image(const double *x, const double *pr, const double eps, const int nx, const int ny, const double flux);
 

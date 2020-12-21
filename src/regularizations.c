@@ -95,6 +95,40 @@ double transpec(const int nchan, const long imwidth, const double *image, const 
   return temp1;
 }
 
+double tvsqspec(const int nchan, const long imwidth, const double *image, const double flux) {
+  long i, w;
+  double temp1, temp2;
+  temp1 = 0;
+  for (w = 1; w < nchan-1; w++)
+  {
+    for (i = 0; i < imwidth * imwidth; ++i)
+    temp1 += (image[w * imwidth * imwidth + i] - image[(w-1) * imwidth * imwidth + i])*(image[w * imwidth * imwidth + i] - image[(w-1) * imwidth * imwidth + i]);
+  }
+  return temp1;
+}
+
+double tvsqspec_diff(long oldpos, long newpos, long chan, const int nchan, const long imsize, const double *image){
+  double temp = 0.0;
+  if (chan == nchan)
+  {
+    temp = -(image[chan * imsize + oldpos] - image[(chan-1) * imsize + oldpos])*(image[chan * imsize + oldpos] - image[(chan-1) * imsize + oldpos])+(image[chan * imsize + newpos] - image[(chan-1) * imsize + newpos])*(image[chan * imsize + newpos] - image[(chan-1) * imsize + newpos]);
+    return temp;
+  }
+
+  if (chan == 0)
+  {
+    temp = -(image[imsize + oldpos] - image[oldpos])*(image[imsize + oldpos] - image[oldpos])+(image[imsize + newpos] - image[newpos])*(image[imsize + newpos] - image[newpos]);
+    return temp;
+  }
+
+  // two sides
+  temp = -(image[chan * imsize + oldpos] - image[(chan-1) * imsize + oldpos])*(image[chan * imsize + oldpos] - image[(chan-1) * imsize + oldpos])+(image[chan * imsize + newpos] - image[(chan-1) * imsize + newpos])*(image[chan * imsize + newpos] - image[(chan-1) * imsize + newpos])-(image[(chan+1) * imsize + oldpos] - image[chan * imsize + oldpos])*(image[(chan+1) * imsize + oldpos] - image[chan * imsize + oldpos])+(image[(chan+1) * imsize + newpos] - image[chan * imsize + newpos])*(image[(chan+1) * imsize + newpos] - image[chan * imsize + newpos]);
+  return temp;
+}
+
+
+
+
 double transpec_diffpoint(long pos, long chan, double diff, const int nchan, const long imsize, const double *image) {
   long w;
   double temp = 0;
@@ -275,18 +309,18 @@ double LAP(const double *x, const double *pr, const double eps, const int nx, co
     for (i = 1; i < nx - 1; ++i)
       reg += fabs(x[i - 1 + off] + x[i + 1 + off] + x[i + off - nx] + x[i + off + nx] - 4. * x[i + off]);
     // case i = 0
-    reg += fabs(x[1 + off] + x[off - nx] + x[off + nx] - 3. * x[off]);
+    reg += fabs(x[1 + off] + x[off - nx] + x[off + nx] - 4. * x[off]);
     // case i = nx -1
-    reg += fabs(x[nx - 2 + off] + x[nx - 1 + off - nx] + x[nx - 1 + off + nx] - 3. * x[nx - 1 + off]);
+    reg += fabs(x[nx - 2 + off] + x[nx - 1 + off - nx] + x[nx - 1 + off + nx] - 4. * x[nx - 1 + off]);
   }
 
   for (i = 1; i < nx - 1; ++i) {
     // case j = 0
     off = 0;
-    reg += fabs(x[i - 1] + x[i + 1] + x[i + off + nx] - 3. * x[i + off]);
+    reg += fabs(x[i - 1] + x[i + 1] + x[i + off + nx] - 4. * x[i + off]);
     // case j = nx -1
     off = nx * (nx - 1);
-    reg += fabs(x[i - 1 + off] + x[i + 1 + off] + x[i + off - nx] - 3. * x[i + off]);
+    reg += fabs(x[i - 1 + off] + x[i + 1 + off] + x[i + off - nx] - 4. * x[i + off]);
   }
 
   return reg / flux;
