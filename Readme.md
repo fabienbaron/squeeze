@@ -1,4 +1,4 @@
-# SQUEEZE 2.6
+# SQUEEZE 2.7
 
 ## 1. Introduction
 SQUEEZE is an image reconstruction for optical interferometry. It is designed to image complex astrophysical sources, while (optionally) modeling them simultaneously with analytic models. SQUEEZE is based on Markov Chain Monte-Carlo (MCMC) exploration of the imaging probability space, and reconstructs images and associated error bars from standard OIFITS data. SQUEEZE leverages the Open Multi-Processing (OpenMP) application programming interface to implement simulated annealing and parallel tempering, in the hope of avoiding the local minima better than classic gradient-based image reconstruction software. Another key difference is that SQUEEZE can reconstruct images using non-convex regularizers, e.g. the l0 norm for true compressed sensing.
@@ -9,7 +9,7 @@ Main features of SQUEEZE:
 
 Imaging:
 
-*    Fully polychromatic imaging with FITS output
+*    Polychromatic imaging over a few channels (<10) with FITS output
 *    Support for numerous regularizers: L0, Total Variation, Laplacian, Maximum Entropy, Dark Energy
 *    Marginal likelihood computation for model selection
 *    Full output of the MCMC chain including all probabilities

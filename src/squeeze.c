@@ -1026,16 +1026,25 @@ int main(int argc, char **argv) {
                                           transpec_diffpoint(new_y * axis_len + new_x, chan, 1.0, nwavr, axis_len * axis_len, image);
 
 
-        if (reg_param[REG_TRANSPECL1] > 0.0)
-          new_reg_value[REG_TRANSPECL1] = reg_value[REG_TRANSPECL1] + tvsqspec_diff(old_y * axis_len + old_x, new_y * axis_len + new_x, chan, nwavr, axis_len * axis_len, image);
-          
+        // if (reg_param[REG_TRANSPECL1] > 0.0)
+        //   new_reg_value[REG_TRANSPECL1] = reg_value[REG_TRANSPECL1]
+        //                                     - tvsqspec_diffpoint(old_y * axis_len + old_x, chan, 0.0, nwavr, axis_len * axis_len, image)
+        //                                     - tvsqspec_diffpoint(new_y * axis_len + new_x, chan, 0.0, nwavr, axis_len * axis_len, image)
+        //                                     + tvsqspec_diffpoint(old_y * axis_len + old_x, chan, -1.0, nwavr, axis_len * axis_len, image)
+        //                                     + tvsqspec_diffpoint(new_y * axis_len + new_x, chan, 1.0, nwavr, axis_len * axis_len, image);
 
         // Regularization for which we need to recompute the whole thing
         image[old_pos]--;
         image[new_pos]++;
 
+        if (reg_param[REG_TRANSPECL1] > 0.0)
+           new_reg_value[REG_TRANSPECL1] = tvsqspec(nwavr, axis_len, image, 1.0) ;
+
         if (reg_param[REG_SPOT] > 0.0)
           new_reg_value[chan * NREGULS + REG_SPOT] = UDreg(&image[chan * axis_len * axis_len], NULL, 0.0, axis_len, axis_len, (const double)nelements);
+
+        if (reg_param[REG_COMPACTNESS] > 0.0)
+          new_reg_value[chan * NREGULS + REG_COMPACTNESS] = compactness(&image[chan * axis_len * axis_len], NULL, 0.0, axis_len, axis_len, (const double)nelements);
 
         if (reg_param[REG_TV] > 0.0)
           new_reg_value[chan * NREGULS + REG_TV] = TV(&image[chan * axis_len * axis_len], NULL, 0.0, axis_len, axis_len, (const double)nelements);
@@ -1067,7 +1076,6 @@ int main(int argc, char **argv) {
         image[new_pos]--;
 
         if (reg_param[REG_CENTERING] > 0.0) {
-          // if((reg_param[REG_TRANSPECL2] > 0.0) && chan > 0
           new_reg_value[chan * NREGULS + REG_CENTERING] =
               reg_value[chan * NREGULS + REG_CENTERING] +
               fov * cent_change(chan, centroid_image_x, centroid_image_y, new_x, new_y, old_x, old_y, axis_len, fov, cent_mult);
@@ -1143,9 +1151,10 @@ int main(int argc, char **argv) {
           element_x[chan * nelements + current_elt] = new_x;
           element_y[chan * nelements + current_elt] = new_y;
           image[new_pos]++;
-          for (int r = 1; r < NREGULS - 1; ++r) // update all spatial regularizers /bug should we include MODELPARAM ?
+          for (int r = 1; r < NREGULS - 2; ++r) // update all spatial regularizers /bug should we include MODELPARAM ?
             reg_value[chan * NREGULS + r] = new_reg_value[chan * NREGULS + r];
 
+          reg_value[REG_TRANSPECL1] = new_reg_value[REG_TRANSPECL1];
           reg_value[REG_TRANSPECL2] = new_reg_value[REG_TRANSPECL2];
 
           prob_movement += 1.0 / DAMPING_TIME;
@@ -1503,6 +1512,7 @@ void printhelp(void) {
   printf("  -de param     : Dark energy regularization multiplier.\n");
   printf("  -ud param     : Uniform disc regularization multiplier.\n");
   printf("  -tv param     : Total variation regularization multiplier.\n");
+  printf("  -cp param     : Compactness regularization multiplier.\n");
   printf("  -la param     : Laplacian regularization multiplier.\n");
   printf("  -l0 param     : L0 sparsity norm multiplier.\n");
   printf("  -ts param     : Structured norm spectral regularization for polychromatic reconstructions.\n");
@@ -2508,6 +2518,9 @@ void compute_regularizers(const double *reg_param, double *reg_value, const doub
     if (reg_param[REG_L0] > 0.0)
       reg_value[w * NREGULS + REG_L0] = L0(&image[w * axis_len * axis_len], NULL, 0.0, axis_len, axis_len, fluxscaling);
 
+    if (reg_param[REG_COMPACTNESS] > 0.0)
+        reg_value[w * NREGULS + REG_COMPACTNESS] = compactness(&image[w * axis_len * axis_len], NULL, 0.0, axis_len, axis_len, fluxscaling);
+
     if (reg_param[REG_L0CDF53] > 0.0) {
       reg_value[w * NREGULS + REG_L0CDF53] = L0_CDF53(&image[w * axis_len * axis_len], NULL, 0.0, axis_len, axis_len, fluxscaling);
     }
@@ -2752,6 +2765,8 @@ bool read_commandline(int *argc, char **argv, bool *benchmark, bool *use_v2, boo
         sscanf(argv[i + 1], "%lf", &reg_param[REG_TV]);
       else if (strcmp(argv[i], "-la") == 0)
         sscanf(argv[i + 1], "%lf", &reg_param[REG_LAP]);
+        else if (strcmp(argv[i], "-cp") == 0)
+          sscanf(argv[i + 1], "%lf", &reg_param[REG_COMPACTNESS]);
       else if (strcmp(argv[i], "-l0CDF53") == 0)
         sscanf(argv[i + 1], "%lf", &reg_param[REG_L0CDF53]);
       else if (strcmp(argv[i], "-l1CDF53") == 0)
@@ -2768,7 +2783,7 @@ bool read_commandline(int *argc, char **argv, bool *benchmark, bool *use_v2, boo
         sscanf(argv[i + 1], "%lf", &reg_param[REG_L0]);
       else if (strcmp(argv[i], "-ts") == 0)
         sscanf(argv[i + 1], "%lf", &reg_param[REG_TRANSPECL2]);
-      else if (strcmp(argv[i], "-tvspec") == 0)
+      else if (strcmp(argv[i], "-tvs") == 0)
         sscanf(argv[i + 1], "%lf", &reg_param[REG_TRANSPECL1]);
       else if (strcmp(argv[i], "-f_any") == 0)
         sscanf(argv[i + 1], "%lf", f_anywhere);
@@ -2980,7 +2995,7 @@ void print_diagnostics(int iChain, long current_iter, long nvis, long nv2, long 
       diagnostics_used += snprintf(diagnostics + diagnostics_used, maxlength - diagnostics_used, TEXT_COLOR_MAGENTA "VP:%5.2f " TEXT_COLOR_BLACK, chi2visphi);
 
     // Print values of monospectral regularizers
-    for (int k = 1; k < NREGULS - 1; k++) {
+    for (int k = 1; k < NREGULS - 2; k++) {
       if (reg_param[k] > 0)
         diagnostics_used +=
             snprintf(diagnostics + diagnostics_used, maxlength - diagnostics_used, "%s :%5.2f ", reg_names[k], reg_param[k] * reg_value[w * NREGULS + k]);
@@ -2996,7 +3011,7 @@ void print_diagnostics(int iChain, long current_iter, long nvis, long nv2, long 
 
     if (reg_param[REG_TRANSPECL1] > 0)
             diagnostics_used +=
-                snprintf(diagnostics + diagnostics_used, maxlength - diagnostics_used, "TVS:%5.2f ", reg_param[REG_TRANSPECL1] * reg_value[REG_TRANSPECL1]);
+          snprintf(diagnostics + diagnostics_used, maxlength - diagnostics_used, "TVS:%5.2f ", reg_param[REG_TRANSPECL1] * reg_value[REG_TRANSPECL1]);
 
 
     if (current_iter > 0)
@@ -3020,7 +3035,7 @@ void print_diagnostics(int iChain, long current_iter, long nvis, long nv2, long 
 
 void compute_lPrior(double *lPrior, const long chan, const double *reg_param, const double *reg_value) {
   double temp = reg_param[REG_TRANSPECL2] * reg_value[REG_TRANSPECL2] + reg_param[REG_TRANSPECL1] * reg_value[REG_TRANSPECL1] ;
-  for (int i = 0; i < NREGULS - 1; ++i)
+  for (int i = 0; i < NREGULS - 2; ++i)
     temp += reg_param[i] * reg_value[chan * NREGULS + i];
   *lPrior = temp;
 }
@@ -3028,7 +3043,7 @@ void compute_lPrior(double *lPrior, const long chan, const double *reg_param, co
 void compute_lPrior_allwav(double *lPrior, const long nwavr, const double *reg_param, const double *reg_value) {
   double temp = reg_param[REG_TRANSPECL2] * reg_value[REG_TRANSPECL2] + reg_param[REG_TRANSPECL1] * reg_value[REG_TRANSPECL1] ;
   for (int w = 0; w < nwavr; ++w)
-    for (int i = 0; i < NREGULS - 1; ++i)
+    for (int i = 0; i < NREGULS - 2; ++i)
       temp += reg_param[i] * reg_value[w * NREGULS + i];
   *lPrior = temp;
 }

@@ -107,27 +107,25 @@ double tvsqspec(const int nchan, const long imwidth, const double *image, const 
   return temp1;
 }
 
-double tvsqspec_diff(long oldpos, long newpos, long chan, const int nchan, const long imsize, const double *image){
+double tvsqspec_diffpoint(long pos, long chan, double diff, const int nchan, const long imsize, const double *image)
+{
   double temp = 0.0;
   if (chan == nchan)
   {
-    temp = -(image[chan * imsize + oldpos] - image[(chan-1) * imsize + oldpos])*(image[chan * imsize + oldpos] - image[(chan-1) * imsize + oldpos])+(image[chan * imsize + newpos] - image[(chan-1) * imsize + newpos])*(image[chan * imsize + newpos] - image[(chan-1) * imsize + newpos]);
+    temp = (image[chan * imsize + pos] + diff - image[(chan-1) * imsize + pos])*(image[chan * imsize + pos] + diff - image[(chan-1) * imsize + pos]);
     return temp;
   }
 
   if (chan == 0)
   {
-    temp = -(image[imsize + oldpos] - image[oldpos])*(image[imsize + oldpos] - image[oldpos])+(image[imsize + newpos] - image[newpos])*(image[imsize + newpos] - image[newpos]);
+    temp = (image[imsize + pos] - image[pos] - diff)*(image[imsize + pos] - image[pos] - diff);
     return temp;
   }
 
   // two sides
-  temp = -(image[chan * imsize + oldpos] - image[(chan-1) * imsize + oldpos])*(image[chan * imsize + oldpos] - image[(chan-1) * imsize + oldpos])+(image[chan * imsize + newpos] - image[(chan-1) * imsize + newpos])*(image[chan * imsize + newpos] - image[(chan-1) * imsize + newpos])-(image[(chan+1) * imsize + oldpos] - image[chan * imsize + oldpos])*(image[(chan+1) * imsize + oldpos] - image[chan * imsize + oldpos])+(image[(chan+1) * imsize + newpos] - image[chan * imsize + newpos])*(image[(chan+1) * imsize + newpos] - image[chan * imsize + newpos]);
+  temp = (image[chan * imsize + pos] + diff - image[(chan-1) * imsize + pos])*(image[chan * imsize + pos] + diff - image[(chan-1) * imsize + pos])+(image[(chan+1) * imsize + pos] - image[chan * imsize + pos] - diff)*(image[(chan+1) * imsize + pos] - image[chan * imsize + pos] - diff);
   return temp;
 }
-
-
-
 
 double transpec_diffpoint(long pos, long chan, double diff, const int nchan, const long imsize, const double *image) {
   long w;
@@ -186,6 +184,22 @@ double TV(const double *x, const double *pr, const double eps, const int nx, con
     }
   }
   return L1g / flux;
+}
+
+
+
+
+double compactness(const double *x, const double *pr, const double eps, const int nx, const int ny, const double flux) {
+  register int i, j;
+  double reg = 0.0;
+  for (j = 0; j < ny; ++j)
+  {
+    for (i = 0; i < nx; ++i)
+    {
+      reg += ((i-0.5*(nx-1))*(i-0.5*(nx-1))+(j-0.5*(ny-1))*(j-0.5*(ny-1)))/(nx*ny)*x[i + nx * j]*x[i + nx * j];
+    }
+  }
+  return reg;
 }
 
 double UDreg(const double *x, const double *pr, const double eps, const int nx, const int ny, const double flux) {
@@ -329,7 +343,6 @@ double LAP(const double *x, const double *pr, const double eps, const int nx, co
 double reg_prior_image(const double *x, const double *pr, const double eps, const int nx, const int ny, const double flux) {
   register int i;
   double rpi = 0;
-
   for (i = 0; i < nx * ny; ++i)
     if (x[i] > 0)
       rpi += pr[i];
