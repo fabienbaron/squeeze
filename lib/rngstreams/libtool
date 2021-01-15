@@ -332,7 +332,7 @@ link_all_deplibs=unknown
 sys_lib_search_path_spec="/usr/lib/gcc/x86_64-pc-linux-gnu/10.2.0 /usr/lib /lib"
 
 # Run-time system search path for libraries
-sys_lib_dlsearch_path_spec="/lib /usr/lib /usr/lib/libfakeroot /opt/hdf4/lib /usr/lib32 /usr/lib/octave/5.2.0 /usr/lib/opencollada /usr/lib/openmpi "
+sys_lib_dlsearch_path_spec="/lib /usr/lib /usr/lib/libfakeroot /opt/hdf4/lib /usr/lib32 /usr/lib/octave/6.1.0 /usr/lib/opencollada /usr/lib/openmpi "
 
 # Fix the shell variable $srcfile for the compiler.
 fix_srcfile_path=""
@@ -7616,7 +7616,7 @@ link_all_deplibs=unknown
 sys_lib_search_path_spec="/usr/lib/gcc/x86_64-pc-linux-gnu/10.2.0 /usr/lib /lib"
 
 # Run-time system search path for libraries
-sys_lib_dlsearch_path_spec="/lib /usr/lib /usr/lib/libfakeroot /opt/hdf4/lib /usr/lib32 /usr/lib/octave/5.2.0 /usr/lib/opencollada /usr/lib/openmpi "
+sys_lib_dlsearch_path_spec="/lib /usr/lib /usr/lib/libfakeroot /opt/hdf4/lib /usr/lib32 /usr/lib/octave/6.1.0 /usr/lib/opencollada /usr/lib/openmpi "
 
 # Fix the shell variable $srcfile for the compiler.
 fix_srcfile_path=""
@@ -7928,7 +7928,7 @@ link_all_deplibs=unknown
 sys_lib_search_path_spec="/usr/lib/gcc/x86_64-pc-linux-gnu/10.2.0 /usr/lib /lib"
 
 # Run-time system search path for libraries
-sys_lib_dlsearch_path_spec="/lib /usr/lib /usr/lib/libfakeroot /opt/hdf4/lib /usr/lib32 /usr/lib/octave/5.2.0 /usr/lib/opencollada /usr/lib/openmpi "
+sys_lib_dlsearch_path_spec="/lib /usr/lib /usr/lib/libfakeroot /opt/hdf4/lib /usr/lib32 /usr/lib/octave/6.1.0 /usr/lib/opencollada /usr/lib/openmpi "
 
 # Fix the shell variable $srcfile for the compiler.
 fix_srcfile_path=""

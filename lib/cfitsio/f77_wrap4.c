@@ -267,7 +267,7 @@ CFARGT14(NCF,DCF,ABSOFT_cf2(VOID),LONG,PSTRING,PINT,CF_0,CF_0,CF_0,CF_0,CF_0,CF_
           TCF(fti2c,PSTRING,2,1) 
           TCF(fti2c,PINT,3,1) );
 
-   sprintf(str,"%20s",B2);
+   snprintf(str,21,"%20s",B2);
    strcpy(B2,str);
 
    RCF(LONG,1)
@@ -289,7 +289,7 @@ CFARGT14(NCF,DCF,ABSOFT_cf2(VOID),LOGICAL,PSTRING,PINT,CF_0,CF_0,CF_0,CF_0,CF_0,
           TCF(ftl2c,PSTRING,2,1) 
           TCF(ftl2c,PINT,3,1) );
 
-   sprintf(str,"%20s",B2);
+   snprintf(str,21,"%20s",B2);
    strcpy(B2,str);
 
    RCF(LOGICAL,1)
@@ -315,7 +315,7 @@ CFARGT14(NCF,DCF,ABSOFT_cf2(VOID),FLOAT,INT,PSTRING,PINT,CF_0,CF_0,CF_0,CF_0,CF_
           TCF(ftr2f,PSTRING,3,1) 
           TCF(ftr2f,PINT,4,1) );
 
-   sprintf(str,"%20s",B3);
+   snprintf(str,21,"%20s",B3);
    strcpy(B3,str);
 
    RCF(FLOAT,1)
@@ -340,7 +340,7 @@ CFARGT14(NCF,DCF,ABSOFT_cf2(VOID),FLOAT,INT,PSTRING,PINT,CF_0,CF_0,CF_0,CF_0,CF_
           TCF(ftr2e,PSTRING,3,1) 
           TCF(ftr2e,PINT,4,1) );
 
-   sprintf(str,"%20s",B3);
+   snprintf(str,21,"%20s",B3);
    strcpy(B3,str);
 
    RCF(FLOAT,1)
@@ -365,7 +365,7 @@ CFARGT14(NCF,DCF,ABSOFT_cf2(VOID),DOUBLE,INT,PSTRING,PINT,CF_0,CF_0,CF_0,CF_0,CF
           TCF(ftd2f,PSTRING,3,1) 
           TCF(ftd2f,PINT,4,1) );
 
-   sprintf(str,"%20s",B3);
+   snprintf(str,21,"%20s",B3);
    strcpy(B3,str);
 
    RCF(DOUBLE,1)
@@ -397,7 +397,7 @@ CFARGT14(NCF,DCF,ABSOFT_cf2(VOID),DOUBLE,INT,PSTRING,PINT,PINT,CF_0,CF_0,CF_0,CF
 
    *vlen = strlen(B3);
    if ( *vlen<20 ) {
-      sprintf(str,"%20s",B3);  /* right justify if vlen<20 characters */
+      snprintf(str,21,"%20s",B3);  /* right justify if vlen<20 characters */
       strcpy(B3,str);
       *vlen = 20;
    }
@@ -468,8 +468,8 @@ void Cffcrep( char *comm, char *comm1, int *repeat )
    len=strlen(comm);
        /* cfortran strips trailing spaces so only check last character  */
    if( len && comm[ len-1 ]=='&' ) {
-      strncpy(comm1,comm,len-1);  /*  Don't copy '&'  */
-      comm1[len-1]='\0';
+      strcpy(comm1,comm);  
+      comm1[len-1]='\0'; /*  Erase '&'  */
       *repeat=TRUE;
    }
    return;

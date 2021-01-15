@@ -118,6 +118,9 @@ static int expr_read( char *buf, int nbytes );
 bit		([bB][01xX]+)
 oct		([oO][01234567xX]+)
 hex		([hH][0123456789aAbBcCdDeEfFxX]+)
+bitconst        (0b[01]+)
+hexconst        (0x[0123456789aAbBcCdDeEfF]+)
+octconst        (0o]+)
 integer		[0-9]+
 boolean         (t|f|T|F)
 real		([0-9]*"."[0-9]+)|([0-9]*"."*[0-9]+[eEdD][+-]?[0-9]+)|([0-9]*".")
@@ -137,6 +140,7 @@ greater         (">"|".gt."|".GT."|"gt."|"GT.")
 lesser          ("<"|".lt."|".LT."|"lt."|"LT.")
 greater_eq	(">="|"=>"|".ge."|".GE."|"ge."|"GE.")
 lesser_eq	("<="|"=<"|".le."|".LE."|"le."|"LE.")
+xor             ("^^"|".xor."|".XOR.")
 nl		\n
 
 %%
@@ -303,6 +307,36 @@ nl		\n
                   strcpy( yylval.str, bitstring );
 		  return( BITSTR );
 		}
+{bitconst}      {
+		  long int constval = 0;
+		  char *p;
+		  for (p = &(yytext[2]); *p; p++) {
+		    constval = (constval << 1) | (*p == '1');
+		  }
+		  yylval.lng = constval;
+		  return( LONG );
+		}
+{octconst}      {
+		  long int constval = 0;
+		  char *p;
+		  for (p = &(yytext[2]); *p; p++) {
+		    constval = (constval << 3) | (*p - '0');
+		  }
+		  yylval.lng = constval;
+		  return( LONG );
+		}
+{hexconst}      {
+		  long int constval = 0;
+		  char *p;
+		  for (p = &(yytext[2]); *p; p++) {
+                    int v = (isdigit(*p) ? (*p - '0') : (*p - 'a' + 10));
+                    constval = (constval << 4) | v;
+		  }
+		  yylval.lng = constval;
+		  return( LONG );
+		}
+
+                  
 {integer}	{
                   yylval.lng = atol(yytext);
 		  return( LONG );
@@ -319,20 +353,20 @@ nl		\n
 		  return( DOUBLE );
 		}
 {constant}	{
-                  if(        !strcasecmp(yytext,"#PI") ) {
+                  if(        !fits_strcasecmp(yytext,"#PI") ) {
 		     yylval.dbl = (double)(4) * atan((double)(1));
 		     return( DOUBLE );
-		  } else if( !strcasecmp(yytext,"#E") ) {
+		  } else if( !fits_strcasecmp(yytext,"#E") ) {
 		     yylval.dbl = exp((double)(1));
 		     return( DOUBLE );
-		  } else if( !strcasecmp(yytext,"#DEG") ) {
+		  } else if( !fits_strcasecmp(yytext,"#DEG") ) {
 		     yylval.dbl = ((double)4)*atan((double)1)/((double)180);
 		     return( DOUBLE );
-		  } else if( !strcasecmp(yytext,"#ROW") ) {
+		  } else if( !fits_strcasecmp(yytext,"#ROW") ) {
 		     return( ROWREF );
-		  } else if( !strcasecmp(yytext,"#NULL") ) {
+		  } else if( !fits_strcasecmp(yytext,"#NULL") ) {
 		     return( NULLREF );
-		  } else if( !strcasecmp(yytext,"#SNULL") ) {
+		  } else if( !fits_strcasecmp(yytext,"#SNULL") ) {
 		     return( SNULLREF );
 		  } else {
                      int len; 
@@ -414,6 +448,7 @@ nl		\n
 {lesser}	{ return( LT      ); }
 {greater_eq}	{ return( GTE     ); }
 {lesser_eq}	{ return( LTE     ); }
+{xor}           { return( XOR     ); }
 {nl}		{ return( '\n'    ); }
 .		{ return( yytext[0] ); }
 %%
@@ -496,50 +531,9 @@ static int find_variable(char *varName)
  
    if( gParse.nCols )
       for( i=0; i<gParse.nCols; i++ ) {
-         if( ! strncasecmp(gParse.varData[i].name,varName,MAXVARNAME) ) {
+         if( ! fits_strncasecmp(gParse.varData[i].name,varName,MAXVARNAME) ) {
             return( i );
          }
       }
    return( -1 );
 }
-
-#if defined(vms) || defined(__vms) || defined(WIN32) || defined(__WIN32__) || defined(macintosh)
-
-/* ================================================================== */
-/* A hack for nonunix machines, which lack strcasecmp and strncasecmp */
-/* ================================================================== */
-
-int strcasecmp(const char *s1, const char *s2)
-{
-   char c1, c2;
-
-   for (;;) {
-      c1 = toupper( *s1 );
-      c2 = toupper( *s2 );
-
-      if (c1 < c2) return(-1);
-      if (c1 > c2) return(1);
-      if (c1 == 0) return(0);
-      s1++;
-      s2++;
-   }
-}
-
-int strncasecmp(const char *s1, const char *s2, size_t n)
-{
-   char c1, c2;
-
-   for (; n-- ;) {
-      c1 = toupper( *s1 );
-      c2 = toupper( *s2 );
-
-      if (c1 < c2) return(-1);
-      if (c1 > c2) return(1);
-      if (c1 == 0) return(0);
-      s1++;
-      s2++;
-   }
-   return(0);
-}
-
-#endif
