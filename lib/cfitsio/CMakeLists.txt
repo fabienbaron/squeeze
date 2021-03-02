@@ -4,7 +4,7 @@
 SET(CMAKE_LEGACY_CYGWIN_WIN32 0)
 
 PROJECT(CFITSIO)
-CMAKE_MINIMUM_REQUIRED(VERSION 2.8.0)
+CMAKE_MINIMUM_REQUIRED(VERSION 3.0)
 
 # Allow @rpath token in target install name on Macs.
 # See "cmake --help-policy CMP0042" for more information.
@@ -16,11 +16,11 @@ INCLUDE (${CMAKE_ROOT}/Modules/CheckLibraryExists.cmake)
 INCLUDE (${CMAKE_ROOT}/Modules/CheckFunctionExists.cmake)
 
 # Allow the developer to select if Dynamic or Static libraries are built
-OPTION (BUILD_SHARED_LIBS "Build Shared Libraries" ON)
-OPTION (USE_PTHREADS "Thread-safe build (using pthreads)" OFF)
+OPTION (BUILD_SHARED_LIBS "Build Shared Libraries" OFF)
+OPTION (USE_PTHREADS "Thread-safe build (using pthreads)" ON)
 
 # Allow curl dependency to be disabled using "-DUseCurl=OFF":
-OPTION(UseCurl "UseCurl" ON)
+OPTION(UseCurl "UseCurl" OFF)
 
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}")
 set (LIB_DESTINATION "${CMAKE_INSTALL_PREFIX}/lib${LIB_SUFFIX}")

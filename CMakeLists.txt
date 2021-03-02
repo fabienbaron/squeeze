@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 2.8) 
+cmake_minimum_required(VERSION 2.8)
 project(squeeze)
 
 # If you want to override compiler please uncomment the line below
@@ -31,7 +31,7 @@ endif()
 
 # We need to compile the following libraries
 
-if(COMPILER_SUPPORTS_C11) 
+if(COMPILER_SUPPORTS_C11)
 		#compile libraries
 		# rngstreams
 include(ExternalProject)
@@ -46,13 +46,15 @@ ExternalProject_Add(
 
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/lib/rngstreams)
 set(LIBS ${LIBS} "${CMAKE_CURRENT_SOURCE_DIR}/lib/rngstreams/librngstreams.a")
+
 # cfitsio
 ExternalProject_Add(
   libcfitsio
   DOWNLOAD_COMMAND ""
   SOURCE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/lib/cfitsio
+  CONFIGURE_COMMAND ${CMAKE_CURRENT_SOURCE_DIR}/lib/cfitsio/configure --silent --disable-curl
   CMAKE_ARGS "-DUSE_PTHREADS=ON"
-  BUILD_COMMAND make
+  BUILD_COMMAND make all
   BUILD_IN_SOURCE 1
   INSTALL_COMMAND ""
 )
@@ -65,5 +67,3 @@ add_subdirectory(src)
 else()
 	message(STATUS "SQUEEZE installation aborted")
 endif()
-
-
