@@ -3028,7 +3028,14 @@ void print_diagnostics(int iChain, long current_iter, long nvis, long nv2, long 
   if (nparams > 0) {
     printf("Chain: %d Model Parameters: \n", iChain);
     for (j = 0; j < nparams; ++j)
-      printf("P[%ld]: %7.5g +/- %7.5g\n", j, params[j], stepsize[j]);
+    if (stepsize[j] == 0.0)
+    {
+      printf("%s: %7.5g\t FIXED\n", model_param_names[j], params[j]);
+    }
+    else
+    {
+        printf("%s: %7.5g\t+/- %7.5g\n", model_param_names[j], params[j], stepsize[j]);
+      }
     printf("\n");
   }
 }
