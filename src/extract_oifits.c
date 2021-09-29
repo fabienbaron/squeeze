@@ -54,7 +54,7 @@ void add_new_uv(long *obs_index, long *uvindex, double new_u, double new_v, doub
 int import_single_epoch_oifits(char *filename, bool use_v2, bool use_t3amp, bool use_t3phi, bool use_visamp, bool use_visphi,
                                double v2a, double v2s, double t3ampa, double t3amps, double t3phia, double t3phis,
                                double visampa, double visamps, double visphia, double visphis, double fluxs, double cwhm, double uvtol, int* pnwavr,
-                               double **pwavmin, double **pwavmax, bool wavauto, double *timemin, double *timemax)
+                               double **pwavmin, double **pwavmax, bool wavauto, double *timemin, double *timemax, bool verbose_import)
 {
 
 //  printf("wavauto = %d\n", wavauto);
@@ -187,7 +187,6 @@ int import_single_epoch_oifits(char *filename, bool use_v2, bool use_t3amp, bool
                         read_next_oi_vis(fptr, &vis_table, &status);
                 }
                 fits_close_file(fptr, &status);
-
                 printf("OIFITS import -- OI_VIS  \tTables %i\t Entries %ld\n", nvis_tables, nvis);
                 fflush(stdout);
         }
@@ -290,6 +289,7 @@ int import_single_epoch_oifits(char *filename, bool use_v2, bool use_t3amp, bool
         flag_t3 = malloc(nt3 * sizeof(char));
 
         // V2
+        int v2table=0;
         if (nv2_tables > 0)
         {
                 printf("OIFITS import -- Importing V2 data...\n");
@@ -301,13 +301,13 @@ int import_single_epoch_oifits(char *filename, bool use_v2, bool use_t3amp, bool
 
                 while (tempindex < nv2)
                 {
-                        
                         read_next_oi_vis2(fptr, &vis2_table, &status);
+                        v2table++;
                         read_oi_wavelength(fptr2, vis2_table.insname, &wave, &status2);
-                        printf("Reading V2 tables...\n");
+                        printf("Reading V2 table: %d/%d\n", v2table, nv2_tables);
                         for (i = 0; i < vis2_table.numrec; i++)
                         {
-                          
+
                                 for (j = 0; j < vis2_table.nwave; j++)
                                 {
                                         valid_v2 = (use_v2 == TRUE)
@@ -347,8 +347,10 @@ int import_single_epoch_oifits(char *filename, bool use_v2, bool use_t3amp, bool
                                         else
                                         {
                                                 nv2--;
-                                                printf("OIFITS import -- Discarded V2 point, Record: %ld\t Wav: %ld Flag: %d V2: %f V2err: %f \n",
+                                                if (verbose_import == TRUE)
+                                                  printf("OIFITS import -- Discarded V2 point, Record: %ld\t Wav: %ld Flag: %d V2: %f V2err: %f \n",
                                                        i, j, (vis2_table.record[i]).flag[j], (vis2_table.record[i]).vis2data[j], (vis2_table.record[i]).vis2err[j]);
+
                                         }
                                 }
                         }
@@ -363,6 +365,7 @@ int import_single_epoch_oifits(char *filename, bool use_v2, bool use_t3amp, bool
         }
 
         // T3 tables
+        int t3table=0;
         if (nt3_tables > 0)
         {
                 printf("OIFITS import -- Importing T3 data...\n");
@@ -379,11 +382,12 @@ int import_single_epoch_oifits(char *filename, bool use_v2, bool use_t3amp, bool
                 {
 
                         read_next_oi_t3(fptr, &t3_table, &status);
+                        t3table++;
                         read_oi_wavelength(fptr2, t3_table.insname, &wave, &status2);
-                        printf("Reading T3 tables...\n");
+                        printf("Reading T3 table: %d/%d\n", t3table, nt3_tables);
                         for (i = 0; i < t3_table.numrec; ++i)
                         {
-                          
+
                           for (j = 0; j < t3_table.nwave; ++j)
                                 {
 
@@ -479,6 +483,7 @@ int import_single_epoch_oifits(char *filename, bool use_v2, bool use_t3amp, bool
                                         }
                                         else
                                         {
+                                              if (verbose_import == TRUE)
                                                 printf("OIFITS import -- Discarded T3 point, Record: %ld Wav: %ld Flag: %d T3amp: %f T3amperr: %f T3phi: %f T3phierr: %f\n",
                                                        i, j, (t3_table.record[i]).flag[j], (t3_table.record[i]).t3amp[j],
                                                        (t3_table.record[i]).t3amperr[j], (t3_table.record[i]).t3phi[j], (t3_table.record[i]).t3phierr[j]);
@@ -497,6 +502,7 @@ int import_single_epoch_oifits(char *filename, bool use_v2, bool use_t3amp, bool
                 fits_close_file(fptr2, &status2);
         }
 
+        int vistable=0;
         if (nvis_tables > 0)
         {
                 // VIS table -- general case
@@ -515,6 +521,8 @@ int import_single_epoch_oifits(char *filename, bool use_v2, bool use_t3amp, bool
                 while (tempindex < nvis)
                 {
                         read_next_oi_vis(fptr, &vis_table, &status);
+                        vistable++;
+                        printf("Reading VIS table: %d/%d\n", vistable, nvis_tables);
                         read_oi_wavelength(fptr2, vis_table.insname, &wave, &status2);
                         for (i = 0; i < vis_table.numrec; i++)
                         {
@@ -578,7 +586,9 @@ int import_single_epoch_oifits(char *filename, bool use_v2, bool use_t3amp, bool
                                         }
                                         else
                                         {
-                                                if ((use_visamp == TRUE) && (use_visphi == TRUE)) printf("OIFITS import -- Bad vis at tempindex %ld -- visamp test: %d -- visphi test: %d \n", tempindex, valid_visamp, valid_visphi);
+                                          if (verbose_import == TRUE)
+                                                if ((use_visamp == TRUE) && (use_visphi == TRUE))
+                                                  printf("OIFITS import -- Bad vis at tempindex %ld -- visamp test: %d -- visphi test: %d \n", tempindex, valid_visamp, valid_visphi);
                                                 nvis--;
                                         }
                                 }
@@ -916,7 +926,7 @@ void add_new_uv(long *obs_index, long *uvindex, double new_u, double new_v, doub
                         #pragma omp cancel for
                         #else
                         break;
-                        #endif                        
+                        #endif
                 }
         }
 

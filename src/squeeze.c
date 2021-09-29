@@ -141,6 +141,7 @@ int main(int argc, char **argv) {
   double cvfwhm = 0., uvtol = 1e3, fluxs = 1.;
   double tempschedc = 3.0;
   bool wavauto = FALSE;
+  bool verbose_import = FALSE;
   double *timemin = NULL;
   double *timemax = NULL;
   double *wavmin = NULL;
@@ -171,7 +172,7 @@ int main(int argc, char **argv) {
                        &use_bandwidthsmearing, &minimization_engine, &dumpchain, &mas_pixel, &axis_len, &depth, &niter, &nelements, &f_anywhere, &f_copycat,
                        &nchains, &nthreads, &tempschedc, &fov, &chi2_temp, &chi2_target, &tmin, &prob_auto, &uvtol, &output_filename[0], &init_filename[0],
                        &prior_filename[0], &v2s, &v2a, &t3amps, &t3ampa, &t3phia, &t3phis, &visamps, &visampa, &visphis, &visphia, &fluxs, &cvfwhm, reg_param,
-                       init_params, &wavmin, &wavmax, &nwavr, &wavauto) == FALSE)
+                       init_params, &wavmin, &wavmax, &nwavr, &wavauto, &verbose_import) == FALSE)
     return 0;
 
   // Check nchains and nthreads are consistent, and if not overwrite them
@@ -213,7 +214,7 @@ int main(int argc, char **argv) {
   /* Read in oifits file */
 
   if (import_single_epoch_oifits(argv[1], use_v2, use_t3amp, use_t3phi, use_visamp, use_visphi, v2a, v2s, t3ampa, t3amps, t3phia, t3phis, visampa, visamps,
-                                 visphia, visphis, fluxs, cvfwhm, uvtol, &nwavr, &wavmin, &wavmax, wavauto, timemin, timemax)) {
+                                 visphia, visphis, fluxs, cvfwhm, uvtol, &nwavr, &wavmin, &wavmax, wavauto, timemin, timemax, verbose_import)) {
     printf("Error opening %s. \n", argv[1]);
     return 0;
   }
@@ -1462,7 +1463,8 @@ void printhelp(void) {
   printf("  -o filename     : Squeeze outputs as a FITS image file.\n");
   printf("  -fullchain      : Output the full MCMC chain into the file output.fullchain .\n");
   printf("  -monitor        : Enable continuous writing of chainxx.fits to monitor execution.\n");
-  printf("  -quiet        : Do not print iteration values.\n");
+  printf("  -quiet          : Do not print iteration values.\n");
+  printf("  -quietflag      : Do not enumerate bad/flagged points when importing OIFITS.\n");
 
   printf("\n***** SIMULTANEOUS MODEL FITTING SETTINGS ***** \n");
   printf("  -P p0 p1...    : Initial parameter input.\n");
@@ -2674,7 +2676,7 @@ bool read_commandline(int *argc, char **argv, bool *benchmark, bool *use_v2, boo
                       double *tempschedc, double *fov, double *chi2_temp, double *chi2_target, double *tmin, double *prob_auto, double *uvtol,
                       char *output_filename, char *init_filename, char *prior_filename, double *v2s, double *v2a, double *t3amps, double *t3ampa,
                       double *t3phia, double *t3phis, double *visamps, double *visampa, double *visphis, double *visphia, double *fluxs, double *cvfwhm,
-                      double *reg_param, double *init_param, double **pwavmin, double **pwavmax, int *nwavr, bool *wavauto) {
+                      double *reg_param, double *init_param, double **pwavmin, double **pwavmax, int *nwavr, bool *wavauto, bool *verbose_import) {
   long i, j, k;
   double *wavmin, *wavmax;
   /* Read in command line info... */
@@ -2730,8 +2732,10 @@ bool read_commandline(int *argc, char **argv, bool *benchmark, bool *use_v2, boo
       *diffvis = TRUE; // interpret VIS tables as differential visibilities, not complex visibilities
     } else if (strcmp(argv[i], "-monitor") == 0) {
       *use_tempfitswriting = TRUE; // enable writing chainxx.fits to disc
+    } else if (strcmp(argv[i], "-showflagged") == 0) {
+      *verbose_import = TRUE; // show discarded data points during import
     } else if (strcmp(argv[i], "-quiet") == 0) {
-      squeeze_quiet = TRUE; // enable writing chainxx.fits to disc
+      squeeze_quiet = TRUE; // shuts up some diagnostics
     } else if (strcmp(argv[i], "-wavauto") == 0) {
       // set wavauto
       printf("Command line -- Automatic wavelength selection\n");
@@ -3028,14 +3032,7 @@ void print_diagnostics(int iChain, long current_iter, long nvis, long nv2, long 
   if (nparams > 0) {
     printf("Chain: %d Model Parameters: \n", iChain);
     for (j = 0; j < nparams; ++j)
-    if (stepsize[j] == 0.0)
-    {
-      printf("%s: %7.5g\t FIXED\n", model_param_names[j], params[j]);
-    }
-    else
-    {
-        printf("%s: %7.5g\t+/- %7.5g\n", model_param_names[j], params[j], stepsize[j]);
-      }
+      printf("P[%ld]: %7.5g +/- %7.5g\n", j, params[j], stepsize[j]);
     printf("\n");
   }
 }
