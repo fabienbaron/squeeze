@@ -23,7 +23,7 @@ with parameters :
  params(5) = background power law
  Globals: nparams, nbaselines, u, v */
 
-const char *model_param_names[6] = {"flux_star   ", "UD     ", "env_indx", "lambda_0 ", "flux_bg ", "bg_indx "};
+const char *model_param_names[6] = {"flux_star   ", "UD        ", "env_indx  ", "lambda_0 ", "flux_bg  ", "bg_indx "};
 
 extern double j1(double);
 int model_vis(const double *params, double complex *modvis, double *lPriorModel, double *flux_frac) {
