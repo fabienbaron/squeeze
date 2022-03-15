@@ -196,7 +196,7 @@ double compactness(const double *x, const double *pr, const double eps, const in
   {
     for (i = 0; i < nx; ++i)
     {
-      reg += ((i-0.5*(nx-1))*(i-0.5*(nx-1))+(j-0.5*(ny-1))*(j-0.5*(ny-1)))/(nx*ny)*x[i + nx * j];
+      reg += ((i-0.5*(nx-1))*(i-0.5*(nx-1))+(j-0.5*(ny-1))*(j-0.5*(ny-1)))/(nx*ny)*x[i + nx * j]*x[i + nx * j];
     }
   }
   return reg;
