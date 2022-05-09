@@ -1,20 +1,4 @@
-/*   modelcode_ud bwsmearing.c:
-
-A polychromatic binary model with primary uniform disc star at the center of the image,
-the secondary as an offset uniform disc with bandwidth smearing parameter.
-The stars follow the lambda^-4 law for their fluxes, while the environment follows lambda^env_ind (user-defined)
-
-with parameters :
-      delta_ra: secondary delta RA in mas from image center (EAST => +)
-      delta_dec: secondary delta DEC in mas from image center (NORTH => +)
-      f_primary_ref : the stellar flux fraction at lambda_ref
-      f_secondary_ref : the stellar flux fraction at lambda_ref
-      diam_primary : the size of the primary, uniform disc at lambda_ref in mas
-      diam_secondary : the size of the primary, uniform disc at lambda_ref in mas
-      bws: bandwidth smearing parameter
-      lambda_ref : reference wavelength (H band)
-      env_ind : the flux power law index for the environment (== the image)
-
+/* SPARCO point source + background + image
  params(0) = primary flux
  params(1) = UD size of primary (mas) [located at origin]
  params(2) = environment index
