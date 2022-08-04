@@ -739,7 +739,7 @@ int main(int argc, char **argv) {
                                             &reg_value[REG_MODELPARAM], nparams, nelements);
 
     // Compute initial values for prior, likelihood, and posterior
-    compute_lLikelihood(&lLikelihood, mod_vis, res, mod_obs, chi2v2, chi2t3amp, chi2visamp, chi2t3phi, chi2visphi, nwavr);
+    compute_lLikelihood(&lLikelihood, mod_vis, res, mod_obs, &chi2v2, &chi2t3amp, &chi2visamp, &chi2t3phi, &chi2visphi, nwavr);
     compute_lPrior_allwav(&lPrior, nwavr, reg_param, reg_value);
     lPosterior = lLikelihood + lPrior;
     if (squeeze_quiet == FALSE)
@@ -1539,13 +1539,13 @@ void printhelp(void) {
 }
 
 /**********************************************************************/
-/* Calculate total chi2   */
+/* Calculate complex vis chi^2 taking into account the known_phases   */
 /**********************************************************************/
-void compute_lLikelihood(double *likelihood, const double complex **__restrict mod_vis, double **__restrict res, double **__restrict mod_obs, double *chi2v2,
+void compute_lLikelihood(double *likelihood, const double complex *__restrict mod_vis, double *__restrict res, double *__restrict mod_obs, double *chi2v2,
                          double *chi2t3amp, double *chi2visamp, double *chi2t3phi, double *chi2visphi, const int nwavr) {
   vis_to_obs(mod_vis, mod_obs, nwavr);
   obs_to_res(mod_obs, res);
-  *likelihood = 0.5 * residuals_to_chi2(res, chi2v2, chi2t3amp, chi2visamp, chi2t3phi, chi2visphi, nwavr);
+  *likelihood = 0.5 * residuals_to_chi2(res, chi2v2, chi2t3amp, chi2visamp, chi2t3phi, chi2visphi);
 }
 
 void vis_to_obs(const double complex *__restrict mod_vis, double *__restrict mod_obs, const int nwavr) {
@@ -1605,55 +1605,61 @@ void vis_to_obs(const double complex *__restrict mod_vis, double *__restrict mod
   }
 }
 
-void obs_to_res(const double *__restrict mod_obs, double **__restrict res) {
-  long i,w;
-  for(w=0;w<nwavr;++w)
-  {
-    for (i = 0; i < nv2[w] + nt3amp[w] + nvisamp[w]; ++i)
-      res[w][i] = (mod_obs[w][i] - data[w][i]) * data_err[w][i];
-
-    for (i = nv2[w] + nt3amp[w] + nvisamp[w]; i < nv2[w] + nt3amp[w] + nvisamp[w] + nt3phi[w] + nvisphi[w]; ++i)
-      res[w][i] = dewrap(mod_obs[w][i] - data[w][i]) * data_err[w][i]; // TBD: improve wrapping
+void obs_to_res(const double *__restrict mod_obs, double *__restrict res) {
+  long i;
+  //#pragma omp parallel for simd
+  for (i = 0; i < nv2 + nt3amp + nvisamp; ++i) {
+    res[i] = (mod_obs[i] - data[i]) * data_err[i];
   }
+
+  // #pragma omp parallel for simd
+  for (i = nv2 + nt3amp + nvisamp; i < nv2 + nt3amp + nvisamp + nt3phi + nvisphi; ++i)
+    res[i] = dewrap(mod_obs[i] - data[i]) * data_err[i]; // TBD: improve wrapping
 }
 
-double residuals_to_chi2(const double **res, double *chi2v2, double *chi2t3amp, double *chi2visamp, double *chi2t3phi, double *chi2visphi, long nwavr) {
-  long i,w;
-// We don't use calloc (too slow)
-for(w=0;w<nwavr;++w)
-{
-  chi2v2[w] = 0;
-  chi2t3amp[w] = 0;
-  chi2t3phi[w] = 0;
-  chi2visamp[w] = 0;
-  chi2visphi[w] = 0;
-}
+double residuals_to_chi2(const double *res, double *chi2v2, double *chi2t3amp, double *chi2visamp, double *chi2t3phi, double *chi2visphi) {
+  long i;
+  double temp1 = 0, temp2 = 0, temp3 = 0, temp4 = 0, temp5 = 0; // local accumulator (faster than using chi2)
 
-  for(w=0;w<nwavr;++w)
-  {
-    if nv2[w]>0
-      for (i = 0; i < nv2[w]; ++i)
-        chi2v2[w] += res[w][i] * res[w][i];
-
-    if nt3amp[w]>0
-      for (i = nv2[w]; i < nv2[w] + nt3amp[w]; ++i)
-        chi2t3amp[w] += res[w][i] * res[w][i];
-
-    if (nvisamp[w] > 0)
-      for (i = nv2[w] + nt3amp[w]; i < nv2[w] + nt3amp[w] + nvisamp[w]; ++i) {
-        chi2visamp[w] += res[w][i] * res[w][i];
-
-    if (nvisphi[w] > 0)
-      for (i = nv2[w] + nt3amp[w] + nvisamp[w] + nt3phi[w]; i < nv2[w] + nt3amp[w] + nvisamp[w] + nt3phi[w] + nvisphi[w]; ++i)
-        chi2visphi[w] += res[w][i] * res[w][i];
-
-    if (nt3phi[w]>0)
-      for (i = nv2[w] + nt3amp[w] + nvisamp[w]; i < nv2[w] + nt3amp[w] + nvisamp[w] + nt3phi[w]; ++i)
-        chi2t3phi[w] += res[w][i] * res[w][i];
-
-    chi2 +=   chi2v2[w] +    chi2t3amp[w] + chi2visamp[w] + chi2visphi[w] + chi2t3phi[w];
+  //  #pragma omp simd reduction(+:temp1)
+  for (i = 0; i < nv2; ++i) {
+    temp1 += res[i] * res[i];
   }
-  return chi2;
+  *chi2v2 = temp1;
+
+  // #pragma omp simd reduction(+:temp2)
+  for (i = nv2; i < nv2 + nt3amp; ++i) {
+    temp2 += res[i] * res[i];
+  }
+
+  *chi2t3amp = temp2;
+
+  if (nvisamp > 0) {
+    //#pragma omp simd reduction(+:temp3)
+    for (i = nv2 + nt3amp; i < nv2 + nt3amp + nvisamp; ++i) {
+      temp3 += res[i] * res[i];
+    }
+
+    *chi2visamp = temp3;
+  }
+
+  if (nvisphi > 0) {
+    //#pragma omp simd reduction(+:temp4)
+    for (i = nv2 + nt3amp + nvisamp + nt3phi; i < nv2 + nt3amp + nvisamp + nt3phi + nvisphi; ++i) {
+      temp4 += res[i] * res[i];
+    }
+
+    *chi2visphi = temp4;
+  }
+
+  // #pragma omp simd reduction(+:temp5)
+  for (i = nv2 + nt3amp + nvisamp; i < nv2 + nt3amp + nvisamp + nt3phi; ++i) {
+    temp5 += res[i] * res[i];
+  }
+
+  *chi2t3phi = temp5;
+
+  return temp1 + temp2 + temp3 + temp4 + temp5;
 }
 
 static inline double dewrap(double diff) //__attribute__((always_inline))
@@ -2946,8 +2952,8 @@ bool read_commandline(int *argc, char **argv, bool *benchmark, bool *use_v2, boo
   return TRUE;
 }
 
-void print_diagnostics(int iChain, long current_iter, long* nvis, long* nv2, long* nt3, long* nt3phi, long* nt3amp, long* nvisamp, long* nvisphi, double* chi2v2,
-                       double* chi2t3amp, double* chi2t3phi, double* chi2visphi, double* chi2visamp, double lPosterior, double lPrior, double lLikelihood,
+void print_diagnostics(int iChain, long current_iter, long nvis, long nv2, long nt3, long nt3phi, long nt3amp, long nvisamp, long nvisphi, double chi2v2,
+                       double chi2t3amp, double chi2t3phi, double chi2visphi, double chi2visamp, double lPosterior, double lPrior, double lLikelihood,
                        const double *reg_param, const double *reg_value, const double *centroid_image_x, const double *centroid_image_y, long nelements,
                        int nwavr, long niter, const double *temperature, double prob_movement, const double *params, const double *stepsize,
                        unsigned int *burn_in_times) {
@@ -2961,20 +2967,19 @@ void print_diagnostics(int iChain, long current_iter, long* nvis, long* nv2, lon
   /* Print output to screen (or wherever stdout is piped to) */
 
   // compute reduced chi2
+  if (nv2 > 0)
+    chi2v2 /= (double)nv2;
+  if (nt3amp > 0)
+    chi2t3amp /= (double)nt3amp;
+  if (nt3phi > 0)
+    chi2t3phi /= (double)nt3phi;
+  if (nvisphi > 0)
+    chi2visphi /= (double)nvisphi;
+  if (nvisamp > 0)
+    chi2visamp /= (double)nvisamp;
 
   for (w = 0; w < nwavr; ++w) // diagnostics
   {
-
-    if (nv2[w] > 0)
-      chi2v2[w] /= (double)nv2[w];
-    if (nt3amp[w] > 0)
-      chi2t3amp[w] /= (double)nt3amp[w];
-    if (nt3phi[w] > 0)
-      chi2t3phi[w] /= (double)nt3phi[w];
-    if (nvisphi[w] > 0)
-      chi2visphi /= (double)nvisphi[w];
-    if (nvisamp[w] > 0)
-      chi2visamp[w] /= (double)nvisamp[w];
 
     if (nwavr > 1)
       diagnostics_used =
@@ -2982,16 +2987,16 @@ void print_diagnostics(int iChain, long current_iter, long* nvis, long* nv2, lon
     else
       diagnostics_used = snprintf(diagnostics, maxlength, "Chain: %d lPost:%8.1f lPrior:%8.1f lLike:%9.1f ", iChain, lPosterior, lPrior, lLikelihood);
 
-    if (nv2[w] > 0)
-      diagnostics_used += snprintf(diagnostics + diagnostics_used, maxlength - diagnostics_used, TEXT_COLOR_RED "V2:%5.2f " TEXT_COLOR_BLACK, chi2v2[w]);
-    if (nt3amp[w] > 0)
-      diagnostics_used += snprintf(diagnostics + diagnostics_used, maxlength - diagnostics_used, TEXT_COLOR_BLUE "T3A:%5.2f " TEXT_COLOR_BLACK, chi2t3amp[w]);
-    if (nt3phi[w] > 0)
-      diagnostics_used += snprintf(diagnostics + diagnostics_used, maxlength - diagnostics_used, TEXT_COLOR_GREEN "T3P:%5.2f " TEXT_COLOR_BLACK, chi2t3phi[w]);
-    if (nvisamp[w] > 0)
-      diagnostics_used += snprintf(diagnostics + diagnostics_used, maxlength - diagnostics_used, TEXT_COLOR_CYAN "VA:%5.2f " TEXT_COLOR_BLACK, chi2visamp[w]);
-    if (nvisphi[w] > 0)
-      diagnostics_used += snprintf(diagnostics + diagnostics_used, maxlength - diagnostics_used, TEXT_COLOR_MAGENTA "VP:%5.2f " TEXT_COLOR_BLACK, chi2visphi[w]);
+    if (nv2 > 0)
+      diagnostics_used += snprintf(diagnostics + diagnostics_used, maxlength - diagnostics_used, TEXT_COLOR_RED "V2:%5.2f " TEXT_COLOR_BLACK, chi2v2);
+    if (nt3amp > 0)
+      diagnostics_used += snprintf(diagnostics + diagnostics_used, maxlength - diagnostics_used, TEXT_COLOR_BLUE "T3A:%5.2f " TEXT_COLOR_BLACK, chi2t3amp);
+    if (nt3phi > 0)
+      diagnostics_used += snprintf(diagnostics + diagnostics_used, maxlength - diagnostics_used, TEXT_COLOR_GREEN "T3P:%5.2f " TEXT_COLOR_BLACK, chi2t3phi);
+    if (nvisamp > 0)
+      diagnostics_used += snprintf(diagnostics + diagnostics_used, maxlength - diagnostics_used, TEXT_COLOR_CYAN "VA:%5.2f " TEXT_COLOR_BLACK, chi2visamp);
+    if (nvisphi > 0)
+      diagnostics_used += snprintf(diagnostics + diagnostics_used, maxlength - diagnostics_used, TEXT_COLOR_MAGENTA "VP:%5.2f " TEXT_COLOR_BLACK, chi2visphi);
 
     // Print values of monospectral regularizers
     for (int k = 1; k < NREGULS - 2; k++) {
