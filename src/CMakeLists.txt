@@ -19,7 +19,11 @@ else()
 endif()
 
 set(CMAKE_BUILD_TYPE release)
-set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Ofast -march=native -mfpmath=sse -ftree-vectorize -ggdb -fno-omit-frame-pointer")
+set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Ofast -march=native -ftree-vectorize -ggdb -fno-omit-frame-pointer")
+CHECK_C_COMPILER_FLAG("-mfpmath=sse" COMPILER_SUPPORTS_SSE)
+if(COMPILER_SUPPORTS_SSE)
+    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -mfpmath=sse")
+endif()
 #set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -g -fno-omit-frame-pointer -O2") #Note: valgrind chokes on march=native for some platforms
 
 file(GLOB SOURCE *.h squeeze.c free_fits.c read_fits.c chkmalloc.c ../lib/oifitslib/src/oifitslib/exchange.h ../lib/oifitslib/src/oifitslib/free_fits.c ../lib/oifitslib/src/oifitslib/read_fits.c ../lib/oifitslib/src/oifitslib/chkmalloc.h ../lib/oifitslib/src/oifitslib/chkmalloc.c ../lib/oifitslib/src/oifitslib/alloc_fits.c )
