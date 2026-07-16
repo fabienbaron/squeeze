@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.20)
 
 project(squeeze
-  VERSION 2.8.0
+  VERSION 3.0.0
   DESCRIPTION "Image reconstruction for optical interferometry by MCMC"
   HOMEPAGE_URL "https://github.com/fabienbaron/squeeze"
   LANGUAGES C)

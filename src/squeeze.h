@@ -24,7 +24,7 @@
  */
 
 
-#define SQUEEZE_VERSION 2.8
+#define SQUEEZE_VERSION "3.0"
 
 // Minimization engines
 #define ENGINE_SIMULATED_ANNEALING 1

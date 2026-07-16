@@ -149,7 +149,7 @@ int main(int argc, char **argv) {
 
   atrous_set(2);
 
-  printf(TEXT_COLOR_RED "SQUEEZE - Version %1.1f\n" TEXT_COLOR_BLACK, SQUEEZE_VERSION);
+  printf(TEXT_COLOR_RED "SQUEEZE - Version %s\n" TEXT_COLOR_BLACK, SQUEEZE_VERSION);
 
   /* Initialize regularization parameters */
   for (i = 0; i < NREGULS; ++i)
