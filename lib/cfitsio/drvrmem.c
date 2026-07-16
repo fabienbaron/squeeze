@@ -145,7 +145,7 @@ int mem_create_comp(char *filename, int *handle)
             return(FILE_NOT_CREATED); 
         }
 
-#if MACHINE == ALPHAVMS || MACHINE == VAXVMS
+#if CFITSIO_MACHINE == ALPHAVMS || CFITSIO_MACHINE == VAXVMS
         /* specify VMS record structure: fixed format, 2880 byte records */
         /* but force stream mode access to enable random I/O access      */
         diskfile = fopen(filename, mode, "rfm=fix", "mrs=2880", "ctx=stm"); 
@@ -166,6 +166,9 @@ int mem_create_comp(char *filename, int *handle)
 
     if (status)
     {
+        if (diskfile != stdout) 
+          fclose(diskfile);  /* close the disk file */
+
         ffpmsg("failed to create empty memory file (mem_create_comp)");
         return(status);
     }
@@ -279,10 +282,11 @@ int mem_truncate(int handle, LONGLONG filesize)
 
         *(memTable[handle].memaddrptr) = ptr;
         *(memTable[handle].memsizeptr) = (size_t) (filesize);
+
+        memTable[handle].currentpos = filesize;
+        memTable[handle].fitsfilesize = filesize;
     }
 
-    memTable[handle].currentpos = filesize;
-    memTable[handle].fitsfilesize = filesize;
     return(0);
 }
 /*--------------------------------------------------------------------------*/
@@ -604,13 +608,16 @@ int mem_compress_open(char *filename, int rwmode, int *hdl)
         fseek(diskfile, 0, 2);            /* move to end of file */
         filesize = ftell(diskfile);       /* position = size of file */
         fseek(diskfile, -4L, 1);          /* move back 4 bytes */
-        fread(buffer, 1, 4L, diskfile);   /* read 4 bytes */
+        if (fread(buffer, 1, 4L, diskfile) != 4) {   /* read 4 bytes */
+            fclose(diskfile);
+            return(READ_ERROR);
+        }
 
         /* have to worry about integer byte order */
 	modulosize  = buffer[0];
 	modulosize |= buffer[1] << 8;
 	modulosize |= buffer[2] << 16;
-	modulosize |= buffer[3] << 24;
+	modulosize |= ((unsigned int)buffer[3]) << 24;
 
 /*
   the field ISIZE in the gzipped file header only stores 4 bytes and contains
@@ -649,13 +656,16 @@ int mem_compress_open(char *filename, int rwmode, int *hdl)
         /* the uncompressed file size is give at byte 22 the file */
 
         fseek(diskfile, 22L, 0);            /* move to byte 22 */
-        fread(buffer, 1, 4L, diskfile);   /* read 4 bytes */
+        if (fread(buffer, 1, 4L, diskfile) != 4) {   /* read 4 bytes */
+            fclose(diskfile);
+            return(READ_ERROR);
+        }
 
         /* have to worry about integer byte order */
 	modulosize  = buffer[0];
 	modulosize |= buffer[1] << 8;
 	modulosize |= buffer[2] << 16;
-	modulosize |= buffer[3] << 24;
+	modulosize |= ((unsigned int)buffer[3]) << 24;
         finalsize = modulosize;
 
         estimated = 0;  /* file size is known, not estimated */
@@ -942,8 +952,10 @@ int mem_rawfile_open(char *filename, int rwmode, int *hdl)
           dim[3] = strtol(cptr2+1, &cptr, 10);
 
           if (cptr && *cptr == ',')
+          {
             naxis = 5;
             dim[4] = strtol(cptr+1, &cptr2, 10);
+          }
         }
       }
     }
@@ -1235,6 +1247,37 @@ int mem_write(int hdl, void *buffer, long nbytes)
                maxvalue(memTable[hdl].fitsfilesize,
                         memTable[hdl].currentpos);
     return(0);
+}
+
+/*--------------------------------------------------------------------------*/
+int mem_zuncompress_and_write(int hdl, void *buffer, long nbytes)
+/*
+  uncompress input buffer, length nbytes and write bytes to current
+  position in file.  output buffer needs to be at position 0 to start.
+*/
+{
+  size_t newsize;
+  int status = 0;
+
+  if (memTable[hdl].currentpos != 0) {
+      ffpmsg("cannot append uncompressed data (mem_uncompress_and_write)");
+      return(WRITE_ERROR);
+  }
+
+  uncompress2mem_from_mem(buffer, nbytes,
+			  memTable[hdl].memaddrptr,
+			  memTable[hdl].memsizeptr,
+			  memTable[hdl].mem_realloc, 
+			  &newsize, &status);
+  
+  if (status) {
+    ffpmsg("unabled to uncompress memory file (mem_uncompress_and_write)");
+    return(WRITE_ERROR);
+  }
+
+  memTable[hdl].currentpos += newsize;
+  memTable[hdl].fitsfilesize = newsize;
+  return(0);
 }
 
 

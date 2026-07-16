@@ -53,6 +53,26 @@
 		Jacek Holeczek and Rene Brun for these suggestions. (KMCCARTY)
       Dec 2008  Added typedef for LONGLONG to support Borland compiler (WDP)
       Jan 2020  Added __attribute__((unused)) for GCC to prevent warnings (C. Markwardt)
+      Jan 2022  Changed H_CF_SPECIAL definition from 'unsigned' to 'size_t'.
+                This determines the type of the hidden length argument which
+                gets added to functions passing strings from Fortran to C.
+                This change was first required when testing Homebrew
+                compilers native to Mac/ARM Silicon. (C. Gordon)
+      Apr 2022  Made equivalent 'unsigned'/'size_t' change to STRING_cfKK(B)
+                definition.  This is required for passing strings from
+                C to Fortran.  To avoid duplication, defined an 'if' block
+                for setting new CF_STRLENTYPE variable.  H_CF_SPECIAL and
+                STRING_cfKK(B) are now set to this.
+      May 2022  Set ALL Mac/ARM platforms to 'size_t' for CF_STRLENTYPE
+                since Clang/Clang++ will not pass GNUC>7 test, yet its
+                (3rd-party) Fortran still needs this.
+      Jun 2025  The PROTOCCALLSFFUNn definitions were constructing their
+                function prototypes with an empty argument list.  GNU 
+                compilers following the C23 standard are no longer allowing
+                this.  New CF_MAKE_PARGST14 and <return_type>_cfMP definitions
+                were added to allow PROTOCCALLSFFUN14 to fill in the prototype
+                arguments (except for functions returning a STRING type).
+                (C. Gordon)
  *******/
 
 #ifndef __CFORTRAN__PCTYPE__UNUSED__
@@ -432,6 +452,19 @@ only C calling FORTRAN subroutines will work using K&R style.*/
 
 #define AcfCOMMA ,
 #define AcfCOLON ;
+
+
+/* Use CF_STRLENTYPE = size_t for all Fortran newer than GNU version 7.x.
+   Apple clang identifies itself as GNUC=4, but we want it to use size_t too.
+   Note that 2 assumptions are in play here:
+   1) Aside from clang, the C version (GNUC) also represents the version
+      of Fortran being used!
+   2) No one is pairing clang with gfortran older than v8.x anymore. */
+#if (defined(__GNUC__) && !defined(__clang__)) && __GNUC__ < 8
+#define  CF_STRLENTYPE       unsigned
+#else
+#define  CF_STRLENTYPE       size_t
+#endif
 
 /*-------------------------------------------------------------------------*/
 
@@ -877,7 +910,7 @@ typedef void (*cfCAST_FUNCTION)(CF_NULL_PROTO);
 #endif
 #define  LOGICAL_cfKK(B) DEFAULT_cfKK(B)
 #define PLOGICAL_cfKK(B) DEFAULT_cfKK(B)
-#define   STRING_cfKK(B) , unsigned B
+#define   STRING_cfKK(B) , CF_STRLENTYPE B
 #define  PSTRING_cfKK(B) STRING_cfKK(B)
 #define  STRINGV_cfKK(B) STRING_cfKK(B)
 #define PSTRINGV_cfKK(B) STRING_cfKK(B)
@@ -1701,7 +1734,7 @@ do{VVCF(T1,A1,B1)  VVCF(T2,A2,B2)  VVCF(T3,A3,B3)  VVCF(T4,A4,B4)  VVCF(T5,A5,B5
 #define   HCF(TN,I)         _(TN,_cfSTR)(3,H,cfCOMMA, H,_(C,I),0,0)
 #define  HHCF(TN,I)         _(TN,_cfSTR)(3,H,cfCOMMA,HH,_(C,I),0,0)
 #define HHHCF(TN,I)         _(TN,_cfSTR)(3,H,cfCOLON, H,_(C,I),0,0)
-#define  H_CF_SPECIAL       unsigned
+#define  H_CF_SPECIAL       CF_STRLENTYPE
 #define HH_CF_SPECIAL
 #define  DEFAULT_cfH(M,I,A)
 #define  LOGICAL_cfH(S,U,B)
@@ -2005,8 +2038,41 @@ static _Icf(2,U,F,CFFUN(UN),0)() {_(F,_cfE) _Icf(3,GZ,F,UN,LN) ABSOFT_cf1(F));_(
 /* HP/UX 9.01 cc requires the blank between '_Icf(3,G,T0,UN,LN) CCCF(T1,1,0)' */
 
 #ifndef __CF__KnR
+
+/* Beginning with the C23 standard, GNU gcc no longer allows PROTOCCALLSFFUN
+   to get away with empty argument lists for function prototypes (unless
+   the function actually takes no arguments). Apparently cfortran.h was
+   leaving the argument list empty because of the difficulties of determining
+   the actual argument list when the function returns a string (both the return
+   string and its length value may be added to the argument list in this case). 
+   This is just a partial fix which fills in the prototype argument lists if the
+   function does NOT return a string. (CG)
+*/
+#define     BYTE_cfMP(T1,T2,T3,T4,T5,T6,T7,T8,T9,TA,TB,TC,TD,TE) \
+ CFARGT14(NCF,KCF,_Z,T1,T2,T3,T4,T5,T6,T7,T8,T9,TA,TB,TC,TD,TE)
+#define     DOUBLE_cfMP(T1,T2,T3,T4,T5,T6,T7,T8,T9,TA,TB,TC,TD,TE) \
+ CFARGT14(NCF,KCF,_Z,T1,T2,T3,T4,T5,T6,T7,T8,T9,TA,TB,TC,TD,TE)
+#define     FLOAT_cfMP(T1,T2,T3,T4,T5,T6,T7,T8,T9,TA,TB,TC,TD,TE) \
+ CFARGT14(NCF,KCF,_Z,T1,T2,T3,T4,T5,T6,T7,T8,T9,TA,TB,TC,TD,TE)
+#define     INT_cfMP(T1,T2,T3,T4,T5,T6,T7,T8,T9,TA,TB,TC,TD,TE) \
+ CFARGT14(NCF,KCF,_Z,T1,T2,T3,T4,T5,T6,T7,T8,T9,TA,TB,TC,TD,TE)
+#define     LOGICAL_cfMP(T1,T2,T3,T4,T5,T6,T7,T8,T9,TA,TB,TC,TD,TE) \
+ CFARGT14(NCF,KCF,_Z,T1,T2,T3,T4,T5,T6,T7,T8,T9,TA,TB,TC,TD,TE)
+#define     LONG_cfMP(T1,T2,T3,T4,T5,T6,T7,T8,T9,TA,TB,TC,TD,TE) \
+ CFARGT14(NCF,KCF,_Z,T1,T2,T3,T4,T5,T6,T7,T8,T9,TA,TB,TC,TD,TE)
+#define     LONGLONG_cfMP(T1,T2,T3,T4,T5,T6,T7,T8,T9,TA,TB,TC,TD,TE) \
+ CFARGT14(NCF,KCF,_Z,T1,T2,T3,T4,T5,T6,T7,T8,T9,TA,TB,TC,TD,TE)
+#define     SHORT_cfMP(T1,T2,T3,T4,T5,T6,T7,T8,T9,TA,TB,TC,TD,TE) \
+ CFARGT14(NCF,KCF,_Z,T1,T2,T3,T4,T5,T6,T7,T8,T9,TA,TB,TC,TD,TE)
+#define     STRING_cfMP(T1,T2,T3,T4,T5,T6,T7,T8,T9,TA,TB,TC,TD,TE)  CF_NULL_PROTO
+ 
+#define CF_MAKE_PARGST14(T0,T1,T2,T3,T4,T5,T6,T7,T8,T9,TA,TB,TC,TD,TE) \
+_(T0,_cfMP)(T1,T2,T3,T4,T5,T6,T7,T8,T9,TA,TB,TC,TD,TE)
+
+/* end of C23 function prototype modification code */
+
 #define PROTOCCALLSFFUN14(T0,UN,LN,T1,T2,T3,T4,T5,T6,T7,T8,T9,TA,TB,TC,TD,TE)  \
- _(T0,_cfPU)(CFC_(UN,LN))(CF_NULL_PROTO); static _Icf(2,U,T0,CFFUN(UN),0)(     \
+ _(T0,_cfPU)(CFC_(UN,LN))(CF_MAKE_PARGST14(T0,T1,T2,T3,T4,T5,T6,T7,T8,T9,TA,TB,TC,TD,TE)); static _Icf(2,U,T0,CFFUN(UN),0)(     \
    CFARGT14FS(UCF,HCF,_Z,T1,T2,T3,T4,T5,T6,T7,T8,T9,TA,TB,TC,TD,TE) )          \
 {       CFARGT14S(VCF,T1,T2,T3,T4,T5,T6,T7,T8,T9,TA,TB,TC,TD,TE)    _(T0,_cfE) \
  CCF(LN,T1,1)  CCF(LN,T2,2)  CCF(LN,T3,3)  CCF(LN,T4,4)  CCF(LN,T5,5)          \

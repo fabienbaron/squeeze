@@ -1,8 +1,16 @@
-%{
 /************************************************************************/
 /*                                                                      */
 /*                       CFITSIO Lexical Parser                         */
 /*                                                                      */
+
+/* This specifies a thread-safe reentrant version of lex functions */
+%option reentrant
+/* This specifies CFITSIO-unique names for lexer functions */
+%option prefix="fits_parser_yy"
+/* This facilitates calling between the Bison parser and this lexer */
+%option bison-bridge
+
+%{
 /* This file is one of 3 files containing code which parses an          */
 /* arithmetic expression and evaluates it in the context of an input    */
 /* FITS file table extension.  The CFITSIO lexical parser is divided    */
@@ -58,15 +66,18 @@
 #include <stdlib.h>
 #endif
 #include "eval_defs.h"
+#include "eval_tab.h"
 
-ParseData gParse;     /* Global structure holding all parser information     */
+/* This is a shorthand accessor to get at the "extra" data inside the
+   lexer, which in our case is the lParse (ParseData) structure */
+#define yylParse (yyextra)
 
 /*****  Internal functions  *****/
 
-       int yyGetVariable( char *varName, YYSTYPE *varVal );
+       int fits_parser_yyGetVariable( ParseData *lParse, char *varName, FITS_PARSER_YYSTYPE *varVal );
 
-static int find_variable( char *varName );
-static int expr_read( char *buf, int nbytes );
+static int find_variable( ParseData *lParse, char *varName );
+static int expr_read( ParseData *lParse, char *buf, int nbytes );
 
 /*****  Definitions  *****/
 
@@ -111,10 +122,11 @@ static int expr_read( char *buf, int nbytes );
 */
 #undef YY_INPUT
 #define YY_INPUT(buf,result,max_size) \
-        if ( (result = expr_read( (char *) buf, max_size )) < 0 ) \
+        if ( (result = expr_read( yylParse, (char *) buf, max_size )) < 0 ) \
             YY_FATAL_ERROR( "read() in flex scanner failed" );
 
 %}
+
 bit		([bB][01xX]+)
 oct		([oO][01234567xX]+)
 hex		([hH][0123456789aAbBcCdDeEfFxX]+)
@@ -152,8 +164,8 @@ nl		\n
 		  while (yytext[len] == ' ')
 			len--;
                   len = len - 1;
-		  strncpy(yylval.str,&yytext[1],len);
-		  yylval.str[len] = '\0';
+		  strncpy(yylval->str,&yytext[1],len);
+		  yylval->str[len] = '\0';
 		  return( BITSTR );
 		}
 {oct}		{
@@ -163,7 +175,7 @@ nl		\n
                   len = strlen(yytext);
 		  if (len >= 256) {
 		    char errMsg[100];
-		    gParse.status = PARSE_SYNTAX_ERR;
+		    yylParse->status = PARSE_SYNTAX_ERR;
 		    strcpy (errMsg,"Bit string exceeds maximum length: '");
 		    strncat(errMsg, &(yytext[0]), 20);
 		    strcat (errMsg,"...'");
@@ -177,43 +189,73 @@ nl		\n
 		  }
                   tmpstring[len] = '\0';
                   bitstring[0] = '\0';
-		  len = 0;
-                  while ( tmpstring[len] != '\0')
+		  size_t bitlen = 0;
+		  size_t bitcap = sizeof(bitstring) - 1;
+		  int overflow = 0;
+		  for (len = 0; tmpstring[len] != '\0'; len++)
                        {
+			const char *chunk = NULL;
+			size_t chunk_len = 0;
 			switch ( tmpstring[len] )
 			      {
 			       case '0':
-					strcat(bitstring,OCT_0);
+					chunk = OCT_0;
+					chunk_len = sizeof(OCT_0) - 1;
 					break;
 			       case '1':
-					strcat(bitstring,OCT_1);
+					chunk = OCT_1;
+					chunk_len = sizeof(OCT_1) - 1;
 					break;
 			       case '2':
-					strcat(bitstring,OCT_2);
+					chunk = OCT_2;
+					chunk_len = sizeof(OCT_2) - 1;
 					break;
 			       case '3':
-					strcat(bitstring,OCT_3);
+					chunk = OCT_3;
+					chunk_len = sizeof(OCT_3) - 1;
 					break;
 			       case '4':
-					strcat(bitstring,OCT_4);
+					chunk = OCT_4;
+					chunk_len = sizeof(OCT_4) - 1;
 					break;
 			       case '5':
-					strcat(bitstring,OCT_5);
+					chunk = OCT_5;
+					chunk_len = sizeof(OCT_5) - 1;
 					break;
 			       case '6':
-					strcat(bitstring,OCT_6);
+					chunk = OCT_6;
+					chunk_len = sizeof(OCT_6) - 1;
 					break;
 			       case '7':
-					strcat(bitstring,OCT_7);
+					chunk = OCT_7;
+					chunk_len = sizeof(OCT_7) - 1;
 					break;
 			       case 'x':
 			       case 'X':
-					strcat(bitstring,OCT_X);
+					chunk = OCT_X;
+					chunk_len = sizeof(OCT_X) - 1;
 					break;
 			      }
-			len++;
+			if (chunk) {
+			   if (bitlen + chunk_len > bitcap) {
+			     char errMsg[100];
+			     yylParse->status = PARSE_SYNTAX_ERR;
+			     strcpy (errMsg,"Bit string exceeds maximum length: '");
+			     strncat(errMsg, &(yytext[0]), 20);
+			     strcat (errMsg,"...'");
+			     ffpmsg (errMsg);
+			     overflow = 1;
+			     break;
+			   }
+			   memcpy(bitstring + bitlen, chunk, chunk_len);
+			   bitlen += chunk_len;
+			   bitstring[bitlen] = '\0';
+			}
                        }
-                  strcpy( yylval.str, bitstring );
+                  if (overflow)
+		    yylval->str[0] = '\0';
+		  else
+                    strcpy( yylval->str, bitstring );
 		  return( BITSTR );
 		}
 {hex}		{
@@ -223,7 +265,7 @@ nl		\n
                   len = strlen(yytext);
 		  if (len >= 256) {
 		    char errMsg[100];
-		    gParse.status = PARSE_SYNTAX_ERR;
+		    yylParse->status = PARSE_SYNTAX_ERR;
 		    strcpy (errMsg,"Hex string exceeds maximum length: '");
 		    strncat(errMsg, &(yytext[0]), 20);
 		    strcat (errMsg,"...'");
@@ -237,74 +279,112 @@ nl		\n
 		  }
                   tmpstring[len] = '\0';
                   bitstring[0] = '\0';
-		  len = 0;
-                  while ( tmpstring[len] != '\0')
+		  size_t bitlen = 0;
+		  size_t bitcap = sizeof(bitstring) - 1;
+		  int overflow = 0;
+                  for (len = 0; tmpstring[len] != '\0'; len++)
                        {
+			const char *chunk = NULL;
+			size_t chunk_len = 0;
 			switch ( tmpstring[len] )
 			      {
 			       case '0':
-					strcat(bitstring,HEX_0);
+					chunk = HEX_0;
+					chunk_len = sizeof(HEX_0) - 1;
 					break;
 			       case '1':
-					strcat(bitstring,HEX_1);
+					chunk = HEX_1;
+					chunk_len = sizeof(HEX_1) - 1;
 					break;
 			       case '2':
-					strcat(bitstring,HEX_2);
+					chunk = HEX_2;
+					chunk_len = sizeof(HEX_2) - 1;
 					break;
 			       case '3':
-					strcat(bitstring,HEX_3);
+					chunk = HEX_3;
+					chunk_len = sizeof(HEX_3) - 1;
 					break;
 			       case '4':
-					strcat(bitstring,HEX_4);
+					chunk = HEX_4;
+					chunk_len = sizeof(HEX_4) - 1;
 					break;
 			       case '5':
-					strcat(bitstring,HEX_5);
+					chunk = HEX_5;
+					chunk_len = sizeof(HEX_5) - 1;
 					break;
 			       case '6':
-					strcat(bitstring,HEX_6);
+					chunk = HEX_6;
+					chunk_len = sizeof(HEX_6) - 1;
 					break;
 			       case '7':
-					strcat(bitstring,HEX_7);
+					chunk = HEX_7;
+					chunk_len = sizeof(HEX_7) - 1;
 					break;
 			       case '8':
-					strcat(bitstring,HEX_8);
+					chunk = HEX_8;
+					chunk_len = sizeof(HEX_8) - 1;
 					break;
 			       case '9':
-					strcat(bitstring,HEX_9);
+					chunk = HEX_9;
+					chunk_len = sizeof(HEX_9) - 1;
 					break;
 			       case 'a':
 			       case 'A':
-					strcat(bitstring,HEX_A);
+					chunk = HEX_A;
+					chunk_len = sizeof(HEX_A) - 1;
 					break;
 			       case 'b':
 			       case 'B':
-					strcat(bitstring,HEX_B);
+					chunk = HEX_B;
+					chunk_len = sizeof(HEX_B) - 1;
 					break;
 			       case 'c':
 			       case 'C':
-					strcat(bitstring,HEX_C);
+					chunk = HEX_C;
+					chunk_len = sizeof(HEX_C) - 1;
 					break;
 			       case 'd':
 			       case 'D':
-					strcat(bitstring,HEX_D);
+					chunk = HEX_D;
+					chunk_len = sizeof(HEX_D) - 1;
 					break;
 			       case 'e':
 			       case 'E':
-					strcat(bitstring,HEX_E);
+					chunk = HEX_E;
+					chunk_len = sizeof(HEX_E) - 1;
 					break;
 			       case 'f':
 			       case 'F':
-					strcat(bitstring,HEX_F);
+					chunk = HEX_F;
+					chunk_len = sizeof(HEX_F) - 1;
 					break;
 			       case 'x':
 			       case 'X':
-					strcat(bitstring,HEX_X);
+					chunk = HEX_X;
+					chunk_len = sizeof(HEX_X) - 1;
 					break;
 			      }
-			len++;
+			if (chunk) {
+			   if (bitlen + chunk_len > bitcap) {
+			     char errMsg[100];
+			     yylParse->status = PARSE_SYNTAX_ERR;
+			     strcpy (errMsg,"Hex string exceeds maximum length: '");
+			     strncat(errMsg, &(yytext[0]), 20);
+			     strcat (errMsg,"...'");
+			     ffpmsg (errMsg);
+			     overflow = 1;
+			     break;
+			   }
+			   memcpy(bitstring + bitlen, chunk, chunk_len);
+			   bitlen += chunk_len;
+			   bitstring[bitlen] = '\0';
+			}
                        }
 
-                  strcpy( yylval.str, bitstring );
+                  if (overflow)
+		    yylval->str[0] = '\0';
+		  else
+                    strcpy( yylval->str, bitstring );
 		  return( BITSTR );
 		}
 {bitconst}      {
@@ -313,7 +393,7 @@ nl		\n
 		  for (p = &(yytext[2]); *p; p++) {
 		    constval = (constval << 1) | (*p == '1');
 		  }
-		  yylval.lng = constval;
+		  yylval->lng = constval;
 		  return( LONG );
 		}
 {octconst}      {
@@ -322,7 +402,7 @@ nl		\n
 		  for (p = &(yytext[2]); *p; p++) {
 		    constval = (constval << 3) | (*p - '0');
 		  }
-		  yylval.lng = constval;
+		  yylval->lng = constval;
 		  return( LONG );
 		}
 {hexconst}      {
@@ -332,35 +412,35 @@ nl		\n
                     int v = (isdigit(*p) ? (*p - '0') : (*p - 'a' + 10));
                     constval = (constval << 4) | v;
 		  }
-		  yylval.lng = constval;
+		  yylval->lng = constval;
 		  return( LONG );
 		}
 
                   
 {integer}	{
-                  yylval.lng = atol(yytext);
+                  yylval->lng = atol(yytext);
 		  return( LONG );
 		}
 {boolean}	{
                   if ((yytext[0] == 't') || (yytext[0] == 'T'))
-		    yylval.log = 1;
+		    yylval->log = 1;
 		  else
-		    yylval.log = 0;
+		    yylval->log = 0;
 		  return( BOOLEAN );
 		}
 {real}		{
-                  yylval.dbl = atof(yytext);
+                  yylval->dbl = atof(yytext);
 		  return( DOUBLE );
 		}
 {constant}	{
                   if(        !fits_strcasecmp(yytext,"#PI") ) {
-		     yylval.dbl = (double)(4) * atan((double)(1));
+		     yylval->dbl = (double)(4) * atan((double)(1));
 		     return( DOUBLE );
 		  } else if( !fits_strcasecmp(yytext,"#E") ) {
-		     yylval.dbl = exp((double)(1));
+		     yylval->dbl = exp((double)(1));
 		     return( DOUBLE );
 		  } else if( !fits_strcasecmp(yytext,"#DEG") ) {
-		     yylval.dbl = ((double)4)*atan((double)1)/((double)180);
+		     yylval->dbl = ((double)4)*atan((double)1)/((double)180);
 		     return( DOUBLE );
 		  } else if( !fits_strcasecmp(yytext,"#ROW") ) {
 		     return( ROWREF );
@@ -370,14 +450,16 @@ nl		\n
 		     return( SNULLREF );
 		  } else {
                      int len; 
+		     int result;
                      if (yytext[1] == '$') {
                         len = strlen(yytext) - 3;
-                        yylval.str[0]     = '#';
-                        strncpy(yylval.str+1,&yytext[2],len);
-                        yylval.str[len+1] = '\0';
-                        yytext = yylval.str;
+                        yylval->str[0]     = '#';
+                        strncpy(yylval->str+1,&yytext[2],len);
+                        yylval->str[len+1] = '\0';
+                        yytext = yylval->str;
 		     }
-                     return( (*gParse.getData)(yytext, &yylval) );
+                     result = (*yylParse->getData)(yylParse, yytext, (yylval));
+		     return result;
                   }
                 }
 {string}	{
@@ -385,16 +467,16 @@ nl		\n
                   len = strlen(yytext) - 2;
 		  if (len >= MAX_STRLEN) {
 		    char errMsg[100];
-		    gParse.status = PARSE_SYNTAX_ERR;
+		    yylParse->status = PARSE_SYNTAX_ERR;
 		    strcpy (errMsg,"String exceeds maximum length: '");
 		    strncat(errMsg, &(yytext[1]), 20);
 		    strcat (errMsg,"...'");
 		    ffpmsg (errMsg);
 		    len = 0;
 		  } else {
-		    strncpy(yylval.str,&yytext[1],len);
+		    strncpy(yylval->str,&yytext[1],len);
 		  }
-		  yylval.str[len] = '\0';
+		  yylval->str[len] = '\0';
 		  return( STRING );
 		}
 {variable}	{
@@ -402,17 +484,17 @@ nl		\n
 
                  if (yytext[0] == '$') {
 		    len = strlen(yytext) - 2;
-		    strncpy(yylval.str,&yytext[1],len);
-		    yylval.str[len] = '\0';
-		    yytext = yylval.str;
+		    strncpy(yylval->str,&yytext[1],len);
+		    yylval->str[len] = '\0';
+		    yytext = yylval->str;
 		 } 
-		 type = yyGetVariable(yytext, &yylval);
+		 type = fits_parser_yyGetVariable(yylParse, yytext, (yylval));
 		 return( type );
 		}
 {function}	{
                   char *fname;
 		  int len=0;
-                  fname = &yylval.str[0];
+                  fname = &(yylval->str[0]);
 		  while( (fname[len]=toupper(yytext[len])) ) len++;
 
                   if(      FSTRCMP(fname,"BOX(")==0 
@@ -426,6 +508,12 @@ nl		\n
 
                   else if( FSTRCMP(fname,"GTIFILTER(")==0 )
                      return( GTIFILTER );
+
+                  else if( FSTRCMP(fname,"GTIOVERLAP(")==0 )
+                     return( GTIOVERLAP );
+
+                  else if( FSTRCMP(fname,"GTIFIND(")==0 )
+                     return( GTIFIND );
 
                   else if( FSTRCMP(fname,"REGFILTER(")==0 )
                      return( REGFILTER );
@@ -453,7 +541,7 @@ nl		\n
 .		{ return( yytext[0] ); }
 %%
 
-int yywrap()
+int yywrap(yyscan_t scanner)
 {
   /* MJT -- 13 June 1996
      Supplied for compatibility with
@@ -473,40 +561,40 @@ int yywrap()
    buffer can be supported. PDW - 28 Feb 1998
 */
 
-static int expr_read(char *buf, int nbytes)
+static int expr_read(ParseData *lParse, char *buf, int nbytes)
 {
  int n;
  
  n = 0;
- if( !gParse.is_eobuf ) {
+ if( !lParse->is_eobuf ) {
      do {
-        buf[n++] = gParse.expr[gParse.index++];
-       } while ((n<nbytes)&&(gParse.expr[gParse.index] != '\0'));
-     if( gParse.expr[gParse.index] == '\0' ) gParse.is_eobuf = 1;
+        buf[n++] = lParse->expr[lParse->index++];
+       } while ((n<nbytes)&&(lParse->expr[lParse->index] != '\0'));
+     if( lParse->expr[lParse->index] == '\0' ) lParse->is_eobuf = 1;
  }
  buf[n] = '\0';
  return(n);
 }
 
-int yyGetVariable( char *varName, YYSTYPE *thelval )
+int fits_parser_yyGetVariable( ParseData *lParse, char *varName, FITS_PARSER_YYSTYPE *thelval )
 {
    int varNum, type;
    char errMsg[MAXVARNAME+25];
 
-   varNum = find_variable( varName );
+   varNum = find_variable( lParse, varName );
    if( varNum<0 ) {
-      if( gParse.getData ) {
-	 type = (*gParse.getData)( varName, thelval );
+      if( lParse->getData ) {
+	 type = (*lParse->getData)( lParse, varName, thelval );
       } else {
 	 type = pERROR;
-	 gParse.status = PARSE_SYNTAX_ERR;
+	 lParse->status = PARSE_SYNTAX_ERR;
 	 strcpy (errMsg,"Unable to find data: ");
 	 strncat(errMsg, varName, MAXVARNAME);
 	 ffpmsg (errMsg);
       }
    } else {
       /*  Convert variable type into expression type  */
-      switch( gParse.varData[ varNum ].type ) {
+      switch( lParse->varData[ varNum ].type ) {
       case LONG:
       case DOUBLE:   type =  COLUMN;  break;
       case BOOLEAN:  type = BCOLUMN;  break;
@@ -514,7 +602,7 @@ int yyGetVariable( char *varName, YYSTYPE *thelval )
       case BITSTR:   type =  BITCOL;  break;
       default:
 	 type = pERROR;
-	 gParse.status = PARSE_SYNTAX_ERR;
+	 lParse->status = PARSE_SYNTAX_ERR;
 	 strcpy (errMsg,"Bad datatype for data: ");
 	 strncat(errMsg, varName, MAXVARNAME);
 	 ffpmsg (errMsg);
@@ -525,13 +613,13 @@ int yyGetVariable( char *varName, YYSTYPE *thelval )
    return( type );
 }
 
-static int find_variable(char *varName)
+static int find_variable(ParseData *lParse, char *varName)
 {
    int i;
  
-   if( gParse.nCols )
-      for( i=0; i<gParse.nCols; i++ ) {
-         if( ! fits_strncasecmp(gParse.varData[i].name,varName,MAXVARNAME) ) {
+   if( lParse->nCols )
+      for( i=0; i<lParse->nCols; i++ ) {
+         if( ! fits_strncasecmp(lParse->varData[i].name,varName,MAXVARNAME) ) {
             return( i );
          }
       }

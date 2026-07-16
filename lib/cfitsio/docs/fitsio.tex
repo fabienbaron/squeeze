@@ -2,7 +2,7 @@
 \input{html.sty}
 \htmladdtonavigation
    {\begin{rawhtml}
- <A HREF="http://heasarc.gsfc.nasa.gov/docs/software/fitsio/fitsio.html">FITSIO Home</A>
+ <A HREF="https://heasarc.gsfc.nasa.gov/docs/software/fitsio/fitsio.html">FITSIO Home</A>
     \end{rawhtml}}
 %\oddsidemargin=0.25in
 \oddsidemargin=0.00in
@@ -32,7 +32,7 @@
 \medskip
 \medskip
 \begin{center}
-{\Large Version 3.0\\}
+{\Large Version 4.6.4\\}
 \end{center}
 \bigskip
 \vskip 2.5cm
@@ -47,7 +47,7 @@ USA}
 \vfill
 \bigskip
 \begin{center}
-{\Large April 2016\\}
+{\Large Apr 2026\\}
 \end{center}
 \vfill
 \end{titlepage}
@@ -93,25 +93,23 @@ contributions that resulted in many of the new features that appeared
 in v2.0 of CFITSIO.
 
 The latest version of the CFITSIO source code, documentation, and
-example programs are available on the World-Wide Web or via anonymous
-ftp from:
+example programs are available on the World-Wide Web from:
 
 \begin{verbatim}
-        http://heasarc.gsfc.nasa.gov/fitsio
-        ftp://legacy.gsfc.nasa.gov/software/fitsio/c
+        https://heasarc.gsfc.nasa.gov/docs/software/fitsio/
 \end{verbatim}
 \newpage
 Any questions, bug reports, or suggested enhancements related to the CFITSIO
 package should be sent to the FTOOLS Help Desk at the HEASARC:
 
 \begin{verbatim}
-        http://heasarc.gsfc.nasa.gov/cgi-bin/ftoolshelp
+        https://heasarc.gsfc.nasa.gov/cgi-bin/ftoolshelp
 \end{verbatim}
 
 This User's Guide assumes that readers already have a general
 understanding of the definition and structure of FITS format files.
 Further information about FITS formats is available from the FITS Support
-Office at {\tt http://fits.gsfc.nasa.gov}.  In particular, the
+Office at {\tt https://fits.gsfc.nasa.gov/}.  In particular, the
 'FITS Standard' gives the authoritative definition of the FITS data
 format.  Other documents available at that Web site
 provide additional historical background
@@ -127,8 +125,8 @@ that can be used to manipulate and analyze FITS format files.
 Fv and FTOOLS are available from their respective Web sites at:
 
 \begin{verbatim}
-        http://fv.gsfc.nasa.gov
-        http://heasarc.gsfc.nasa.gov/ftools
+        https://fv.gsfc.nasa.gov
+        https://heasarc.gsfc.nasa.gov/docs/software/ftools/
 \end{verbatim}
 
 
@@ -319,18 +317,12 @@ absence of leading zeros, or 3 digit exponents in numbers,
 which can be ignored).
 
 The Fortran wrappers in CFITSIO may be tested with the testf77
-program.  On Unix systems the fortran compilation and link command
-may be called 'f77' or 'g77', depending on the system.
+program.  On Unix systems the Fortran compiler is typically
+called 'gfortran'.
+-
 
 \begin{verbatim}
-   % f77 -o testf77 testf77.f -L. -lcfitsio -lnsl -lsocket
- or
-   % f77 -f -o testf77 testf77.f -L. -lcfitsio    (under SUN O/S)
- or
-   % f77 -o testf77 testf77.f -Wl,-L. -lcfitsio -lm -lnsl -lsocket (HP/UX)
- or
-   % g77 -o testf77 -s testf77.f -lcfitsio -lcc_dynamic -lncurses (Mac OS-X)
-
+   % gfortran -o testf77 testf77.f -L. -lcfitsio -lz -lcurl
    % testf77 > testf77.lis
    % diff testf77.lis testf77.out
    % cmp testf77.fit testf77.std
@@ -559,7 +551,7 @@ rely on the CFORTRAN macro developed by Burkhard Burow.
 The syntax used by CFITSIO for filtering or binning input FITS files is
 based on ideas developed for the AXAF Science Center Data Model by
 Jonathan McDowell, Antonella Fruscione, Aneta Siemiginowska and Bill
-Joye. See http://heasarc.gsfc.nasa.gov/docs/journal/axaf7.html for
+Joye. See https://heasarc.gsfc.nasa.gov/docs/journal/axaf7.html for
 further description of the AXAF Data Model.
 
 The file decompression code were taken directly from the gzip (GNU zip)
@@ -704,7 +696,7 @@ TFORMn -- the datatype of the column
 TUNITn -- the physical units of the column (optional)
 \end{itemize}
 
-Users should refer to the FITS Support Office at {\tt http://fits.gsfc.nasa.gov}
+Users should refer to the FITS Support Office at {\tt https://fits.gsfc.nasa.gov/}
 for further information about the FITS format and related software
 packages.
 
@@ -1240,10 +1232,10 @@ that this convention is being used, then the actual keyword name
 equals sign marks the end of the keyword name and is followed by the
 usual value and comment fields just as in standard FITS keywords.
 Further details of this convention are described at
-http://fits.gsfc.nasa.gov/registry/hierarch\_keyword.html
+https://fits.gsfc.nasa.gov/registry/hierarch\_keyword.html
 and in Section 4.4 of the ESO Data Interface Control Document that
 is linked to from
-http://archive.eso.org/cms/tools-documentation/eso-data-interface-control.html.
+https://archive.eso.org/cms/tools-documentation/eso-data-interface-control.html.
 
 This convention allows a broader range of keyword names
 than is allowed by the FITS Standard.  Here are more examples
@@ -1545,7 +1537,7 @@ on FITS files.  New users should start with these subroutines and
 then, as needed, explore the more advance routines described in
 the following chapter to perform more complex or specialized operations.
 
-A right arrow symbol ($>$) is used to separate the input parameters from
+A right arrow symbol (\verb+>+) is used to separate the input parameters from
 the output parameters in the  definition of each routine.  This symbol
 is not actually part of the calling sequence.  Note that
 the status parameter is both an input and an output parameter
@@ -1561,7 +1553,8 @@ used by these interface routines.
 \begin{description}
 \item[1 ] Return the current version number of the fitsio library.
     The version number will be incremented with each new
-   release of CFITSIO.
+   release of CFITSIO. The 3 fields of the version string M.xx.yy
+   are converted to a float as: M + .01*xx + .0001*yy.
 \end{description}
 
 \begin{verbatim}
@@ -3307,11 +3300,13 @@ contiguous rectangular subset of pixels within the n-dimensional array.
 \end{verbatim}
 
 \begin{description}
-\item[5 ]Put elements into the data array
+\item[5 ]Put elements into the data array.  The FTPPR[]LL routines
+      accept 64-bit integers for fpixel and nelements.
 \end{description}
 
 \begin{verbatim}
         FTPPR[BIJKED](unit,group,fpixel,nelements,values, > status)
+        FTPPR[BIJKED]LL(unit,group,fpixelll,nelementsll,values, > status)
 \end{verbatim}
 
 \begin{description}
@@ -3320,29 +3315,35 @@ contiguous rectangular subset of pixels within the n-dimensional array.
    integer FITS arrays, the null value defined by the previous call to FTPNUL
    will be substituted;  for floating point FITS arrays (BITPIX = -32
    or -64) then the special IEEE NaN (Not-a-Number) value will be
-  substituted.
+  substituted.  The FTPPN[]LL routines accept 64-bit integers for 
+  fpixel and nelements.
 \end{description}
 
 \begin{verbatim}
         FTPPN[BIJKED](unit,group,fpixel,nelements,values,nullval > status)
+        FTPPN[BIJKED]LL(unit,group,fpixelll,nelementsll,values,nullval > status)
 \end{verbatim}
 
 \begin{description}
-\item[7 ]Set data array elements as undefined
+\item[7 ]Set data array elements as undefined.  FTPPRULL accepts 64-bit integers
+         for fpixel and nelements.
 \end{description}
 
 \begin{verbatim}
         FTPPRU(unit,group,fpixel,nelements, > status)
+        FTPPRULL(unit,group,fpixelll,nelementsll, > status)
 \end{verbatim}
 
 \begin{description}
 \item[8 ] Get elements from the data array.  Undefined array elements will be
     returned with a value = nullval, unless nullval = 0 in which case no
-   checks for undefined pixels will be performed.
+   checks for undefined pixels will be performed.  FTGPV[]LL accepts
+   64-bit integers for fpixel and nelements.
 \end{description}
 
 \begin{verbatim}
         FTGPV[BIJKED](unit,group,fpixel,nelements,nullval, > values,anyf,status)
+        FTGPV[BIJKED]LL(unit,group,fpixelll,nelementsll,nullval, > values,anyf,status)
 \end{verbatim}
 
 \begin{description}
@@ -4229,7 +4230,7 @@ external WCS library.  Several recommended libraries are:
 
 More information about the WCS keyword conventions and links to all of
 these WCS libraries can be found on the FITS Support Office web site at
-http://fits.gsfc.nasa.gov under the WCS link.
+https://fits.gsfc.nasa.gov under the WCS link.
 
 The functions provided in these external WCS libraries will need access to
 the  WCS information contained in the FITS file headers.  One convenient
@@ -5299,7 +5300,7 @@ This modified version is available in rootd subdirectory
 in the CFITSIO ftp area at
 
 \begin{verbatim}
-      ftp://legacy.gsfc.nasa.gov/software/fitsio/c/root/rootd.tar.gz.
+      https://heasarc.gsfc.nasa.gov/FTP/software/fitsio/c/root/rootd.tar.gz
 \end{verbatim}
 
 This small server is started either by inetd when a client requests a
@@ -6170,6 +6171,8 @@ log(negative), log10(negative), arccos(.gt. 1), arcsin(.gt. 1).
     "round down to int"  floor(x)   "round up to int"      ceil(x)
     "exponential"        exp(x)     "square root"          sqrt(x)
     "natural log"        log(x)     "common log"           log10(x)
+    "error function"     erf(x)     "complement of erf"    erfc(x)
+    "gamma function"     gamma(x)
     "modulus"            x % y      
     "bitwise AND"        x & y      "bitwise OR"           x | y
     "bitwise XOR"        x ^^ y     (bitwise operators are 32-bit int only)
@@ -6269,7 +6272,7 @@ usage. Also, the integer to real casts values to double precision:
            0b01001 binary integer
 \end{verbatim}
     Note that integer constants are only allowed to be 32-bit, i.e.
-    between -2^(31) and +2^(31).  Integer constants may be used in any
+    between -2\^(31) and +2\^(31).  Integer constants may be used in any
     arithmetic expression where an integer would be appropriate.  Thus,
     they are distinct from bitmasks (which may be of arbitrary length,
     allow the "wildcard" bit, and may only be used in logical
@@ -6294,13 +6297,15 @@ usage. Also, the integer to real casts values to double precision:
 \begin{verbatim}
          "a null value?"              ISNULL(x)
          "define a value for null"    DEFNULL(x,y)
+         "declare certain value null" SETNULL(x,y)
 \end{verbatim}
-    The former
-    returns a boolean value of TRUE if the  argument  x  is  NULL.   The
-    later  "defines"  a  value  to  be  substituted  for NULL values; it
+    ISNULL(x)
+    returns a boolean value of TRUE if the  argument  x  is  NULL. DEFNULL(x,y)
+    "defines"  a  value  to  be  substituted  for NULL values; it
     returns the value of x if x is not NULL, otherwise  it  returns  the
-    value of y.
-
+    value of y.  SETNULL(x,y) allows NULL values to be inserted into
+    a variable; if x==y, a NULL value is returned; otherwise y is returned
+    (x and y must be numerical, and x must be a scalar).
 
 \subsection{Bit Masks}
 
@@ -6354,7 +6359,7 @@ usage. Also, the integer to real casts values to double precision:
     (0) bits in the mask, as shown in the second expression above.
 
     Bit wise AND, OR and NOT operations are  also  possible  on  two  or
-    more  bit  fields  using  the  '\&'(AND),  '$|$'(OR),  and the '!'(NOT)
+    more  bit  fields  using  the  '\verb+&+'(AND),  '\verb+|+'(OR),  and the '\verb+!+'(NOT)
     operators. All of these operators result in a bit  field  which  can
     then be used with the equal operator. For example:
 
@@ -6386,14 +6391,17 @@ usage. Also, the integer to real casts values to double precision:
     thus  results  in  another vector of boolean values indicating which
     elements of the two vectors are equal.
 
-    Eight functions are available that operate on a vector and return a
-    scalar result:
+    Several functions are available that operate on a vector.  All but
+    the last two return a scalar result:
 
 \begin{verbatim}
     "minimum"      MIN(V)          "maximum"               MAX(V)
     "average"      AVERAGE(V)      "median"                MEDIAN(V)
     "summation"    SUM(V)          "standard deviation"    STDDEV(V)
     "# of values"  NELEM(V)        "# of non-null values"  NVALID(V)
+    "# axes"       NAXIS(V)        "axis dimension"        NAXES(V,n)
+    "axis pos'n"   AXISELEM(V,n)   "vector element pos'n"  ELEMENTNUM(V)
+                                   "promote to array"      ARRAY(X,d)
 \end{verbatim}
     where V represents the name of a vector column or a manually
     constructed vector using curly brackets as described below.  The
@@ -6401,6 +6409,16 @@ usage. Also, the integer to real casts values to double precision:
     computing the result.  The STDDEV() function computes the sample
     standard deviation, i.e. it is proportional to 1/SQRT(N-1) instead
     of 1/SQRT(N), where N is NVALID(V).
+
+    The NAXIS(V) function returns the number of axes of the vector,
+    for example a 2D array would be NAXIS(V) == 2.  The NAXES(V,n)
+    function returns the dimension of axis n, for example a 4x2 array
+    would have NAXES(V,1) == 4.  The ELEMENTNUM(V) and AXISELEM(V,n)
+    functions return vectors of the same size as the input vector V.
+    ELEMENTNUM(V) returns the vector element position for each element
+    in the vector, starting from 1 in each row.  The AXISELEM(V,n)
+    function is similar but returns the element position of axis n
+    only.
 
     The SUM function literally sums all  the elements in x,  returning a
     scalar value.   If x  is  a  boolean  vector, SUM returns the number
@@ -6417,6 +6435,25 @@ usage. Also, the integer to real casts values to double precision:
 
     which will return TRUE if all elements  of  COL1  are  greater  than
     their corresponding elements in COL2.
+
+    The ARRAY(X,d) function promotes scalar value X to a vector (or
+    array) table element.  X may be any scalar-valued item, including
+    a column, an expression, or a constant value.  The resulting
+    vector or array will have the same scalar value replicated into
+    each element position.  This may be a useful way to construct
+    large arrays without using the cumbersome \{vector\} notation. The
+    dimensions of the new array are given by the second argument, d.
+    d can either be a single constant integer value, or a vector of up
+    to five dimensions of the form \{Nx,Ny,...\}.  Thus, ARRAY(TIME,4)
+    would promote TIME to be a 4-vector, and ARRAY(0, \{2,3,1\}) would
+    construct an array of all 0's with dimensions $2\times 3\times 1$.
+
+    A second form of ARRAY(X,d) can be used where X is a vector or
+    array, and the dimensions d merely change the dimensions of X
+    without changing the total number of vector elements.  This is a
+    way to re-dimension an existing array.  For example,
+    ARRAY(\{1,2,3,4\},{2,2}) would transform the 4-vector into a
+    $2\times 2$ array.
 
     To  specify  a  single  element  of  a  vector, give the column name
     followed by  a  comma-separated  list  of  coordinates  enclosed  in
@@ -6456,22 +6493,28 @@ usage. Also, the integer to real casts values to double precision:
     element in the constructed vector.
 
 
-\subsection{Good Time Interval Filtering}
+\subsection{Good Time Interval Filtering and Calculation}
 
-    A common filtering method involves selecting rows which have a time
-    value which lies within what is called a Good Time Interval or GTI.
-    The time intervals are defined in a separate FITS table extension
-    which contains 2 columns giving the start and stop time of each
-    good interval.  The filtering operation accepts only those rows of
-    the input table which have an associated time which falls within
-    one of the time intervals defined in the GTI extension. A high
-    level function, gtifilter(a,b,c,d), is available which evaluates
-    each row of the input table  and returns TRUE  or FALSE depending
-    whether the row is inside or outside the  good time interval.  The
+    There are two functions for filtering and calculating based
+    on Good Time Intervals, or GTIs.  GTIs are commonly used to
+    express fragmented time ranges that are not easy to express with a
+    single start and stop time.  The time intervals are defined in a
+    FITS table extension which contains 2 columns giving the
+    start and stop time of each good interval.
+
+    A common filtering method involves selecting rows which have a
+    time value which lies within any GTI.  The gtifilter() filtering
+    operation accepts only those rows of the input table which have an
+    associated time which falls within one of the time intervals
+    defined in a separate GTI extension.  gtifilter(a,b,c,d) evaluates
+    each row of the input table and returns TRUE or FALSE depending
+    whether the row is inside or outside the good time interval.  The
     syntax is
 
 \begin{verbatim}
       gtifilter( [ "gtifile" [, expr [, "STARTCOL", "STOPCOL" ] ] ] )
+    or
+      gtifilter( [ 'gtifile' [, expr [, 'STARTCOL', 'STOPCOL' ] ] ] )
 \end{verbatim}
     where  each "[]" demarks optional parameters.  Note that  the quotes
     around the gtifile and START/STOP column are required.  Either single
@@ -6509,6 +6552,77 @@ usage. Also, the integer to real casts values to double precision:
     searches   for   TIMEZERO/I/F   keywords  in  the  current  and  GTI
     extensions, applying a relative time offset, if necessary.
 
+    The related function, gtifind(a,b,c,d), is similar to gtifilter()
+    but instead of returning true/false, gtifind() returns the GTI
+    number that brackets the requested time sample.  gtifind() returns
+    the row number in the GTI table that matches the time sample, or
+    -1 if the time sample is not within any GTI.  gtifind() is
+    particularly useful when entries in a table must be categorized by
+    which GTI the fall within.  For example, if events in an event
+    list must be separated by good time interval.  The results of
+    gtifind() can be used with histogram binning techniques to bin an
+    event list by which GTI.
+    
+\begin{verbatim}
+      gtifind( "gtifile" , expr [, "STARTCOL", "STOPCOL" ] )
+\end{verbatim}
+
+    The requirements for specifying the gtifile are the same as for
+    gtifilter() as described above.  Like gtifilter(), the expr is
+    the time-like expression and is optional (defaulting to TIME).
+    The start and stop columns default to START and STOP.
+
+    The function, gtioverlap(a,b,c,d,e), computes the overlap
+    between a user-requested time range and the entries in a GTI.  The
+    cases of no overlap, partial overlap, or overlap of many GTIs
+    within the user requested range are handled.  gtioverlap() is very
+    useful for calculating exposure times and fractional exposures of
+    individual time bins, say for a light curve.  The syntax of
+    gtioverlap() is
+
+\begin{verbatim}
+      gtioverlap( "gtifile" , startExpr, stopExpr [, "STARTCOL", "STOPCOL" ] )
+    or
+      gtioverlap( 'gtifile' , startExpr, stopExpr [, 'STARTCOL', 'STOPCOL' ] )
+\end{verbatim}
+
+    The requirements for specifying the gtifile are the same as for
+    gtifilter() as described above.  Unlike gtifilter(), the startExpr
+    and stopExpr are not optional.  startExpr provides a start of the
+    user requested time interval.  startExpr is typically TIME, but
+    can be any valid expression.  Likewise, stopExpr provides the stop
+    of the user requested time interval, and can be an expression.
+    For example, for a light curve with a TIME column and time bin
+    size of 1.0 seconds, the expression
+
+\begin{verbatim}
+      gtioverlap('gtifile',TIME,TIME+1.0)
+\end{verbatim}
+
+    would calculate the amount of overlap exposure time between each
+    one second time bin and the GTI in 'gtifile'.  In this case the
+    time bin is assumed to begin at the time specified by TIME and end
+    1 second later.  Neither startExpr nor stopExpr are required to be
+    constant, and a light curve is not required to have a constant bin
+    size.  For tables, the overlap is calculated for each entry in the
+    table.
+
+    It is also possible to calculate a single overlap value, which
+    would typically be placed in a keyword.  For example, a way to to
+    compute the total overlap exposure of a file whose TIME column is
+    bounded by the keywords TSTART and TSTOP, overlapping with the
+    specified GTI, would be
+
+\begin{verbatim}
+      #EXPOSURE = gtioverlap('gtifile',#TSTART,#TSTOP)
+\end{verbatim}
+
+    The \verb+#EXPOSURE+ syntax with a leading \verb+#+ ensures that the
+    requested values are treated as keywords.  Otherwise, a column
+    named EXPOSURE will be created with the (constant) exposure value
+    in each entry.  
+
+
 
 \subsection{Spatial Region Filtering}
 
@@ -6532,7 +6646,7 @@ usage. Also, the integer to real casts values to double precision:
     provided with these programs for more details on the syntax used in
     the region files.  The FITS region file format is defined in a document
     available from the FITS Support Office at
-    http://fits.gsfc.nasa.gov/ registry/ region.html
+    https://fits.gsfc.nasa.gov/registry/region.html
 
     In its simplest form, (e.g., regfilter("region.reg") ) the
     coordinates in the default 'X' and 'Y' columns will be used to
@@ -6750,13 +6864,28 @@ axes, respectively.  In cases where the column name could be confused
 with an arithmetic expression, enclose the column name in parentheses to
 force the name to be interpreted literally.
 
-Each column name may be followed by an equals sign and then the lower
-and upper range of the histogram, and the size of the histogram bins,
-separated by colons.  Spaces are allowed before and after the equals
-sign but not within the 'min:max:binsize' string.  The min, max and
-binsize values may be integer or floating point numbers, or they may be
-the names of keywords in the header of the table.  If the latter, then
-the value of that keyword is substituted into the expression.
+In addition to binning by a FITS column, any arbitrary calculator
+expression may be specified as well.  Usage of this form would appear
+as:
+
+\begin{verbatim}
+ [bin  Xcol(arbitrary expression)=min:max:binsize, ... ]
+\end{verbatim}
+
+The column name must still be specified, and is used to label
+coordinate axes of the resulting image.  The expression appears
+immediately after the name, enclosed in parentheses.  The expression
+may use any combination of columns, keywords, functions and constants
+and allowed by the CFITSIO calculator.
+
+The column name (and optional expression) may be followed by an equals
+sign and then the lower and upper range of the histogram, and the size
+of the histogram bins, separated by colons.  Spaces are allowed before
+and after the equals sign but not within the 'min:max:binsize' string.
+The min, max and binsize values may be integer or floating point
+numbers, or they may be the names of keywords in the header of the
+table.  If the latter, then the value of that keyword is substituted
+into the expression.
 
 Default values for the min, max and binsize quantities will be
 used if not explicitly given in the binning expression as shown
@@ -6780,6 +6909,13 @@ values in the column for the histogram min and max values.  The default
 binsize will be set to 1, or (max - min) / 10., whichever is smaller,
 so that the histogram will have at least 10 bins along each axis.
 
+Please note that if explicit min and max values (or TLMINn/TLMAXn keywords)
+are not present, then CFITSIO must check every value of the binned quantity
+in advance to determine the binning limits.  This is especially relevant 
+for binning expressions, which must be evaluated multiple times to determine
+the limits of the expression.  Thus, it is always advisable to specify 
+min and max limits where possible.
+
 A shortcut notation is allowed if all the columns/axes have the same
 binning specification.  In this case all the column names may be listed
 within parentheses, followed by the (single) binning specification, as
@@ -6797,13 +6933,18 @@ incremented the value of the appropriated bin in the histogram.  If the
 weighting factor is not specified, then the default weight = 1 is
 assumed.  The weighting factor may be a constant integer or floating
 point number, or the name of a keyword containing the weighting value.
-Or the weighting factor may be the name of a table column in which case
+The weighting factor may also be the name of a table column in which case
 the value in that column, on a row by row basis, will be used.
+It may also be an expression, enclosed in parenthesis, in which case
+the weighting value will be evaluated for each binned row and applied
+accordingly.
 
 In some cases, the column or keyword may give the reciprocal of the
 actual weight value that is needed.  In this case, precede the weight
 keyword or column name by a slash '/' to tell CFITSIO to use the
-reciprocal of the value when constructing the histogram.
+reciprocal of the value when constructing the histogram.  An expression,
+enclosed in parentheses, may also appear after the slash, to
+indicate the reciprocal value of the expression.
 
 For  complex or commonly  used  histograms, one  can also  place its
 description  into  a  text  file and  import   it  into  the binning
@@ -6837,6 +6978,22 @@ ignored and may be used to add comments into the file.
                                        of the PHA column for the X axis,
                                        and 1000 bins in the range
                                        8000. to 8100. for the Y axis.
+
+    [bin pha, gti_num(gtifind())=1:2:1] - a 2-D image, where PHA is the
+                                       X axis and the Y axis is an expression
+                                       which evaluates to the GTI number, 
+                                       as determined using the
+                                       GTIFIND() function.
+
+    [bin time=0:4000:2000, HR( (LC2/LC1).lt.1.5 ? 1 : 2 )=1:2:1] - a 2-D
+                                       histogram which determines the number
+                                       of samples in two time bins between 0 and
+                                       4000 and separating hardness ratio, 
+                                       evaluated as (LC2/LC1), between less than
+                                       1.5 or greater than 1.5.  The ?: 
+                                       conditional function is used to decide
+                                       less (or greater) than 1.5 and assign
+                                       HR bin 1 or 2.
 
     [bin @binFilter.txt]             - Use the contents of the text file
                                        binFilter.txt for the binning

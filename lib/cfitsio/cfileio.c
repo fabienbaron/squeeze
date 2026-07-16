@@ -10,11 +10,13 @@
 #include <ctype.h>
 #include <errno.h>
 #include <stddef.h>  /* apparently needed to define size_t */
-#include "fitsio2.h"
-#include "group.h"
+#include <limits.h>
 #ifdef CFITSIO_HAVE_CURL
   #include <curl/curl.h>
 #endif
+#undef TBYTE
+#include "fitsio2.h"
+#include "group.h"
 
 #define MAX_PREFIX_LEN 20  /* max length of file type prefix (e.g. 'http://') */
 #define MAX_DRIVERS 31     /* max number of file I/O drivers */
@@ -296,6 +298,7 @@ int ffomem(fitsfile **fptr,      /* O - FITS file pointer                   */
 
         ffclos(*fptr, status);
         *fptr = 0;              /* return null file pointer */
+        return(*status);
     }
 
     /* ---------------------------------------------------------- */
@@ -418,7 +421,9 @@ int ffeopn(fitsfile **fptr,      /* O - FITS file pointer                   */
 {
     int hdunum, naxis = 0, thdutype, gotext=0;
     char *ext, *textlist;
+    #ifdef _REENTRANT
     char *saveptr;
+    #endif
   
     if (*status > 0)
         return(*status);
@@ -578,7 +583,9 @@ int ffopen(fitsfile **fptr,      /* O - FITS file pointer                   */
     char *url;
     double minin[4], maxin[4], binsizein[4], weight;
     int imagetype, naxis = 1, haxis, recip;
+    long *naxes=0;
     int skip_null = 0, skip_image = 0, skip_table = 0, open_disk_file = 0;
+    int no_primary_data = 0, groupval=0;
     char colname[4][FLEN_VALUE];
     char errmsg[FLEN_ERRMSG];
     char *hdtype[3] = {"IMAGE", "TABLE", "BINTABLE"};
@@ -1022,8 +1029,31 @@ move2hdu:
       if (hdunum == 1) {
 
         fits_get_img_dim(*fptr, &naxis, status);
+        if (naxis) {
+           naxes = (long *)malloc(naxis*sizeof(long));
+           fits_get_img_size(*fptr, naxis, naxes, status);
+           for (ii = 0; ii < naxis; ii++)
+           {
+              if (naxes[ii] == 0)
+              {
+                 if (ii == 0)
+                 {
+                   /* NAXIS1=0 could be a random group indicator */
+                   tstatus = 0;
+                   ffmaky(*fptr, 2, status);
+                   if (ffgkyl(*fptr, "GROUPS", &groupval, 0, &tstatus))
+                      no_primary_data = 1;  /* GROUPS keyword not found */
+                 }
+                 else
+                    no_primary_data = 1;
+              }
+           }
+           free(naxes);
+        }
+        else
+           no_primary_data = 1;
 
-        if (naxis == 0 || skip_image) /* skip primary array */
+        if (no_primary_data == 1 || skip_image) /* skip primary array */
         {
           while(1) 
           {
@@ -1306,6 +1336,7 @@ move2hdu:
  
     if (*binspec)
     {
+       char **exprs = 0;
        if (*histfilename  && !(*pixfilter) )
            strcpy(outfile, histfilename); /* the original outfile name */
        else
@@ -1313,16 +1344,20 @@ move2hdu:
                                          /* if not already copied the file */ 
 
        /* parse the binning specifier into individual parameters */
-       ffbins(binspec, &imagetype, &haxis, colname, 
-                          minin, maxin, binsizein, 
-                          minname, maxname, binname,
-                          &weight, wtcol, &recip, status);
-
+       ffbinse(binspec, &imagetype, &haxis, colname, 
+	       minin, maxin, binsizein, 
+	       minname, maxname, binname,
+	       &weight, wtcol, &recip, &(exprs), status);
+       
        /* Create the histogram primary array and open it as the current fptr */
        /* This will close the table that was used to create the histogram. */
-       ffhist2(fptr, outfile, imagetype, haxis, colname, minin, maxin,
-              binsizein, minname, maxname, binname,
-              weight, wtcol, recip, rowselect, status);
+       ffhist2e(fptr, outfile, imagetype, haxis, 
+		colname, exprs, minin, maxin, binsizein, 
+		minname, maxname, binname,
+		weight, wtcol, (exprs?exprs[4]:0),
+		recip, rowselect, status);
+
+       if (exprs) free(exprs);
 
        if (rowselect)
           free(rowselect);
@@ -1498,8 +1533,6 @@ int fits_already_open(fitsfile **fptr, /* I/O - FITS file pointer       */
     char oldextspec[FLEN_FILENAME], oldoutfile[FLEN_FILENAME];
     char oldrowfilter[FLEN_FILENAME];
     char oldbinspec[FLEN_FILENAME], oldcolspec[FLEN_FILENAME];
-    char cwd[FLEN_FILENAME];
-    char tmpStr[FLEN_FILENAME];
     char tmpinfile[FLEN_FILENAME]; 
     
     *isopen = 0;
@@ -1708,7 +1741,7 @@ int fits_is_this_a_copy(char *urltype) /* I - type of file */
      iscopy = 1;    /* copied file using ftp protocol */
   else if (!strncmp(urltype, "gsiftp", 6) )
      iscopy = 1;    /* copied file using gsiftp protocol */
-  else if (!strncpy(urltype, "stdin", 5) )
+  else if (!strncmp(urltype, "stdin", 5) )
      iscopy = 1;    /* piped stdin has been copied to memory */
   else
      iscopy = 0;    /* file is not known to be a copy */
@@ -1736,6 +1769,38 @@ static int find_quote(char **string)
     }
     return(1);  /* opps, didn't find the closing character */
 }
+
+/*--------------------------------------------------------------------------*/
+char *fits_find_match_delim(char *string, char delim)
+/*
+  Find matching delimiter, respecting quoting and (potentially nested) parentheses
+  
+  char *string - null-terminated string to be searched for delimiter
+  char delim - single delimiter to search for (one of '")]} )
+
+  returns: pointer to character after delimiter, or 0 if not found
+*/
+{
+  char *tstr = string;
+  int retval = 0;
+
+  if (!string) return 0;
+  switch (delim) {
+  case '\'': retval = find_quote(&tstr); break;
+  case '"':  retval = find_doublequote(&tstr); break;
+  case '}':  retval = find_curlybracket(&tstr); break;
+  case ']':  retval = find_bracket(&tstr); break;
+  case ')':  retval = find_paren(&tstr); break;
+  default: return 0; /* Invalid delimeter, return failure */
+  }
+
+  /* Delimeter not found, return failure */
+  if (retval) return 0;
+
+  /* Delimeter was found, return next position */
+  return (tstr);
+}
+
 /*--------------------------------------------------------------------------*/
 static int find_doublequote(char **string)
 
@@ -2081,9 +2146,11 @@ int ffedit_columns(
 	       Note no leading '#'
 	    */
 	    } else if (clause1[0] && clause1[0] != '#' &&
-		ffgcno(*fptr, CASEINSEN, clause1, &colnum, status) <= 0)
+		       ((ffgcno(*fptr, CASEINSEN, clause1, &colnum, status) <= 0) ||
+			*status == COL_NOT_UNIQUE))
             {
                 /* a column with this name exists, so try to delete it */
+	        *status = 0; /* Clear potential status=COL_NOT_UNIQUE */
                 if (ffdcol(*fptr, colnum, status) > 0)
                 {
                     ffpmsg("failed to delete column in input file:");
@@ -2278,6 +2345,7 @@ int ffedit_columns(
                       ffpmsg("error: column name is too long (ffedit_columns):");
                       if( file_expr ) free( file_expr );
 		      if (clause) free(clause);
+                      if (colindex) free(colindex);
                       free(tstbuff);
                       *status=URL_PARSE_ERROR;
 		      return (*status);
@@ -2301,7 +2369,7 @@ int ffedit_columns(
 
               /* look for matching column */
               ffgcno(*fptr, CASEINSEN, colname, &testnum, status);
-
+	      
               while (*status == COL_NOT_UNIQUE) 
               {
                  /* the column name contained wild cards, and it */
@@ -2381,6 +2449,7 @@ int ffedit_columns(
                       ffpmsg("error: column name syntax is too long (ffedit_columns):");
                       if( file_expr ) free( file_expr );
 		      if (clause) free(clause);
+                      if (colindex) free(colindex);
                       free(tstbuff);
                       *status=URL_PARSE_ERROR;
 		      return (*status);
@@ -3279,11 +3348,15 @@ int fits_copy_image_section(
        lpixels[ii] = smax;
        incs[ii] = sinc;
 
-       if (smin <= smax)
-           outnaxes[ii] = (smax - smin + sinc) / sinc;
-       else
-           outnaxes[ii] = (smin - smax + sinc) / sinc;
-
+       LONGLONG lllength = labs(smax - smin)/sinc + 1;
+       if (lllength > LONG_MAX)
+       {
+          ffpmsg("image range exceeds LONG_MAX limit");
+          ffpmsg(expr);
+          return(*status = NUM_OVERFLOW);          
+       }
+       outnaxes[ii] = (long)lllength;
+       
        /* modify the NAXISn keyword */
        fits_make_keyn("NAXIS", ii + 1, keyname, status);
        fits_modify_key_lng(newptr, keyname, outnaxes[ii], NULL, status);
@@ -3404,27 +3477,15 @@ int fits_copy_image_section(
 
     minrow = fpixels[1];
     maxrow = lpixels[1];
-    if (minrow > maxrow) {
-        nrowiter = (minrow - maxrow + incs[1]) / incs[1];
-    } else {
-        nrowiter = (maxrow - minrow + incs[1]) / incs[1];
-    }
+    nrowiter = labs(maxrow - minrow)/incs[1] + 1;
 
     minslice = fpixels[2];
     maxslice = lpixels[2];
-    if (minslice > maxslice) {
-        nsliceiter = (minslice - maxslice + incs[2]) / incs[2];
-    } else {
-        nsliceiter = (maxslice - minslice + incs[2]) / incs[2];
-    }
+    nsliceiter = labs(maxslice - minslice)/incs[2] + 1;
 
     mincube = fpixels[3];
     maxcube = lpixels[3];
-    if (mincube > maxcube) {
-        ncubeiter = (mincube - maxcube + incs[3]) / incs[3];
-    } else {
-        ncubeiter = (maxcube - mincube + incs[3]) / incs[3];
-    }
+    ncubeiter = labs(maxcube - mincube)/incs[3] + 1;
 
     firstpix = 1;
     for (kiter = 0; kiter < ncubeiter; kiter++)
@@ -3971,7 +4032,7 @@ int ffinit(fitsfile **fptr,      /* O - FITS file pointer                   */
     int ii, driver, slen, clobber = 0;
     char *url;
     char urltype[MAX_PREFIX_LEN], outfile[FLEN_FILENAME];
-    char tmplfile[FLEN_FILENAME], compspec[80];
+    char tmplfile[FLEN_FILENAME], compspec[FLEN_FILENAME];
     int handle, create_disk_file = 0;
 
     *fptr = 0;              /* initialize null file pointer, */
@@ -4356,7 +4417,7 @@ int fits_init_cfitsio(void)
     {
       printf ("\n!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!\n");
       printf(" Byteswapping is not being done correctly on this system.\n");
-      printf(" Check the MACHINE and BYTESWAPPED definitions in fitsio2.h\n");
+      printf(" Check the CFITSIO_MACHINE and BYTESWAPPED definitions in fitsio2.h\n");
       printf(" Please report this problem to the CFITSIO developers.\n");
       printf(  "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!\n");
       FFUNLOCK;
@@ -5468,6 +5529,7 @@ int ffifile2(char *url,       /* input filename */
         {
             if (ptr2-ptr1+3 >= MAX_PREFIX_LEN)
             {
+               free(infile);
                ffpmsg("Name of urltype is too long.");
                return(*status = URL_PARSE_ERROR);
             }
@@ -5545,6 +5607,7 @@ int ffifile2(char *url,       /* input filename */
                 if (infilex) {
 
                     if (strlen(ptr1) > FLEN_FILENAME - 1) {
+                        free(infile);
                         ffpmsg("Name of file is too long.");
                         return(*status = URL_PARSE_ERROR);
                     }
@@ -6119,11 +6182,12 @@ int ffifile2(char *url,       /* input filename */
                     return(*status = URL_PARSE_ERROR);
             }
 
-            strcpy(binspec, ptr1 + 1);       
-            ptr2 = strchr(binspec, ']');
+            strcpy(binspec, ptr1 + 1);
+	    ptr2 = fits_find_match_delim(binspec, ']');
 
             if (ptr2)      /* terminate the binning filter */
             {
+	        --ptr2;    /* points beyond delimeter, so rewind by 1 */
                 *ptr2 = '\0';
 
                 if ( *(--ptr2) == ' ')  /* delete trailing spaces */
@@ -6139,9 +6203,16 @@ int ffifile2(char *url,       /* input filename */
         }
 
         /* delete the binning spec from the row filter string */
-        ptr2 = strchr(ptr1, ']');
-        strcpy(tmpstr, ptr2+1);  /* copy any chars after the binspec */
-        strcpy(ptr1, tmpstr);    /* overwrite binspec */
+	ptr2 = fits_find_match_delim(ptr1+1, ']');
+	if (ptr2) {
+	  strcpy(tmpstr, ptr2);    /* copy any chars after the binspec */
+	  strcpy(ptr1, tmpstr);    /* overwrite binspec */
+	} else {
+	  ffpmsg("input file URL is missing closing bracket ']'");
+	  ffpmsg(rowfilter);
+	  free(infile);
+	  return(*status = URL_PARSE_ERROR);  /* error, no closing ] */
+	}
     }
 
     /* --------------------------------------------------------- */
@@ -6429,7 +6500,7 @@ int ffifile2(char *url,       /* input filename */
 	  if (*ptr3 == '@') hasAt = 1;
 
 	  /* Check for overflow; add extra 4 characters if we have pre-existing expression */
-  	  if (strlen(rowfilterx) + (ptr2-ptr1 + (*rowfilterx)?4:0) > FLEN_FILENAME - 1) {
+  	  if (strlen(rowfilterx) + (ptr2-ptr1-1) + ((*rowfilterx)?4:0) > FLEN_FILENAME - 1) {
 	      free(infile);
 	      return(*status = URL_PARSE_ERROR);
 	  }
@@ -7058,7 +7129,7 @@ int ffexts(char *extspec,
             return(*status = URL_PARSE_ERROR);
         }
 
-	if (ptr2 - ptr1 > FLEN_FILENAME - 1)
+	if (ptr2 - ptr1 > FLEN_VALUE - 1)
 	{
             return(*status = URL_PARSE_ERROR); 
         }
@@ -7071,7 +7142,7 @@ int ffexts(char *extspec,
 
 
         ptr1 = strchr(ptr2, ')');
-        if (!ptr2)
+        if (!ptr1)
         {
             ffpmsg("illegal specification of image in table cell in input URL:");
             ffpmsg(" missing closing ')' character in row expression");
@@ -7316,7 +7387,6 @@ int fits_get_token(char **ptr,
 {
     char *loc, tval[73];
     int slen;
-    double dval;
     
     *token = '\0';
 
@@ -7341,9 +7411,9 @@ int fits_get_token(char **ptr,
 	        /*  The C language does not support a 'D'; replace with 'E' */
 	        if ((loc = strchr(tval, 'D'))) *loc = 'E';
 
-	        dval =  strtod(tval, &loc);
+	        strtod(tval, &loc);
 	    } else {
-	        dval =  strtod(token, &loc);
+	        strtod(token, &loc);
  	    }
 
 	    /* check for read error, or junk following the value */
@@ -7371,7 +7441,6 @@ int fits_get_token2(char **ptr,
 {
     char *loc, tval[73];
     int slen;
-    double dval;
     
     if (*status)
         return(0);
@@ -7403,9 +7472,9 @@ int fits_get_token2(char **ptr,
 	        /*  The C language does not support a 'D'; replace with 'E' */
 	        if ((loc = strchr(tval, 'D'))) *loc = 'E';
 
-	        dval =  strtod(tval, &loc);
+	        strtod(tval, &loc);
 	    } else {
-	        dval =  strtod(*token, &loc);
+	        strtod(*token, &loc);
  	    }
 
 	    /* check for read error, or junk following the value */

@@ -79,7 +79,7 @@ int ffgcls( fitsfile *fptr,   /* I - FITS file pointer                       */
     long ii, jj;
     tcolumn *colptr;
     char message[FLEN_ERRMSG], *carray, keyname[FLEN_KEYWORD];
-    char cform[20], dispfmt[20], tmpstr[400], *flgarray, tmpnull[80];
+    char cform[20], dispfmt[FLEN_VALUE], tmpstr[400], *flgarray, tmpnull[80];
     unsigned char byteval;
     float *earray;
     double *darray, tscale = 1.0;
@@ -567,7 +567,7 @@ int ffgcls( fitsfile *fptr,   /* I - FITS file pointer                       */
       {
            if (tcode == TBIT)
            {
-               byteval = (char) darray[ii];
+               byteval = (unsigned char) darray[ii];
 
                for (ll=0; ll < 8; ll++)
                {
@@ -622,7 +622,7 @@ int ffgcdw( fitsfile *fptr,   /* I - FITS file pointer                       */
 {
     tcolumn *colptr;
     char *cptr;
-    char message[FLEN_ERRMSG], keyname[FLEN_KEYWORD], dispfmt[20];
+    char message[FLEN_ERRMSG], keyname[FLEN_KEYWORD], dispfmt[FLEN_VALUE];
     int tcode, hdutype, tstatus, scaled;
     double tscale;
 

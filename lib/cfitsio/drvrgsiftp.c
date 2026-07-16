@@ -23,6 +23,7 @@ static int gsiftpopen = 0;
 static int global_offset = 0;
 static int free_gsiftp_tmp=0;
 static int gsiftp_get(char *filename, FILE **gsiftpfile, int num_streams);
+static int gsiftp_put(char *filename, FILE **gsiftpfile, int num_streams);
 
 static globus_mutex_t lock;
 static globus_cond_t cond;
@@ -38,10 +39,9 @@ static void signal_handler(int sig);
 int gsiftp_init(void)
 {
 
-  if (getenv("GSIFTP_TMPFILE")) {
-    gsiftp_tmpfile = getenv("GSIFTP_TMPFILE");
-  } else {
+  if (!(gsiftp_tmpfile = getenv("GSIFTP_TMPFILE"))) {
     strncpy(gsiftp_tmpdir, "/tmp/gsiftp_XXXXXX", sizeof gsiftp_tmpdir);
+    gsiftp_tmpdir[sizeof gsiftp_tmpdir - 1] = '\0'; // Ensure NUL-termination of string
     if (mkdtemp(gsiftp_tmpdir) == NULL) {
         ffpmsg("Cannot create temporary directory!");
         return (FILE_NOT_OPENED);
@@ -90,8 +90,10 @@ int gsiftp_open(char *filename, int rwmode, int *handle)
   FILE *gsiftpfile;
   int num_streams;
 
-  if (getenv("GSIFTP_STREAMS")) {
-    num_streams = (int)getenv("GSIFTP_STREAMS");
+  char * num_streams_str = getenv("GSIFTP_STREAMS");
+  if (num_streams_str) {
+    num_streams = atoi(num_streams_str);
+    if (num_streams < 1) num_streams = 1;
   } else {
     num_streams = 1;
   }
@@ -160,8 +162,10 @@ int gsiftp_flush(int handle)
   FILE *gsiftpfile;
   int num_streams;
 
-  if (getenv("GSIFTP_STREAMS")) {
-    num_streams = (int)getenv("GSIFTP_STREAMS");
+  char * num_streams_str = getenv("GSIFTP_STREAMS");
+  if (num_streams_str) {
+    num_streams = atoi(num_streams_str);
+    if (num_streams < 1) num_streams = 1;
   } else {
     num_streams = 1;
   }
@@ -217,9 +221,9 @@ int gsiftp_write(int hdl, void *buffer, long nbytes)
 int gsiftp_close(int handle)
 {
     unlink(gsiftp_tmpfile);
-    
-    if (gsiftp_tmpdir)
-        rmdir(gsiftp_tmpdir);
+
+    if (gsiftp_tmpdir[0] != '\0')
+      rmdir(gsiftp_tmpdir);
 
     return file_close(handle);
 }
@@ -254,7 +258,7 @@ static void data_cb_read( void * 			user_arg,
     else {
         FILE* fd = (FILE*) user_arg;
         int rc = fwrite(buffer, 1, length, fd);
-        if (ferror(fd)) {
+        if (ferror(fd) || rc != length) {
             printf("Read error in function data_cb_read; errno = %d\n", errno);
             return;
         }
@@ -417,7 +421,6 @@ int gsiftp_put(char *filename, FILE **gsiftpfile, int num_streams)
     globus_ftp_control_parallelism_t   	parallelism;
     globus_ftp_control_layout_t		layout;
     globus_byte_t * 			buffer;
-    globus_size_t buffer_length = sizeof(buffer);
     globus_result_t 			result;
     globus_ftp_client_restart_marker_t	restart;
     globus_ftp_control_type_t 		filetype;
