@@ -1,32 +1,42 @@
-cmake_minimum_required(VERSION 3.0)
-project(squeeze C)
+# squeeze.c is a unity build: it #includes extract_oifits.c, regularizations.c
+# and models/modelcode.c directly, so it is the only translation unit here.
+add_executable(squeeze squeeze.c)
 
-# Compile with C11 support.
-include(CheckCCompilerFlag)
-CHECK_C_COMPILER_FLAG("-std=c11" COMPILER_SUPPORTS_C11)
-if(COMPILER_SUPPORTS_C11)
-    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -std=c11")
-else()
-    message(STATUS "The compiler ${CMAKE_C_COMPILER} has no C11 support. Please use a different C compiler.")
+target_link_libraries(squeeze PRIVATE oitable rngstreams m)
+
+if(OpenMP_C_FOUND)
+  target_link_libraries(squeeze PRIVATE OpenMP::OpenMP_C)
 endif()
 
-# Compile with OpenMP support
-find_package(OpenMP)
-if (OPENMP_FOUND)
-    set (CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${OpenMP_C_FLAGS}")
-else()
-    message(STATUS "The compiler ${CMAKE_C_COMPILER} has no OpenMP support. Please use a different C compiler if you want to use OpenMP capabilities.")
+# ---------------------------------------------------------------------------
+# Optimisation
+# ---------------------------------------------------------------------------
+# Release already implies -O3. We add fp-contract (FMA) and vectorisation, but
+# deliberately NOT -Ofast/-ffast-math: that enables -ffinite-math-only, under
+# which the compiler assumes NaN/Inf cannot occur and folds the isnan()/isinf()
+# checks in extract_oifits.c to false -- silently letting flagged OIFITS points
+# into the chi2. See docs in Readme.md.
+target_compile_options(squeeze PRIVATE
+  $<$<C_COMPILER_ID:GNU,Clang,AppleClang,IntelLLVM>:
+    -ffp-contract=fast
+    -ftree-vectorize
+    -ggdb
+    -fno-omit-frame-pointer>)
+
+if(SQUEEZE_NATIVE_ARCH)
+  include(CheckCCompilerFlag)
+  check_c_compiler_flag("-march=native" HAVE_MARCH_NATIVE)
+  if(HAVE_MARCH_NATIVE)
+    target_compile_options(squeeze PRIVATE -march=native)
+  else()
+    # Apple Silicon / some ARM toolchains use -mcpu=native instead.
+    check_c_compiler_flag("-mcpu=native" HAVE_MCPU_NATIVE)
+    if(HAVE_MCPU_NATIVE)
+      target_compile_options(squeeze PRIVATE -mcpu=native)
+    else()
+      message(STATUS "Neither -march=native nor -mcpu=native supported; using generic tuning.")
+    endif()
+  endif()
 endif()
 
-set(CMAKE_BUILD_TYPE release)
-set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Ofast -march=native -mfpmath=sse -ftree-vectorize -ggdb -fno-omit-frame-pointer")
-#set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -g -fno-omit-frame-pointer -O2") #Note: valgrind chokes on march=native for some platforms
-
-file(GLOB SOURCE *.h squeeze.c free_fits.c read_fits.c chkmalloc.c ../lib/oifitslib/src/oifitslib/exchange.h ../lib/oifitslib/src/oifitslib/free_fits.c ../lib/oifitslib/src/oifitslib/read_fits.c ../lib/oifitslib/src/oifitslib/chkmalloc.h ../lib/oifitslib/src/oifitslib/chkmalloc.c ../lib/oifitslib/src/oifitslib/alloc_fits.c )
-
-# Now add the binary
-add_executable(squeeze ${SOURCE})
-
-target_link_libraries(squeeze m pthread ${CMAKE_CURRENT_SOURCE_DIR}/../lib/cfitsio/libcfitsio.a ${CMAKE_CURRENT_SOURCE_DIR}/../lib/rngstreams/src/.libs/librngstreams.a)   
-
-
+install(TARGETS squeeze RUNTIME DESTINATION bin)

@@ -1,4 +1,10 @@
-As of Spring 2014, OSX Mavericks still does not support OpenMP by default.
-To compile a multicore version of squeeze, please install gcc-4.8 or later
-using your favorite package manager (fink, macports, homebrew...). 
-Then type "xcode-select --install" and select gcc as a compiler.
+Requirements: cmake >= 3.20, a C11 compiler with OpenMP (gcc, clang/LLVM, icx).
+
+    git submodule update --init      # pulls OIFITSlib
+    cmake -B build
+    cmake --build build -j
+
+The binary is written to ./bin/squeeze.
+
+See Readme.md section 2 for build options and platform notes (in particular
+OpenMP on macOS, where Apple's bundled clang lacks the OpenMP runtime).

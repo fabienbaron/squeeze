@@ -3,7 +3,7 @@
 ## 1. Introduction
 SQUEEZE is an image reconstruction for optical interferometry. It is designed to image complex astrophysical sources, while (optionally) modeling them simultaneously with analytic models. SQUEEZE is based on Markov Chain Monte-Carlo (MCMC) exploration of the imaging probability space, and reconstructs images and associated error bars from standard OIFITS data. SQUEEZE leverages the Open Multi-Processing (OpenMP) application programming interface to implement simulated annealing and parallel tempering, in the hope of avoiding the local minima better than classic gradient-based image reconstruction software. Another key difference is that SQUEEZE can reconstruct images using non-convex regularizers, e.g. the l0 norm for true compressed sensing.
 
-SQUEEZE is developed by Pr Fabien Baron of Georgia State University and distributed under an open source (GPL v3) license. If you encounter bugs or if you have specific requests for additional features, models, or other enhancements, please send an email to Fabien Baron (baron@chara.gsu.edu).
+SQUEEZE is developed by Pr Fabien Baron of Georgia State University and distributed under an open source (GPL v3) license. If you encounter bugs or if you have specific requests for additional features, models, or other enhancements, please send an email to Fabien Baron (fbaron@gsu.edu).
 
 Main features of SQUEEZE:
 
@@ -36,42 +36,27 @@ SQUEEZE is designed to be cross-platform compatible. It has been
 tested on several variants of GNU/Linux and on Mac OSX. Test on
 additional platforms are most welcomed.
 
-SQUEEZE requires the [git](http://git-scm.com) and [cmake](http://www.cmake.org) packages to be installed on your machine.
+SQUEEZE requires [git](http://git-scm.com) and [cmake](http://www.cmake.org)
+(version 3.20 or later) to be installed on your machine.
 
 SQUEEZE requires your compiler to be compatible with the C11 and
 [OpenMP](http://openmp.org) standards. These are supported by gcc, the
-Intel Compiler, the clang/LLVM compiler, but may not be natively
-available on your platform yet (e.g. Mac OSX).
+Intel Compiler, and clang/LLVM. An OpenMP-capable compiler is required if you
+want to use parallel tempering or parallel annealing; without one SQUEEZE still
+builds, but runs single-threaded.
 
-#### 2.1.1 Installing gcc on OSX
+#### 2.1.1 OpenMP on macOS
 
-SQUEEZE includes all necessary libraries but an OpenMP-capable
-compiler is required if you want to use parallel tempering or parallel
-annealing.
-
-Note1: though newer clang versions available for GNU/Linux do support OpenMP, OSX's default one does not at the moment.
-
-Note2: the "gcc binary" included in OSX is actually nothing more than a hard link to the clang compiler.
-
-We recommend you install gcc 4.9 from homebrew. You will need to install homebrew, then type:
+Apple's bundled clang does not ship the OpenMP runtime (and the "gcc" binary on
+macOS is just a hard link to clang). Install a real gcc or LLVM's OpenMP via
+homebrew:
 ```
-brew install gcc --without-multilib
+brew install gcc          # or: brew install libomp
 ```
-
-Before using the cmake command above, you will have to set the default
-cmake compiler to be the homebrew one.
-If you use the bash shell:
+then point cmake at it, e.g.:
 ```
-export CC=/usr/local/bin/gcc-4.9
-export CXX=/usr/local/bin/g++-4.9
+cmake -B build -DCMAKE_C_COMPILER=$(brew --prefix)/bin/gcc-14
 ```
-For tsch:
-```
-setenv CC /usr/local/bin/gcc-4.9
-setenv CXX /usr/local/bin/g++-4.9
-```
-
-Note: if you are not sure which shell you have, you may type 'echo $SHELL'.
 
 ### 2.2 Installing SQUEEZE
 
@@ -84,14 +69,35 @@ which will create a squeeze subdirectory and download the SQUEEZE source into it
 git submodule update --init
 ```
 
+Then build SQUEEZE by typing:
+```
+cd squeeze
+cmake -B build
+cmake --build build -j
+```
+This will configure and build SQUEEZE's bundled libraries, CFITSIO and
+RngStreams, then SQUEEZE itself. The binary is written to `./bin/squeeze`.
 
-Then install SQUEEZE by typing:
+#### 2.2.1 Build options
+
+| Option | Default | Meaning |
+| --- | --- | --- |
+| `SQUEEZE_NATIVE_ARCH` | `ON` | Tune for the build machine's CPU (`-march=native`). Set `OFF` for binaries that must run on other hardware. |
+| `CMAKE_BUILD_TYPE` | `Release` | Standard CMake build types. |
+
+For example, to build a portable binary:
 ```
-cd squeeze/build
-cmake ..
-make
+cmake -B build -DSQUEEZE_NATIVE_ARCH=OFF
 ```
-This will configure and build both SQUEEZE's sublibraries, CFITSIO and RngStreams, then SQUEEZE itself.
+
+#### 2.2.2 A note on `-ffast-math` / `-Ofast`
+
+SQUEEZE is deliberately **not** compiled with `-Ofast` or `-ffast-math`. Those
+enable `-ffinite-math-only`, which permits the compiler to assume NaN and Inf
+never occur -- and SQUEEZE relies on `isnan()`/`isinf()` to reject flagged or
+corrupt V2/T3/VIS points during OIFITS import. Under `-Ofast` those checks are
+folded away, bad points enter the chi2, and the likelihood (and the annealing
+temperature) can go to `inf`. Please do not add these flags back.
 
 ## 3. Usage
 

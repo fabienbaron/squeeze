@@ -25,8 +25,8 @@
 #include <omp.h>
 #endif
 
-#include "../lib/oifitslib/src/oifitslib/exchange.h" // includes cfitio
-#include "../lib/rngstreams/src/RngStream.h"
+#include "RngStream.h"
+#include "exchange.h" // includes cfitsio
 #include "squeeze.h"
 #include <assert.h>
 #include <complex.h>

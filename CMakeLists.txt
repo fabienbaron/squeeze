@@ -1,69 +1,100 @@
-cmake_minimum_required(VERSION 2.8)
-project(squeeze)
+cmake_minimum_required(VERSION 3.20)
 
-# If you want to override compiler please uncomment the line below
-#SET(CMAKE_C_COMPILER pathto/mycompiler)
+project(squeeze
+  VERSION 2.8.0
+  DESCRIPTION "Image reconstruction for optical interferometry by MCMC"
+  HOMEPAGE_URL "https://github.com/fabienbaron/squeeze"
+  LANGUAGES C)
 
-set(CMAKE_BUILD_TYPE release)
+# ---------------------------------------------------------------------------
+# Language / build configuration
+# ---------------------------------------------------------------------------
+set(CMAKE_C_STANDARD 11)
+set(CMAKE_C_STANDARD_REQUIRED ON)
 
-# Set some CMake properties:
-SET(EXECUTABLE_OUTPUT_PATH ${CMAKE_SOURCE_DIR}/bin)
-SET(CMAKE_MODULE_PATH ${PROJECT_SOURCE_DIR}/CMakeModules)
-#include_directories(${CMAKE_SOURCE_DIR}/include)
-
-# Check for compatibility with C11 and OpenMP
-# Compile with C11 support.
-include(CheckCCompilerFlag)
-CHECK_C_COMPILER_FLAG("-std=c11" COMPILER_SUPPORTS_C11)
-if(COMPILER_SUPPORTS_C11)
-    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -std=c11")
-else()
-    message(STATUS "Your compiler (${CMAKE_C_COMPILER}) has no C11 support. If you are using clang on Apple OS X, please switch to gcc (version > 4.7) which is compliant with the C11 standard.")
+if(NOT CMAKE_BUILD_TYPE AND NOT CMAKE_CONFIGURATION_TYPES)
+  set(CMAKE_BUILD_TYPE Release CACHE STRING "Build type" FORCE)
+  set_property(CACHE CMAKE_BUILD_TYPE PROPERTY STRINGS
+    Debug Release RelWithDebInfo MinSizeRel)
 endif()
 
-# Compile with OpenMP support
-find_package(OpenMP)
-if (OPENMP_FOUND)
-    set (CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${OpenMP_C_FLAGS}")
-else()
-    message(STATUS "The compiler ${CMAKE_C_COMPILER} has no OpenMP 3.x support, and if you want to use OpenMP capabilities you will need to switch to a different compiler. gcc > 4.7 and clang > 3.7 both support OpenMP 3.x. ")
+# Defaults to ./bin (as the docs and helper scripts expect) but stays
+# overridable with -DCMAKE_RUNTIME_OUTPUT_DIRECTORY=... so that separate build
+# trees do not clobber each other's binary.
+if(NOT CMAKE_RUNTIME_OUTPUT_DIRECTORY)
+  set(CMAKE_RUNTIME_OUTPUT_DIRECTORY "${PROJECT_SOURCE_DIR}/bin")
 endif()
 
-# We need to compile the following libraries
+option(SQUEEZE_NATIVE_ARCH
+  "Optimise for this machine's CPU (-march=native). Turn OFF for binaries that must run on other hardware."
+  ON)
 
-if(COMPILER_SUPPORTS_C11)
-		#compile libraries
-		# rngstreams
-include(ExternalProject)
-ExternalProject_Add(
-  librngstreams
-  SOURCE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/lib/rngstreams
-  CONFIGURE_COMMAND ${CMAKE_CURRENT_SOURCE_DIR}/lib/rngstreams/configure --silent
-  BUILD_COMMAND make
-  BUILD_IN_SOURCE 1
-  INSTALL_COMMAND ""
-)
+# In-source builds leave CMakeCache.txt/CMakeFiles littering the repo root.
+if(CMAKE_SOURCE_DIR STREQUAL CMAKE_BINARY_DIR)
+  message(FATAL_ERROR
+    "In-source builds are not supported. Run:\n"
+    "  cmake -B build && cmake --build build -j")
+endif()
 
-include_directories(${CMAKE_CURRENT_SOURCE_DIR}/lib/rngstreams)
-set(LIBS ${LIBS} "${CMAKE_CURRENT_SOURCE_DIR}/lib/rngstreams/librngstreams.a")
+# ---------------------------------------------------------------------------
+# OpenMP (parallel tempering / simulated annealing)
+# ---------------------------------------------------------------------------
+find_package(OpenMP COMPONENTS C)
+if(NOT OpenMP_C_FOUND)
+  message(WARNING
+    "No OpenMP support found for ${CMAKE_C_COMPILER_ID}. SQUEEZE will build, but "
+    "parallel tempering and parallel annealing will run on a single thread.")
+endif()
 
-# cfitsio
-ExternalProject_Add(
-  libcfitsio
-  DOWNLOAD_COMMAND ""
-  SOURCE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/lib/cfitsio
-  CONFIGURE_COMMAND ${CMAKE_CURRENT_SOURCE_DIR}/lib/cfitsio/configure --silent --disable-curl
-  CMAKE_ARGS "-DUSE_PTHREADS=ON"
-  BUILD_COMMAND make all
-  BUILD_IN_SOURCE 1
-  INSTALL_COMMAND ""
-)
+# ---------------------------------------------------------------------------
+# CFITSIO (vendored: lib/cfitsio)
+# ---------------------------------------------------------------------------
+# Force-set as cache entries so they win over CFITSIO's own option() defaults.
+set(BUILD_SHARED_LIBS OFF CACHE BOOL "" FORCE)  # static: avoids runtime lookup issues
+set(USE_CURL          OFF CACHE BOOL "" FORCE)  # no remote FITS access needed
+set(USE_PTHREADS      ON  CACHE BOOL "" FORCE)  # SQUEEZE reads FITS from OpenMP threads
+set(TESTS             OFF CACHE BOOL "" FORCE)  # skip TestProg/cookbook
+set(UTILS             OFF CACHE BOOL "" FORCE)  # skip fpack/funpack/fitsverify/...
+set(ITERPROGS         OFF CACHE BOOL "" FORCE)
 
-include_directories(${CMAKE_CURRENT_SOURCE_DIR}/lib/cfitsio)
-set(LIBS ${LIBS} "${CMAKE_CURRENT_SOURCE_DIR}/lib/cfitsio/libcfitsio.a")
+add_subdirectory(lib/cfitsio EXCLUDE_FROM_ALL)
 
-# Build the main directory, always
+# CFITSIO's CMakeLists never exports its own headers to consumers, so `#include
+# <fitsio.h>` would not resolve through the target alone. BUILD_INTERFACE keeps
+# the path out of CFITSIO's own install(EXPORT) rules, which would otherwise
+# reject a source-tree path.
+target_include_directories(cfitsio
+  INTERFACE $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/lib/cfitsio>)
+
+# ---------------------------------------------------------------------------
+# RngStreams (vendored: lib/rngstreams)
+# ---------------------------------------------------------------------------
+# Upstream ships an autotools build; the library is two files, so compile it
+# directly rather than driving ./configure through ExternalProject.
+add_library(rngstreams STATIC lib/rngstreams/src/RngStream.c)
+target_include_directories(rngstreams PUBLIC "${PROJECT_SOURCE_DIR}/lib/rngstreams/src")
+target_link_libraries(rngstreams PRIVATE m)
+
+# ---------------------------------------------------------------------------
+# OIFITSlib exchange layer (submodule: lib/oifitslib)
+# ---------------------------------------------------------------------------
+set(OITABLE_DIR "${PROJECT_SOURCE_DIR}/lib/oifitslib/src/oifitslib")
+if(NOT EXISTS "${OITABLE_DIR}/exchange.h")
+  message(FATAL_ERROR
+    "The oifitslib submodule is missing. Run:\n"
+    "  git submodule update --init")
+endif()
+
+# Mirrors upstream's `oitable` target: the low-level table layer only. The
+# higher-level `oifits` target needs GLib, which SQUEEZE does not use.
+add_library(oitable STATIC
+  "${OITABLE_DIR}/read_fits.c"
+  "${OITABLE_DIR}/write_fits.c"
+  "${OITABLE_DIR}/alloc_fits.c"
+  "${OITABLE_DIR}/free_fits.c"
+  "${OITABLE_DIR}/chkmalloc.c")
+target_include_directories(oitable PUBLIC "${OITABLE_DIR}")
+target_link_libraries(oitable PUBLIC cfitsio PRIVATE m)
+
+# ---------------------------------------------------------------------------
 add_subdirectory(src)
-else()
-	message(STATUS "SQUEEZE installation aborted")
-endif()

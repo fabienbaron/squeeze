@@ -31,7 +31,7 @@
 #include <stdbool.h>
 #include <complex.h>
 #include <math.h>
-#include "../lib/oifitslib/src/oifitslib/exchange.h"
+#include "exchange.h"
 
 void find_vec_minmax(double* output_min, double *output_max, double* vec, long N)
 {
