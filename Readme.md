@@ -39,47 +39,50 @@ SQUEEZE is designed to be cross-platform compatible. It has been
 tested on several variants of GNU/Linux and on Mac OSX. Test on
 additional platforms are most welcomed.
 
-SQUEEZE requires [git](http://git-scm.com) and [cmake](http://www.cmake.org)
-(version 3.20 or later) to be installed on your machine.
+You need [git](http://git-scm.com), [cmake](http://www.cmake.org) 3.20 or later, and a C11
+compiler. Everything else ships with SQUEEZE: CFITSIO is bundled in `lib/cfitsio`, OIFITSlib
+comes in as a git submodule, and the random number generator is a single header. There is
+nothing to install system-wide and no configure script to run.
 
-SQUEEZE requires your compiler to be compatible with the C11 and
-[OpenMP](http://openmp.org) standards. These are supported by gcc, the
-Intel Compiler, and clang/LLVM. An OpenMP-capable compiler is required if you
-want to use parallel tempering or parallel annealing; without one SQUEEZE still
-builds, but runs single-threaded.
+[OpenMP](http://openmp.org) is optional but recommended: without it SQUEEZE still builds and
+runs, but on a single thread, so `-chains` and `-tempering` lose their point. gcc, clang/LLVM
+and the Intel compilers all support it.
 
 #### 2.1.1 OpenMP on macOS
 
-Apple's bundled clang does not ship the OpenMP runtime (and the "gcc" binary on
-macOS is just a hard link to clang). Install a real gcc or LLVM's OpenMP via
+Apple's bundled clang does not ship the OpenMP runtime, and the `gcc` in `/usr/bin` is only a
+hard link to clang, so a stock macOS build is single-threaded. Install a real gcc from
 homebrew:
 ```
-brew install gcc          # or: brew install libomp
+brew install gcc
 ```
-then point cmake at it, e.g.:
+and point cmake at it (adjust the version to whatever homebrew installed):
 ```
 cmake -B build -DCMAKE_C_COMPILER=$(brew --prefix)/bin/gcc-14
 ```
+Apple Silicon is fine otherwise: the build detects that `-march=native` is not an Apple clang
+flag and uses `-mcpu=native` instead.
 
 ### 2.2 Installing SQUEEZE
 
-First download the current git version of SQUEEZE using:
 ```
 git clone https://github.com/fabienbaron/squeeze.git
-```
-which will create a squeeze subdirectory and download the SQUEEZE source into it. Then you will need to initialize the submodule that pulls the latest OIFITSLIB (from https://github.com/jsy1001/oifitslib).
-```
-git submodule update --init
-```
-
-Then build SQUEEZE by typing:
-```
 cd squeeze
+git submodule update --init
 cmake -B build
 cmake --build build -j
 ```
-This will configure and build the bundled CFITSIO, then SQUEEZE itself. The binary is
-written to `./bin/squeeze`.
+
+The submodule step pulls OIFITSlib (from https://github.com/jsy1001/oifitslib), pinned to a
+tested revision. It is not optional: cmake stops with an error telling you to run it if the
+submodule is missing. Build directories are also kept out of the source tree, so
+`cmake -B build` is the only supported form and an in-source `cmake .` is refused.
+
+The binary is written to `./bin/squeeze`. To check the build:
+```
+./bin/squeeze ./sample_data/2004-data1.oifits -w 64 -s 0.2 -n 200
+```
+which should converge to a reduced chi2 slightly below 1 in a second or so.
 
 #### 2.2.1 Build options
 
@@ -184,49 +187,42 @@ same job better and additionally gives you `logZ`.
 `squeeze` also reports `Best single-frame chi2`, the single lowest-chi2 frame seen across all
 chains, which is a crude MAP estimate that costs nothing.
 
-### 3.2.2 Modes: `-tm` and `-fc` are a pair
+### 3.2.2 Temperature floor and chi2 target (`-tm`, `-fc`)
 
-`tmin` (`-tm`) and `chi2_t` (`-fc`) are not independent knobs. They select between two
-intended modes of the engine, and **must be changed together**. The reason is that burn-in is
-declared when *either*
+The defaults (`-tm 1 -fc 0`) are what you normally want, and this section is only about what
+happens if you change them.
+
+Burn-in is declared when *either*
 
 ```
-T < tmin            (the schedule wants to be colder than you allow)
-   or   chi2r < chi2_t     (the fit has reached its target)
+T < tmin                (the schedule wants to be colder than you allow)
+   or   chi2r < chi2_t  (the fit has reached its target)
 ```
 
-Since the temperature settles at `chi2r/chi2_t`, the first test fires exactly when
-`chi2r < chi2_t * tmin`. So `tmin` is doing double duty: temperature floor *and* convergence
+With the defaults only the first test can fire, and since the temperature tracks
+`chi2r/chi2_t` it fires exactly when `chi2r < chi2_t * tmin`, i.e. `chi2r < 4`. So `tmin` is
+doing double duty: it is the temperature floor *and*, through that product, the convergence
 criterion.
 
-**Bayesian mean map (the default: `-tm 1 -fc 0`).** The chain cools until `chi2r < 4`, at
-which point T floors at 1 (the true posterior) and the run samples it. The image you get is
-a posterior mean. Convergence comes from the `T < tmin` route.
+**Do not lower `tmin` on its own.** It removes the only convergence route the defaults have,
+so no chain ever reaches burn-in: you get `NO CHAIN REACHED BURN IN`, the final image falls
+back to the `-depth` heuristic, and the `Best single-frame chi2` report disappears. Measured
+on the bundled data at 64x64:
 
-**Pseudo-maximum-entropy map (`-tm 0 -fc 1`).** Removing the floor lets the chain keep cooling
-below T = 1, while `chi2_t = 1` regulates `chi2r` towards 1 instead of driving it down: the
-classic "fix chi2 to its expected value and maximise entropy" reconstruction. Convergence comes
-from the `chi2r < chi2_t` route. Measured on the bundled sample data, T settles around 0.6 to 0.75
-and chi2r around 1:
-
-```
-./bin/squeeze ./sample_data/2004-data1.oifits -w 32 -s 0.3 -n 150 -tm 0 -fc 1
-```
-
-**Do not lower `tmin` on its own.** It removes the `T < tmin` convergence route without
-supplying the other one, so no chain ever reaches burn-in: you get
-`NO CHAIN REACHED BURN IN`, the final image silently falls back to the `-depth` heuristic, and
-the `Best single-frame chi2` report disappears.
-
-| flags | final T | burn-in | result |
+| flags | T (mean over last 100 sweeps) | burn-in | chi2r |
 | --- | --- | --- | --- |
-| `-tm 1 -fc 0` (default) | 1.00 | reached | chi2r 0.81, posterior mean |
-| `-tm 0 -fc 1` | ~0.72 | reached (via chi2_t) | chi2r 0.84, pseudo-MEM |
-| `-tm 0.01` alone | 0.29 | **never** | falls back to `-depth` |
+| `-tm 1 -fc 0` (default) | 1.00, constant (floored) | reached | 0.78 |
+| `-tm 0.01` alone | 0.21 | **never reached** | 0.80 |
+| `-tm 0 -fc 1` | 0.68, fluctuating (sd 0.30) | reached, via chi2_t | 0.85 |
 
-Note also that cooling harder is not a route to a better fit: at very low temperature the chain
-freezes and stops exploring, settling for whatever minimum it happens to be nearest. Sampling
-at T = 1 keeps moving and generally finds better optima.
+The third row is the one case where lowering `tmin` is safe, because `-fc 1` supplies the
+other convergence route: with no floor the chain keeps cooling below T = 1 while `chi2_t = 1`
+holds `chi2r` near 1 rather than driving it down. That is the classic "fix chi2 to its
+expected value" reconstruction, but it is rarely used in practice and it does not fit the
+bundled data any better than the default.
+
+Note that cooling harder is not a route to a better fit: at low temperature the chain freezes
+and stops exploring, settling for whatever minimum it happens to be nearest.
 
 ### 3.2.3 Multiple chains
 
@@ -257,7 +253,7 @@ scheduled, and re-running the same command reproduces every output file byte for
 (Parallel tempering is not yet reproducible in this sense: there the chains also exchange
 temperatures, and which pairs get tried depends on thread arrival order.)
 
-### 3.2.4 Getting the grid right matters more than the starting image
+### 3.2.4 Choosing the image grid
 
 Chains sometimes stall: instead of converging they settle at a high chi2r (hundreds) and stay
 there, because the temperature is slaved to chi2 (3.2.1) and a chain that stops improving
@@ -275,10 +271,10 @@ iterations:
 | **64 px @ 0.2 mas** | 12.8 mas | **4 of 4** (12 of 12 over three runs) |
 | 128 px @ 0.1 mas | 12.8 mas | 3 of 4 |
 
-At an appropriate grid the engine is robust and the starting image makes little difference:
-both the default (all flux in one pixel) and `-i randomthr` converge every chain. Too small a
-grid is what makes chains fragile. For this dataset 64x64 is the right choice, which is what
-the examples in 3.1 use.
+At an appropriate grid the engine is robust, and the starting image then makes little
+difference: both the default (all flux in one pixel) and `-i randomthr` converge every chain.
+Too small a grid is what makes chains fragile. For this dataset 64x64 is the right choice,
+which is what the examples in 3.1 use.
 
 If chains do stall, the ranking output (3.2.3) makes it obvious, and the fix is a better grid
 rather than more iterations. Note that cooling harder (`-ct`) does *not* rescue a stalled
