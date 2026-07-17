@@ -2,7 +2,7 @@
 # and models/modelcode.c directly, so it is the only translation unit here.
 add_executable(squeeze squeeze.c)
 
-target_link_libraries(squeeze PRIVATE oitable rngstreams m)
+target_link_libraries(squeeze PRIVATE oitable m)
 
 if(OpenMP_C_FOUND)
   target_link_libraries(squeeze PRIVATE OpenMP::OpenMP_C)

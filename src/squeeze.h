@@ -147,6 +147,7 @@ void print_diagnostics(int iChain, long current_iter, long nvis, long nv2, long 
 void compute_lLikelihood(double *likelihood, const double complex *__restrict mod_vis, double *__restrict res, double *__restrict mod_obs, double *chi2v2, double *chi2t3amp, double *chi2visamp, double *chi2t3phi, double *chi2visphi, const int nwavr);
 void compute_lPrior(double *lPrior, const long chan, const double *reg_param, const double *reg_value);
 
+void check_xatan2(void); /* validates the fast atan2 against libm at startup */
 void vis_to_obs(const double complex *mod_vis, double *mod_obs, const int nwavr);
 void obs_to_res(const double *mod_obs, double *res);
 double residuals_to_chi2(const double *res, double *chi2v2, double *chi2t3amp, double *chi2visamp, double *chi2t3phi, double *chi2visphi) ;
@@ -199,6 +200,20 @@ int write_best_oifits(char *filestring, double complex *mod_vis);
 /* Function prototype for modelcode.c */
 int model_vis(const double *params, double complex *modvis, double *logl, double *flux_frac);
 
+/* Parametric models are selected at runtime with -modeltype; see modelcode.c.
+   Each entry names a model, states how many parameters -P must supply, names them
+   (for the fitted-parameter report), and points at its model_vis implementation. */
+typedef struct {
+  const char *name;
+  int nparams;
+  const char **param_names;
+  int (*model_vis_fn)(const double *params, double complex *modvis, double *lPriorModel, double *flux_frac);
+} model_desc;
+
+extern const model_desc squeeze_models[];
+extern const int n_squeeze_models;
+extern int modeltype; /* index into squeeze_models[]; default 0 = sparco */
+
 /* regularizations.c */
 double entropy(const double s);
 double den_full(const double *x, const double *pr, const double eps, const int nx, const int ny, const double flux);
@@ -230,8 +245,6 @@ double sinc(double x);
 
 inline void swapi(unsigned short *a, unsigned short *b);
 inline void swapd(double *a, double *b);
-double xatan2(double y, double x);
-double xatan2_u1(double y, double x);
 
 // Wavelet specifics
 

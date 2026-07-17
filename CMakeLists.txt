@@ -67,15 +67,6 @@ target_include_directories(cfitsio
   INTERFACE $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/lib/cfitsio>)
 
 # ---------------------------------------------------------------------------
-# RngStreams (vendored: lib/rngstreams)
-# ---------------------------------------------------------------------------
-# Upstream ships an autotools build; the library is two files, so compile it
-# directly rather than driving ./configure through ExternalProject.
-add_library(rngstreams STATIC lib/rngstreams/src/RngStream.c)
-target_include_directories(rngstreams PUBLIC "${PROJECT_SOURCE_DIR}/lib/rngstreams/src")
-target_link_libraries(rngstreams PRIVATE m)
-
-# ---------------------------------------------------------------------------
 # OIFITSlib exchange layer (submodule: lib/oifitslib)
 # ---------------------------------------------------------------------------
 set(OITABLE_DIR "${PROJECT_SOURCE_DIR}/lib/oifitslib/src/oifitslib")

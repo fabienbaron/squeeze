@@ -1,4 +1,4 @@
-/*   modelcode_ud bwsmearing.c:
+/*   modelcode_binary_bwsmearing.c:
 
 A polychromatic binary model with primary uniform disc star at the center of the image,
 the secondary as an offset uniform disc with bandwidth smearing parameter.
@@ -26,8 +26,11 @@ with parameters :
  params(8) = reference wavelength for above parameters
  Globals: nparams, nbaselines, u, v */
 
-extern double j1(double);
-int model_vis(const double *params, double complex *modvis, double *lPriorModel, double *flux_frac) {
+#define NPARAMS_BINARY 9
+static const char *model_param_names_binary[NPARAMS_BINARY] = {"delta_ra ", "delta_dec", "flux_pri ", "flux_sec ", "UD_pri   ",
+                                                               "UD_sec   ", "frac_bw  ", "env_indx ", "lambda_0 "};
+
+static int model_vis_binary(const double *params, double complex *modvis, double *lPriorModel, double *flux_frac) {
   int status = 0;
   long i;
   double lPriorParams[9];

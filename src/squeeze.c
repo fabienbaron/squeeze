@@ -25,7 +25,7 @@
 #include <omp.h>
 #endif
 
-#include "RngStream.h"
+#include "philox.h"
 #include "exchange.h" // includes cfitsio
 #include "squeeze.h"
 #include <assert.h>
@@ -49,7 +49,22 @@
 #define TEXT_COLOR_BLACK "\x1b[0m"
 
 static bool ctrlcpressed = FALSE; // CHECKS CTRL+C PRESSED DURING EXECUTION
+// Collectively-latched copy of ctrlcpressed, used to leave the sampling loop in
+// parallel tempering mode. Written by a single thread at a sweep boundary and
+// published by that region's implicit barrier, so every chain observes the same
+// value and they all break together. See the exit test at the end of the loop.
+static bool stop_requested = FALSE;
 int oi_hush_errors = 0;           // flag for read_fits.c
+
+/* Standard normal deviate by Box-Muller; the generator provides only uniforms.
+   Used for reversible parameter proposals. */
+static double rand_normal(Philox *rng) {
+  double u1;
+  do {
+    u1 = philox_u01(rng); // philox_u01 is open at 0, but guard log(0) regardless
+  } while (u1 <= 0.0);
+  return sqrt(-2.0 * log(u1)) * cos(2.0 * M_PI * philox_u01(rng));
+}
 
 /* Global OIFITS variables */
 long nuv;
@@ -148,6 +163,7 @@ int main(int argc, char **argv) {
   double *wavmax = NULL;
 
   atrous_set(2);
+  check_xatan2(); // refuse to run on a broken fast atan2 rather than produce quiet nonsense
 
   printf(TEXT_COLOR_RED "SQUEEZE - Version %s\n" TEXT_COLOR_BLACK, SQUEEZE_VERSION);
 
@@ -174,6 +190,29 @@ int main(int argc, char **argv) {
                        &prior_filename[0], &v2s, &v2a, &t3amps, &t3ampa, &t3phia, &t3phis, &visamps, &visampa, &visphis, &visphia, &fluxs, &cvfwhm, reg_param,
                        init_params, &wavmin, &wavmax, &nwavr, &wavauto, &verbose_import) == FALSE)
     return 0;
+
+  // -P counts however many numbers follow it, and init_params[] is zero-filled, so an
+  // -P list of the wrong length used to be accepted silently. With SPARCO that left
+  // lambda_0 = 0 and every pow(uv_lambda/lambda_0, ...) infinite. Check the count against
+  // the selected model, and name the parameters so the right order is obvious.
+  if ((nparams > 0) && (nparams != squeeze_models[modeltype].nparams)) {
+    printf("Command line -- -modeltype %s takes %d parameters, but -P supplied %ld. Expected order:\n", squeeze_models[modeltype].name,
+           squeeze_models[modeltype].nparams, nparams);
+    for (i = 0; i < squeeze_models[modeltype].nparams; ++i)
+      printf("               -P[%ld] %s\n", i, squeeze_models[modeltype].param_names[i]);
+    return 0;
+  }
+
+  // -f_copy / -f_any are the fraction of steps attempting each move type; the sampling loop
+  // selects with u01 < f, so any value in [0,1] means exactly what it says (0 disables).
+  if ((f_copycat < 0.0) || (f_copycat > 1.0)) {
+    printf("Command line -- -f_copy must be a fraction between 0 and 1 (got %g). Use 0 to disable copycat moves.\n", f_copycat);
+    return 0;
+  }
+  if ((f_anywhere < 0.0) || (f_anywhere > 1.0)) {
+    printf("Command line -- -f_any must be a fraction between 0 and 1 (got %g). Use 0 to disable anywhere moves.\n", f_anywhere);
+    return 0;
+  }
 
   // Check nchains and nthreads are consistent, and if not overwrite them
   // First check if nchains and nthreads have been set
@@ -277,10 +316,10 @@ int main(int argc, char **argv) {
 
     if (!strcmp(init_filename, "random")) {
       printf("\nInitial image -- Random image common to all parallel chains and wavelengths\n");
-      RngStream initrng = RngStream_CreateStream("init");
+      Philox initrng = philox_stream(PHILOX_STREAM_INIT, PHILOX_DEFAULT_SEED);
       for (i = 0; i < nelements; ++i) {
-        initial_x[i] = RngStream_RandInt(initrng, 0, 2147483647) % axis_len;
-        initial_y[i] = RngStream_RandInt(initrng, 0, 2147483647) % axis_len;
+        initial_x[i] = philox_randint(&initrng, 0, axis_len - 1);
+        initial_y[i] = philox_randint(&initrng, 0, axis_len - 1);
       }
 
       // copy same random image at
@@ -292,19 +331,17 @@ int main(int argc, char **argv) {
         }
       }
 
-      RngStream_DeleteStream(&initrng);
     } else if (!strcmp(init_filename, "randomthr")) {
       printf("\nInitial image -- Random images unique to each parallel chain\n");
-      RngStream initrng = RngStream_CreateStream("init");
+      Philox initrng = philox_stream(PHILOX_STREAM_INIT, PHILOX_DEFAULT_SEED);
       for (j = 0; j < nchains; ++j) {
         for (w = 0; w < nwavr; ++w) {
           for (i = 0; i < nelements; ++i) {
-            initial_x[(j * nwavr + w) * nelements + i] = RngStream_RandInt(initrng, 0, 2147483647) % axis_len;
-            initial_y[(j * nwavr + w) * nelements + i] = RngStream_RandInt(initrng, 0, 2147483647) % axis_len;
+            initial_x[(j * nwavr + w) * nelements + i] = philox_randint(&initrng, 0, axis_len - 1);
+            initial_y[(j * nwavr + w) * nelements + i] = philox_randint(&initrng, 0, axis_len - 1);
           }
         }
       }
-      RngStream_DeleteStream(&initrng);
     } else {
       status = 0;
       printf("\nInitial image -- Opening file : %s\n", init_filename);
@@ -615,9 +652,16 @@ int main(int argc, char **argv) {
 // omp_set_nested(1); // we allow nested parallelism, typical application is if you have a low number of chains and lots of CPU cores
 // Start nchains MCMC
 //
-#pragma omp parallel private(i, j, k, w) shared(temperature, iChaintoStorage, iStoragetoChain, iMovedChain, burn_in_times, saved_x, saved_y,                   \
+// tmin is firstprivate, not shared: with -pa every chain rescales it from its own
+// (thread-private) prob_movement, which as a shared variable was an unsynchronized
+// read-modify-write. Its consumers are per-chain too: it floors temperature[iChain]
+// and gates burn_in_times[iChain], so each chain owning a copy, seeded from the -tm
+// setting, is the reading where the control loop closes on itself. Outside this region
+// (mcmc_results) tmin remains the user-supplied setting.
+#pragma omp parallel private(i, j, k, w) firstprivate(tmin)                                                                                                    \
+    shared(temperature, iChaintoStorage, iStoragetoChain, iMovedChain, burn_in_times, saved_x, saved_y,                                                        \
                                                 saved_lLikelihood, saved_lPosterior, saved_lPrior, saved_params, saved_reg_value, minimization_engine,         \
-                                                use_tempfitswriting, init_filename, ctrlcpressed, f_anywhere, f_copycat, prob_auto, tmin, chi2_target,         \
+                                                use_tempfitswriting, init_filename, ctrlcpressed, f_anywhere, f_copycat, prob_auto, chi2_target,               \
                                                 mas_pixel, niter, chi2_temp, flat_chi2, axis_len, lLikelihood_expectation, lLikelihood_deviation, nwavr,       \
                                                 nelements, nchains, tempschedc, uvwav2chan, uvtime2chan, nuv, nv2, nt3amp, nt3phi, nvisamp, nvisphi,           \
                                                 init_params, init_stepsize, initial_x, initial_y, reg_param, prior_image, cent_mult, fov, nparams,             \
@@ -647,7 +691,8 @@ int main(int argc, char **argv) {
     iStoragetoChain[iChain] = iChain; // initally,  storage[N] has temperature[N]
     iMovedChain[iChain] = 0;          // no threads have been moved
 
-    long chan = 0, rlong, xstep = 0, ystep = 0, steptype = STEP_MEDIUM;
+    long chan = 0, xstep = 0, ystep = 0, steptype = STEP_MEDIUM;
+    long steptype_frozen = STEP_MEDIUM; // base step type kept once tuning stops (tempering, post burn-in)
     unsigned short new_x = 0, new_y = 0, old_x = 0, old_y = 0;
     long old_pos = 0, new_pos = 0;
     long current_elt;
@@ -688,9 +733,11 @@ int main(int argc, char **argv) {
     double temp1 = 0, temp2 = 0;
     // Randomization
 
-    char rngname[80];
-    sprintf(rngname, "rng%02d", iChain);
-    RngStream rng = RngStream_CreateStream(rngname); // will be multithreaded
+    // The stream is a pure function of the chain index, so chain i always gets stream i
+    // whatever order the threads start in: no shared state, nothing to synchronise, and
+    // no way for two chains to be handed the same generator.
+    Philox rng_state = philox_stream((uint32_t)iChain, PHILOX_DEFAULT_SEED);
+    Philox *rng = &rng_state;
 
     /* Initialize the filename for temporarily saving*/
     char temp_filename[80];
@@ -764,6 +811,17 @@ int main(int argc, char **argv) {
      *    This is the main loop...
      *    ----------------------------*/
     for (i = 0; i < niter * nwavr * nelements; ++i) {
+      // Adaptive MCMC is only valid if the adaptation vanishes: steptype and stepsize[]
+      // are driven by prob_movement/prob_pmovement, which are exponentially-damped
+      // functions of the whole chain history, so while they keep moving the transition
+      // kernel depends on the past and the chain has no stationary distribution. Under
+      // tempering we therefore tune during burn-in only, then freeze. Simulated
+      // annealing is an optimizer, where detailed balance is irrelevant and the
+      // adaptation is useful, so it keeps tuning throughout.
+      // ceil(0.3*niter) is the same burn-in cutoff the logZ expectations use above.
+      const bool tempering = (minimization_engine == ENGINE_PARALLEL_TEMPERING);
+      const bool adapting = !tempering || ((i / (nwavr * nelements)) < (long)ceil(0.3 * niter));
+
       //  new regularizer values
       for (w = 0; w < nwavr; ++w)
         for (j = 0; j < NREGULS; ++j)
@@ -831,6 +889,9 @@ int main(int argc, char **argv) {
             // Marginal likelihood estimation -- Step 2 = compute log Z
             compute_logZ(temperature, iStoragetoChain, lLikelihood_expectation, lLikelihood_deviation, nchains, &logZ, &logZ_err);
             printf("log Z computed by chain: %d logZ: %f +/- %f \n", iChain, logZ, logZ_err);
+            // Latch Ctrl-C here: this single's implicit barrier publishes the value,
+            // so every chain sees the same one and they leave the loop together.
+            stop_requested = ctrlcpressed;
           }
 
           //
@@ -858,14 +919,20 @@ int main(int argc, char **argv) {
               chain2 = iStoragetoChain[iChain + 1];
 
               if ((iMovedChain[chain1] == 0) && (iMovedChain[chain2] == 0)) {
-                if (RngStream_RandU01(rng) < 0.3) // base probability of swapping is 30%
+                if (philox_u01(rng) < 0.3) // base probability of swapping is 30%
                 {
 
+                  // The within-chain kernel tempers only the likelihood, so the target family is
+                  // pi_beta(x) ~ L(x)^beta * pi(x). For that family the swap ratio is
+                  //   log alpha = (beta1 - beta2) * (lLikelihood1 - lLikelihood2)
+                  // and the (untempered) priors cancel exactly. Using lPosterior here left a
+                  // spurious (beta1-beta2)*(lPrior1-lPrior2) term, which biased the swaps and
+                  // disagreed with compute_logZ's thermodynamic integration of E_beta[log L].
                   transition_test =
-                      (1. / temperature[chain1] - 1. / temperature[chain2]) * (saved_lPosterior[iChaintoStorage[chain1] * niter + i / (nwavr * nelements)] -
-                                                                               saved_lPosterior[iChaintoStorage[chain2] * niter + i / (nwavr * nelements)]);
+                      (1. / temperature[chain1] - 1. / temperature[chain2]) * (saved_lLikelihood[iChaintoStorage[chain1] * niter + i / (nwavr * nelements)] -
+                                                                               saved_lLikelihood[iChaintoStorage[chain2] * niter + i / (nwavr * nelements)]);
 
-                  if (log(RngStream_RandU01(rng)) < transition_test) {
+                  if (log(philox_u01(rng)) < transition_test) {
                     printf("Swap called from chain %d -- will be swapping chains %d : %f and %d : %f at iteration %ld\n", iChain, chain1, temperature[chain1],
                            chain2, temperature[chain2], i / (nwavr * nelements));
 
@@ -913,82 +980,78 @@ int main(int argc, char **argv) {
                             chi2visamp, lPosterior, lPrior, lLikelihood, reg_param, reg_value, centroid_image_x, centroid_image_y, nelements, nwavr, niter,
                             temperature, prob_movement, params, stepsize, burn_in_times);
         // getchar();
+        // Drive this chain's own temperature floor toward the requested acceptance
+        // rate: accepting too often lowers it (allowing further cooling), too rarely
+        // raises it. tmin is firstprivate, so this no longer races across chains.
         if (prob_auto > 0)
-          tmin = tmin * (1.0 - .5 * (prob_movement - prob_auto)); // BUG ? should this be here ?
+          tmin = tmin * (1.0 - .5 * (prob_movement - prob_auto));
       }
 
-      //
-      // Generate the main random number
-      //
-      rlong = RngStream_RandInt(rng, 0, 2147483647);
+      // Each decision below takes its own variate. This used to be one draw, radix-decomposed
+      // into the channel, the element, the step, the acceptance test and the next step type.
+      // Peeling digits that way left the acceptance digit ranging over only ~85 whole cycles
+      // of 1024, i.e. a 1-3% modulo bias, and quantised the acceptance probability so that
+      // anything below 4.9e-4 could never be accepted. A draw costs ~5 ns against a full
+      // likelihood over nuv points, so there is no reason to share bits between decisions.
 
       //
       // Select wavelength channel based on iteration number or random number ???
       //
-      if (nwavr > 1) {
-        // alternate
-        chan = rlong % nwavr;
-        rlong /= nwavr;
-        // printf("%ld", chan);
-      } else
+      if (nwavr > 1)
+        chan = philox_randint(rng, 0, nwavr - 1);
+      else
         chan = 0;
 
-      current_elt = rlong % (nelements + nparams_free * PARAMS_PER_ELT);
-      rlong /= (nelements + nparams_free * PARAMS_PER_ELT);
+      current_elt = philox_randint(rng, 0, nelements + nparams_free * PARAMS_PER_ELT - 1);
 
       if(current_elt < nelements) /* Attempt image movement rather than parametric model movement */
       {
 
         zerostep = TRUE;
-        // select step
+        // select step. Every pass through the loop draws fresh steps, so a rejected
+        // zero step simply redraws rather than peeling further digits off a shared number
         while (zerostep == TRUE)
          {
           switch (steptype)
           {
             case STEP_SMALL: /* One step in either x or y direction */
-              xstep = rlong % 4;
-              rlong /= 4;
-              if (xstep > 1) // 2 or 3, we select a y move
+            {
+              long dir = philox_randint(rng, 0, 3);
+              if (dir > 1) // 2 or 3, we select a y move
               {
-                ystep = (xstep - 2) * 2 - 1;
+                ystep = (dir - 2) * 2 - 1;
                 xstep = 0;
               }
               else // 0 or 1, we select a x movement
               {
                 ystep = 0;
-                xstep = xstep * 2 - 1;
+                xstep = dir * 2 - 1;
               }
+            }
               break;
 
             case STEP_MEDIUM: /* Up to 2 steps in x and y direction */
-              xstep = (rlong % 5) - 2;
-              rlong /= 5;
-              ystep = (rlong % 5) - 2;
-              rlong /= 5;
+              xstep = philox_randint(rng, -2, 2);
+              ystep = philox_randint(rng, -2, 2);
             break;
 
             case STEP_ANYWHERE: /* Move flux anywhere in image */
-              // xstep = (rlong % axis_len) - axis_len / 2;
-              // rlong = RngStream_RandInt(rng, 0, 2147483647);
-              // ystep = (rlong % axis_len) - axis_len / 2;
-              // rlong /= axis_len;
-              xstep = (RngStream_RandInt(rng, 0, 2147483647) % axis_len) - axis_len / 2;
-              // rlong = RngStream_RandInt(rng, 0, 2147483647);
-              ystep = (RngStream_RandInt(rng, 0, 2147483647) % axis_len) - axis_len / 2;
-              // rlong /= axis_len;
+              xstep = philox_randint(rng, 0, axis_len - 1) - axis_len / 2;
+              ystep = philox_randint(rng, 0, axis_len - 1) - axis_len / 2;
             break;
 
             case STEP_COPYCAT: /* Copy the position of another element */
-              xstep = element_x[chan * nelements + rlong % nelements] - element_x[chan * nelements + current_elt];
-              ystep = element_y[chan * nelements + rlong % nelements] - element_y[chan * nelements + current_elt];
-              rlong = RngStream_RandInt(rng, 0, 2147483647);
+            {
+              long donor = philox_randint(rng, 0, nelements - 1);
+              xstep = element_x[chan * nelements + donor] - element_x[chan * nelements + current_elt];
+              ystep = element_y[chan * nelements + donor] - element_y[chan * nelements + current_elt];
+            }
             break;
           } // end switch statement
 
           if ((xstep != 0) || (ystep != 0))
             zerostep = FALSE;
-          else // old position == new position --> we want to redraw
-            rlong = RngStream_RandInt(rng, 0, 2147483647);
+          // else: old position == new position --> loop and draw a fresh step
         } //end while statement
 
         old_x = element_x[chan * nelements + current_elt];
@@ -1027,19 +1090,16 @@ int main(int argc, char **argv) {
                                           transpec_diffpoint(new_y * axis_len + new_x, chan, 1.0, nwavr, axis_len * axis_len, image);
 
 
-        // if (reg_param[REG_TRANSPECL1] > 0.0)
-        //   new_reg_value[REG_TRANSPECL1] = reg_value[REG_TRANSPECL1]
-        //                                     - tvsqspec_diffpoint(old_y * axis_len + old_x, chan, 0.0, nwavr, axis_len * axis_len, image)
-        //                                     - tvsqspec_diffpoint(new_y * axis_len + new_x, chan, 0.0, nwavr, axis_len * axis_len, image)
-        //                                     + tvsqspec_diffpoint(old_y * axis_len + old_x, chan, -1.0, nwavr, axis_len * axis_len, image)
-        //                                     + tvsqspec_diffpoint(new_y * axis_len + new_x, chan, 1.0, nwavr, axis_len * axis_len, image);
+        if (reg_param[REG_TRANSPECL1] > 0.0)
+          new_reg_value[REG_TRANSPECL1] = reg_value[REG_TRANSPECL1] // remove old contribution
+                                          - tvsqspec_diffpoint(old_y * axis_len + old_x, chan, 0.0, nwavr, axis_len * axis_len, image) -
+                                          tvsqspec_diffpoint(new_y * axis_len + new_x, chan, 0.0, nwavr, axis_len * axis_len, image) // add new contribution
+                                          + tvsqspec_diffpoint(old_y * axis_len + old_x, chan, -1.0, nwavr, axis_len * axis_len, image) +
+                                          tvsqspec_diffpoint(new_y * axis_len + new_x, chan, 1.0, nwavr, axis_len * axis_len, image);
 
         // Regularization for which we need to recompute the whole thing
         image[old_pos]--;
         image[new_pos]++;
-
-        if (reg_param[REG_TRANSPECL1] > 0.0)
-           new_reg_value[REG_TRANSPECL1] = tvsqspec(nwavr, axis_len, image, 1.0) ;
 
         if (reg_param[REG_SPOT] > 0.0)
           new_reg_value[chan * NREGULS + REG_SPOT] = UDreg(&image[chan * axis_len * axis_len], NULL, 0.0, axis_len, axis_len, (const double)nelements);
@@ -1101,15 +1161,29 @@ int main(int argc, char **argv) {
 
       } else /* Attempt parametric model movement -- model visibilities are recomputed from scratch */
       {
-        xstep = rlong % 2; /* The type of step to be taken, plus or minus */
-        rlong /= 2;
+        xstep = philox_randint(rng, 0, 1); /* The type of step to be taken, plus or minus */
         j = params_free[(current_elt - nelements) / PARAMS_PER_ELT]; /* Parameter to vary */
         for (k = 0; k < nparams; k++)
           new_params[k] = params[k];
-        new_params[j] = params[j] + stepsize[j] * (xstep * 2.0 - 1.0);
+
+        // A +/-stepsize[j] proposal walks a two-point lattice whose spacing is rescaled
+        // on every proposal, before the accept test, so the chain can never return
+        // exactly to a previous parameter value: the move is not reversible and the
+        // resulting params_std is not a posterior width. Under tempering use a symmetric
+        // Gaussian random walk instead (no Hastings ratio needed), with stepsize[j]
+        // frozen after burn-in. Annealing keeps the original lattice move.
+        if (tempering)
+          new_params[j] = params[j] + stepsize[j] * rand_normal(rng);
+        else
+          new_params[j] = params[j] + stepsize[j] * (xstep * 2.0 - 1.0);
+
         model_vis(new_params, new_param_vis, &new_reg_value[REG_MODELPARAM], new_fluxratio_image);
+        // prob_pmovement keeps tracking the acceptance rate (it is an EWMA: decayed here,
+        // incremented on accept, and reported in the diagnostics). Only its *effect* --
+        // the stepsize rescaling, is frozen, which is what the chain's kernel depends on.
         prob_pmovement[j] *= 1.0 - 1.0 / PARAM_DAMPING_TIME;
-        stepsize[j] *= 1.0 + (prob_pmovement[j] - TARGET_MPROB) / STEPSIZE_ADJUST_TIME;
+        if (adapting)
+          stepsize[j] *= 1.0 + (prob_pmovement[j] - TARGET_MPROB) / STEPSIZE_ADJUST_TIME;
         for (j = 0; j < nuv; ++j)
         {
           new_im_vis[j] = im_vis[j] * new_fluxratio_image[j] / fluxratio_image[j];
@@ -1121,6 +1195,13 @@ int main(int argc, char **argv) {
       // Evaluate posterior probability
       //
 
+      // compute_lLikelihood() overwrites chi2v2 &c with the PROPOSAL's values, but
+      // print_diagnostics() and writeasfits() report them alongside the currently
+      // accepted image. Without restoring them on rejection, the chi2 shown (and
+      // written to the FITS header) is a rejected proposal's. These are diagnostic
+      // only: the accept test and the temperature update use lLikelihood.
+      const double kept_chi2v2 = chi2v2, kept_chi2t3amp = chi2t3amp, kept_chi2visamp = chi2visamp, kept_chi2t3phi = chi2t3phi, kept_chi2visphi = chi2visphi;
+
       compute_lLikelihood(&new_lLikelihood, new_mod_vis, res, mod_obs, &chi2v2, &chi2t3amp, &chi2visamp, &chi2t3phi, &chi2visphi, nwavr);
       compute_lPrior_allwav(&lPrior, nwavr, reg_param, reg_value);
       compute_lPrior_allwav(&new_lPrior, nwavr, reg_param, new_reg_value);
@@ -1129,7 +1210,12 @@ int main(int argc, char **argv) {
       // BUG: think how to rescale priors with fluxratio_image ?
       transition_test = (new_lLikelihood - lLikelihood) / temperature[iChain] + new_lPrior - lPrior;
 
-      if ((double)(rlong % 1024) + 0.5 < 1024.0 * exp(-transition_test)) {
+      // Metropolis test in log space with its own fresh variate. The old form reused a digit
+      // of the proposal's random number and compared it against 1024*exp(-transition_test),
+      // which quantised the acceptance probability into 1024 levels, so any move with
+      // p < 4.9e-4 was unreachable, and carried the modulo bias noted above. Working in
+      // logs also removes the exp() overflow path.
+      if (log(philox_u01(rng)) < -transition_test) {
         // We accept the new state
 
         lLikelihood = new_lLikelihood;
@@ -1176,6 +1262,10 @@ int main(int argc, char **argv) {
           reg_value[REG_MODELPARAM] = new_reg_value[REG_MODELPARAM];
         }
 
+        // NB: this fires on accepted moves only, so the schedule's effective timescale is
+        // TEMP_CHANGE_TIME/acceptance rather than TEMP_CHANGE_TIME. Do not "fix" that: updating
+        // every proposal instead overcools (T 0.26 vs 0.72), and the -tm 0 -fc 1 mode then never
+        // reaches chi2r < 1, so it never declares burn-in.
         if (minimization_engine == ENGINE_SIMULATED_ANNEALING)
         {
           /* If chi^2 has changed, change the temperature... */
@@ -1194,7 +1284,14 @@ int main(int argc, char **argv) {
         }
 
       } else {
-        // The proposed new state was rejected
+        // The proposed new state was rejected: restore the accepted state's chi2
+        // components, which compute_lLikelihood() overwrote with the proposal's.
+        chi2v2 = kept_chi2v2;
+        chi2t3amp = kept_chi2t3amp;
+        chi2visamp = kept_chi2visamp;
+        chi2t3phi = kept_chi2t3phi;
+        chi2visphi = kept_chi2visphi;
+
         if (current_elt < nelements) // flux movement was attempted and rejected
         {
           /* Reverse the centering change */
@@ -1210,40 +1307,66 @@ int main(int argc, char **argv) {
       }
 
       /* Now that prob_movement has changed, we may want to change the step type */
-      if ((2. * lLikelihood) < FLAT_CHI2_MULT * flat_chi2) {
-        if (steptype == STEP_COPYCAT)
-          steptype = STEP_SMALL;
+      if (adapting) {
+        if ((2. * lLikelihood) < FLAT_CHI2_MULT * flat_chi2) {
+          if (steptype == STEP_COPYCAT)
+            steptype = STEP_SMALL;
 
-        if (steptype == STEP_ANYWHERE)
-          steptype = STEP_SMALL;
+          if (steptype == STEP_ANYWHERE)
+            steptype = STEP_SMALL;
 
-        else if (prob_movement > MPROB_HIGH) {
-          steptype++;
-          if (steptype > STEP_MAX)
-            steptype = STEP_MAX;
-        } else if (prob_movement < MPROB_LOW) {
-          steptype--;
-          if (steptype < 0)
-            steptype = 0;
+          else if (prob_movement > MPROB_HIGH) {
+            steptype++;
+            // NB: STEP_MAX == STEP_COPYCAT, so this increment is itself a way of
+            // reaching copycat, so cap below it under tempering (see the 1.2 note above).
+            if (steptype > (tempering ? STEP_ANYWHERE : STEP_MAX))
+              steptype = (tempering ? STEP_ANYWHERE : STEP_MAX);
+          } else if (prob_movement < MPROB_LOW) {
+            steptype--;
+            if (steptype < 0)
+              steptype = 0;
+          }
+          if (!tempering && (philox_u01(rng) < f_copycat))
+            steptype = STEP_COPYCAT;
+
+        } else {
+          steptype = STEP_MEDIUM; /* If lLikelihood is too high, fix the step type.*/
         }
-        if (rlong % (int)(1. / f_copycat) == 3)
-          steptype = STEP_COPYCAT;
-        // if ((steptype == STEP_SMALL) &&
-        //     if (rlong % (int)(1./f_anywhere) == 2) steptype=STEP_ANYWHERE;
-
+        steptype_frozen = steptype; // latch the tuned base type while we are still tuning
       } else {
-        steptype = STEP_MEDIUM; /* If lLikelihood is too high, fix the step type.*/
+        // Tuning has stopped: always start from the base type burn-in settled on, rather
+        // than letting it drift. Together with the fixed-probability excursion below this
+        // makes the kernel an i.i.d. mixture with constant weights, independent of the
+        // chain's history, hence Markov in the state, hence it has a stationary law.
+        steptype = steptype_frozen;
       }
 
-      if (rlong % (int)(1. / f_copycat) == 3)
+      // STEP_COPYCAT copies another element's position, so P(propose o->p) ~ c(p): the
+      // proposal is asymmetric, and irreversible when c(o)==1 (moving the last quantum off
+      // a pixel leaves no donor able to propose the way back). Without a Hastings ratio it
+      // drifts toward clumping: an excellent optimizer heuristic, an invalid sampler move.
+      // Keep it for annealing, never propose it under tempering.
+      // Selecting with u01 < f gives exactly the requested fraction. The old test was
+      // rlong % (int)(1/f) == 3, which only approximated f when 1/f was an integer, silently
+      // never fired for f >= 1/4, and divided by zero for f > 1.
+      if (!tempering && (philox_u01(rng) < f_copycat))
         steptype = STEP_COPYCAT;
-      // if ((steptype == STEP_SMALL) &&
-      if (rlong % (int)(1. / f_anywhere) == 2)
+      // STEP_SMALL/MEDIUM/ANYWHERE are symmetric on the torus (the % axis_len wraparound is
+      // what makes them so) and are drawn with fixed probability, so they need no correction.
+      if (philox_u01(rng) < f_anywhere)
         steptype = STEP_ANYWHERE;
 
       /* If we're on the smallest step size, we may want to change to steptype COPYCAT */
 
-      if (ctrlcpressed == TRUE)
+      // In parallel tempering the sweep-boundary block above runs OpenMP barriers,
+      // so a chain that breaks mid-sweep strands the others there forever. Break on
+      // the collectively-latched flag instead: every chain observes the same value,
+      // so they all leave the loop and none is left waiting at a barrier.
+      // Simulated annealing executes no barriers here, so it can exit immediately.
+      if (minimization_engine == ENGINE_PARALLEL_TEMPERING) {
+        if (stop_requested == TRUE)
+          break;
+      } else if (ctrlcpressed == TRUE)
         break;
     } // end iterations
 
@@ -1256,8 +1379,6 @@ int main(int argc, char **argv) {
                     chi2visphi, temperature[iChain], nelements, &reg_param[0], &reg_value[0], niter, axis_len, ndf, tmin, chi2_temp, chi2_target, mas_pixel,
                     nchains, 0, 0, "", "", &saved_params[iChain * niter * nparams], NULL);
     }
-
-    RngStream_DeleteStream(&rng);
 
     free(centroid_image_x);
     free(centroid_image_y);
@@ -1471,7 +1592,19 @@ void printhelp(void) {
   printf("  -S s0 s1...   : Initial parameter step sizes (NB: must come after -P option).\n");
 //  printf("  -LP lp0 lp1... : lower bounds on parameters (NB: must come after -P option).\n");
 //  printf("  -HP hp0 hp1... : upper bounds on paramaters (NB: must come after -P option).\n");
-  printf("  To change the model, change modelcode.c in src/models \n");
+  printf("  -modeltype name : Parametric model to fit (default: %s). Available:\n", squeeze_models[0].name);
+  for (int m = 0; m < n_squeeze_models; ++m) {
+    printf("                    %-8s (%d params:", squeeze_models[m].name, squeeze_models[m].nparams);
+    for (int p = 0; p < squeeze_models[m].nparams; ++p) {
+      char trimmed[32];
+      snprintf(trimmed, sizeof trimmed, "%s", squeeze_models[m].param_names[p]);
+      for (char *e = trimmed + strlen(trimmed); e > trimmed && e[-1] == ' '; --e)
+        e[-1] = '\0';
+      printf(" %s", trimmed);
+    }
+    printf(")\n");
+  }
+  printf("  To add a model, see the instructions at the top of src/models/modelcode.c \n");
 
   printf("\n***** OIFITS IMPORT SETTINGS ***** \n");
 
@@ -1525,12 +1658,30 @@ void printhelp(void) {
   printf("  -i file.fits  : Initial image will be read from a FITS file.\n");
   printf("  -i random     : Initial image will be random, and common to all chain/wavelengths.\n");
   printf("  -i randomthr  : Initial image will be random, with a different image for each chain.\n");
+  printf("                  (The default start is all flux in one pixel. At a well-chosen grid both\n");
+  printf("                  converge equally well; chains that stall at high chi2 usually mean the\n");
+  printf("                  image is too small, not that the start was bad.)\n");
 
   printf("\n***** CONVERGENCE SETTINGS ***** \n");
-  printf("  -tm tmin      : Mininmum temperature (default 1.0 for MCMC).\n");
+  printf("  Annealing has no fixed cooling schedule: the temperature is slaved to the current\n");
+  printf("  misfit, relaxing towards T = chi2r / chi2_t, and is then floored at tmin. The chain\n");
+  printf("  therefore cools only as fast as the fit improves. Burn-in is declared once T < tmin\n");
+  printf("  OR chi2r < chi2_t, so -tm and -fc are a pair selecting between two modes:\n");
+  printf("    -tm 1 -fc 0  (default) : cool until chi2r < 4, floor at T=1 = the true posterior,\n");
+  printf("                             then sample it. The mean image is a posterior mean.\n");
+  printf("    -tm 0 -fc 1            : no floor, so the chain keeps cooling below T=1, while\n");
+  printf("                             chi2_t=1 holds chi2r near 1 -- a pseudo-maximum-entropy map.\n");
+  printf("  -tm tmin      : Minimum temperature (default 1.0). Do NOT lower it on its own: that\n");
+  printf("                  removes the T < tmin convergence route without supplying the other,\n");
+  printf("                  so no chain reaches burn-in and the final image falls back to the\n");
+  printf("                  -depth heuristic. Use -tm 0 -fc 1 instead. Note deeper cooling tends\n");
+  printf("                  to find WORSE optima -- the chain freezes and stops exploring.\n");
   printf("  -pa prob      : Adjust temperature to achieve given prob for simulated annealing (default = -1, unused).\n");
-  printf("  -ct chi2_t    : Chi-squared / Temperature for sim annealing (default 4.0).\n");
-  printf("  -fc target    : Attempt to fix chi-squared to this target (default 0.0).\n");
+  printf("  -ct chi2_t    : Target ratio chi2r/T for the annealing schedule (default 4.0). The\n");
+  printf("                  temperature settles at chi2r/chi2_t, i.e. proportional to the misfit.\n");
+  printf("  -fc target    : Attempt to fix chi-squared to this target (default 0.0 = just minimise).\n");
+  printf("                  Non-zero makes the schedule regulate chi2r towards the target rather\n");
+  printf("                  than drive it down, and also counts as a convergence criterion.\n");
 
   printf("  -f_copy       : Fraction of steps that attempt a copycat move.\n");
   printf("  -f_any        : Fraction of step that attempt to move anywhere.\n");
@@ -1546,6 +1697,67 @@ void compute_lLikelihood(double *likelihood, const double complex *__restrict mo
   vis_to_obs(mod_vis, mod_obs, nwavr);
   obs_to_res(mod_obs, res);
   *likelihood = 0.5 * residuals_to_chi2(res, chi2v2, chi2t3amp, chi2visamp, chi2t3phi, chi2visphi);
+}
+
+/* Fast atan2, used for the closure/differential phases in vis_to_obs().
+ *
+ * carg() was ~40% of the whole runtime: the T3 loop is ~78% of compute_lLikelihood, which
+ * is itself ~84% of a proposal, and glibc's atan2 is ~19 ns against ~6 ns for this. The
+ * accuracy cost is nil: max error 8.9e-16 rad, about 2 ULP of pi, versus closure-phase
+ * measurement errors of ~1e-2 rad.
+ *
+ * Method: reduce to |x| <= tan(pi/8) using atan(x) = pi/4 + atan((x-1)/(x+1)), then a
+ * degree-9 (in x^2) minimax polynomial fitted by Chebyshev interpolation. Verified against
+ * atan2() at startup by check_xatan2(), so a broken edit cannot pass silently.
+ * NB a one-division variant (poly straight on [0,1], no second reduction) was measured and
+ * is slower: the extra polynomial terms cost more than the division they save. */
+static const double XATAN_C[10] = {9.99999999999999112e-01,  -3.33333333332159698e-01, 1.99999999776733772e-01,  -1.42857126258050027e-01,
+                                   1.11110479156724715e-01,  -9.08951544027416236e-02, 7.67339706562477908e-02,  -6.50518367888952287e-02,
+                                   5.02219654194395251e-02,  -2.52814262982825229e-02};
+
+static inline double xatan_core(double x) { /* |x| <= tan(pi/8) */
+  double t = x * x, r = XATAN_C[9];
+  for (int k = 8; k >= 0; --k)
+    r = r * t + XATAN_C[k];
+  return x * r;
+}
+
+static inline double xatan(double x) { /* |x| <= 1 */
+  const double TAN_PI_8 = 0.41421356237309503;
+  if (fabs(x) <= TAN_PI_8)
+    return xatan_core(x);
+  return M_PI_4 + xatan_core((x - 1.0) / (x + 1.0));
+}
+
+static inline double xatan2(double y, double x) {
+  double ax = fabs(x), ay = fabs(y), a;
+  if (ax == 0.0 && ay == 0.0)
+    return 0.0;
+  if (ax >= ay)
+    a = xatan(ay / ax);
+  else
+    a = M_PI_2 - xatan(ax / ay);
+  if (x < 0.0)
+    a = M_PI - a;
+  return (y < 0.0) ? -a : a;
+}
+
+/* Guard against a bad edit to the coefficients or the range reduction: sweep the whole
+   circle against the libm reference. Costs microseconds, runs once. */
+void check_xatan2(void) {
+  double worst = 0.0;
+  for (int k = 0; k < 20000; ++k) {
+    double th = -M_PI + 2.0 * M_PI * k / 20000.0;
+    for (double r = 0.1; r < 1.01; r += 0.3) {
+      double e = fabs(xatan2(r * sin(th), r * cos(th)) - atan2(r * sin(th), r * cos(th)));
+      if ((e > worst) && (e < 6.0)) // ignore the +-pi branch cut, where both are correct
+        worst = e;
+    }
+  }
+  if (worst > 1e-12) {
+    printf(TEXT_COLOR_RED "FATAL -- the fast atan2 is inaccurate (max error %.3e rad); refusing to run.\n" TEXT_COLOR_BLACK, worst);
+    exit(1);
+  }
 }
 
 void vis_to_obs(const double complex *__restrict mod_vis, double *__restrict mod_obs, const int nwavr) {
@@ -1566,19 +1778,21 @@ void vis_to_obs(const double complex *__restrict mod_vis, double *__restrict mod
 
     if (i < nt3amp) // as many instruments only have closure phases, useful check to gain cycles
       if (data_err[t3ampoffset + i] > 0)
-        mod_obs[t3ampoffset + i] = cabs(modt3);
+        // sqrt(|z|^2) rather than cabs(): cabs() is hypot(), which spends ~5x the cycles on
+        // overflow-safe scaling we cannot need (visibilities are normalised, |V| <= 1).
+        // Agreement with cabs() over this range is 1.5e-16 relative, i.e. exact.
+        mod_obs[t3ampoffset + i] = sqrt(modsq(modt3));
 
     if (i < nt3phi)
       if (data_err[t3phioffset + i] > 0)
-        // mod_obs[t3phioffset + i] = xatan2(cimag(modt3), creal(modt3));
-        mod_obs[t3phioffset + i] = carg(modt3);
+        mod_obs[t3phioffset + i] = xatan2(cimag(modt3), creal(modt3));
   }
 
   if (nvisamp > 0)
     //#pragma omp for simd
     for (i = 0; i < nvisamp; ++i)
       if (data_err[visampoffset + i] > 0)
-        mod_obs[visampoffset + i] = cabs(mod_vis[visin[i]]);
+        mod_obs[visampoffset + i] = sqrt(modsq(mod_vis[visin[i]]));
 
   if (nvisphi > 0) {
     //#pragma omp for simd
@@ -1587,7 +1801,7 @@ void vis_to_obs(const double complex *__restrict mod_vis, double *__restrict mod
     if (diffvis == FALSE) {
       for (i = 0; i < nvisphi; ++i)
         if (data_err[visphioffset + i] > 0)
-          mod_obs[visphioffset + i] = carg(mod_vis[visin[i]]);
+          mod_obs[visphioffset + i] = xatan2(cimag(mod_vis[visin[i]]), creal(mod_vis[visin[i]]));
     } else {
       double ref_chan;
       for (i = 0; i < nvisphi; ++i) {
@@ -1595,11 +1809,11 @@ void vis_to_obs(const double complex *__restrict mod_vis, double *__restrict mod
         for (k = 0; k < nwavr; k++) // annoying: differential vis require the original number of spectral channels -- need to check that
         {
           if (dvisindx[i][k] != -1)
-            ref_chan += carg(mod_vis[dvisindx[i][k]]);
+            ref_chan += xatan2(cimag(mod_vis[dvisindx[i][k]]), creal(mod_vis[dvisindx[i][k]]));
         }
         ref_chan /= (double)dvisnwav[i];
         //    printf("Point: %ld index: %ld ref_chan: %lf navg: %d \n", i, visin[i], ref_chan, dvisnwav[i]);
-        mod_obs[visphioffset + i] = carg(mod_vis[visin[i]]) - ref_chan;
+        mod_obs[visphioffset + i] = xatan2(cimag(mod_vis[visin[i]]), creal(mod_vis[visin[i]])) - ref_chan;
       }
     }
   }
@@ -1621,13 +1835,13 @@ double residuals_to_chi2(const double *res, double *chi2v2, double *chi2t3amp, d
   long i;
   double temp1 = 0, temp2 = 0, temp3 = 0, temp4 = 0, temp5 = 0; // local accumulator (faster than using chi2)
 
-  //  #pragma omp simd reduction(+:temp1)
+  #pragma omp simd reduction(+ : temp1)
   for (i = 0; i < nv2; ++i) {
     temp1 += res[i] * res[i];
   }
   *chi2v2 = temp1;
 
-  // #pragma omp simd reduction(+:temp2)
+  #pragma omp simd reduction(+ : temp2)
   for (i = nv2; i < nv2 + nt3amp; ++i) {
     temp2 += res[i] * res[i];
   }
@@ -1635,7 +1849,7 @@ double residuals_to_chi2(const double *res, double *chi2v2, double *chi2t3amp, d
   *chi2t3amp = temp2;
 
   if (nvisamp > 0) {
-    //#pragma omp simd reduction(+:temp3)
+    #pragma omp simd reduction(+ : temp3)
     for (i = nv2 + nt3amp; i < nv2 + nt3amp + nvisamp; ++i) {
       temp3 += res[i] * res[i];
     }
@@ -1644,7 +1858,7 @@ double residuals_to_chi2(const double *res, double *chi2v2, double *chi2t3amp, d
   }
 
   if (nvisphi > 0) {
-    //#pragma omp simd reduction(+:temp4)
+    #pragma omp simd reduction(+ : temp4)
     for (i = nv2 + nt3amp + nvisamp + nt3phi; i < nv2 + nt3amp + nvisamp + nt3phi + nvisphi; ++i) {
       temp4 += res[i] * res[i];
     }
@@ -1682,16 +1896,14 @@ static inline double modsq(double complex input) // __attribute__((always_inline
 /* Calculate chi^2 for a flat image (for reference)       */
 /**********************************************************/
 double get_flat_chi2(bool benchmark, const int nwavr) {
-  long i, rlong, nbench;
+  long i, nbench;
   double dummy1, dummy2, dummy3, dummy4, dummy5, startTime, endTime;
   double complex *mod_vis = malloc(nuv * sizeof(double complex));
   double *res = calloc((nv2 + nt3amp + nt3phi + nvisamp + nvisphi), sizeof(double));     // current residuals
   double *mod_obs = calloc((nv2 + nt3amp + nt3phi + nvisamp + nvisphi), sizeof(double)); // current observables
-  RngStream rngflat = RngStream_CreateStream("flatchi2");
-  for (i = 0; i < nuv; ++i) {
-    rlong = RngStream_RandInt(rngflat, 0, 2147483647);
-    mod_vis[i] = cexp(-10.0 + I * (rlong % 1000) * 0.006283);
-  }
+  Philox rngflat = philox_stream(PHILOX_STREAM_FLAT, PHILOX_DEFAULT_SEED);
+  for (i = 0; i < nuv; ++i)
+    mod_vis[i] = cexp(-10.0 + I * philox_randint(&rngflat, 0, 999) * 0.006283);
 
   if (benchmark == TRUE) {
     printf("Reconst setup -- Benchmarking the chi2...\n");
@@ -1713,7 +1925,6 @@ double get_flat_chi2(bool benchmark, const int nwavr) {
   free(res);
   free(mod_obs);
   free(mod_vis);
-  RngStream_DeleteStream(&rngflat);
   if (benchmark == TRUE)
     getchar();
 
@@ -2117,7 +2328,9 @@ void mcmc_fullchain(char *file, long nchains, long niter, int nwavr, long neleme
 // Recompute observables, chi2, regularizers from input image
 // then dump the info into .fits (+headers) and .data files
 //
-void mcmc_writeoutput(char *file_basename, double *image, const int nchains, const int nrealizations, const unsigned int *burn_in_times, const long depth,
+/* Writes one reconstructed image (+ its .data companion) and returns the reduced chi2 of
+   that image, so callers can rank several chains against each other. */
+double mcmc_writeoutput(char *file_basename, double *image, const int nchains, const int nrealizations, const unsigned int *burn_in_times, const long depth,
                       const long nelements, const unsigned short axis_len, const double complex *__restrict xtransform,
                       const double complex *__restrict ytransform, const unsigned short *saved_x, const unsigned short *saved_y, const double *saved_params,
                       const long niter, const int nwavr, double *params, double *params_std, double *reg_param, double *reg_value, const double *prior_image,
@@ -2225,6 +2438,8 @@ void mcmc_writeoutput(char *file_basename, double *image, const int nchains, con
   writeasfits(file_basename, image, nwavr, depth, niter - burn_in_times[0] - 1, chi2 / ndf, chi2v2, chi2t3amp, chi2t3phi, chi2visamp, chi2visphi, -1, nelements,
               reg_param, reg_value, niter, axis_len, ndf, tmin, chi2_temp, chi2_target, mas_pixel, nchains, logZ, logZe, init_filename, prior_filename, params,
               params_std);
+
+  return chi2 / ndf;
 }
 
 void normalize_image(double *image, int size) {
@@ -2376,6 +2591,7 @@ void mcmc_results(int minimization_engine, char *file_basename, const int nchain
   if (output_mean) {
 
     images_mean = calloc(nchains_eff * nwavr * axis_len * axis_len, sizeof(double));
+    double *chain_chi2r = malloc(nchains_eff * sizeof(double));
     for (t = 0; t < nchains_eff; ++t) {
 
       for (i = 0; i < nwavr * axis_len * axis_len; ++i)
@@ -2394,11 +2610,45 @@ void mcmc_results(int minimization_engine, char *file_basename, const int nchain
       }
 
       sprintf(data_filename, "%s_MEAN_chain%d", file_basename, t);
-      mcmc_writeoutput(data_filename, &images_mean[t * nwavr * axis_len * axis_len], nchains, niter - burn_in_times[t], &burn_in_times[t], depth, nelements,
-                       axis_len, xtransform, ytransform, saved_x, saved_y, saved_params, niter, nwavr, final_params, final_params_std, reg_param,
+      chain_chi2r[t] =
+          mcmc_writeoutput(data_filename, &images_mean[t * nwavr * axis_len * axis_len], nchains, niter - burn_in_times[t], &burn_in_times[t], depth, nelements,
+                           axis_len, xtransform, ytransform, saved_x, saved_y, saved_params, niter, nwavr, final_params, final_params_std, reg_param,
+                           final_reg_value, prior_image, initial_x, initial_y, centroid_image_x, centroid_image_y, fov, cent_mult, ndf, tmin, chi2_temp,
+                           chi2_target, mas_pixel, init_filename, prior_filename, logZ, logZe);
+    }
+
+    // Each annealing chain is an independent restart, and they routinely settle into very
+    // different local minima, so the per-chain mean images are not variations on one
+    // answer, they are competing answers. The caller asked for a single image, so rank the
+    // chains by the chi2 of their mean image and write the winner to the
+    // requested filename. Without this, no file of that name was produced at all and the
+    // choice was left to whoever read the log.
+    if (nchains_eff > 1) {
+      int best = 0;
+      for (t = 1; t < nchains_eff; ++t)
+        if (chain_chi2r[t] < chain_chi2r[best])
+          best = t;
+
+      printf("Output -- Chain ranking (chi2r of each chain's mean image):\n");
+      for (t = 0; t < nchains_eff; ++t) {
+        int rank = 1;
+        for (int s = 0; s < nchains_eff; ++s)
+          if ((chain_chi2r[s] < chain_chi2r[t]) || ((chain_chi2r[s] == chain_chi2r[t]) && (s < t)))
+            rank++;
+        printf("Output --   chain %2d : chi2r %12.4f   (rank %d of %d)%s\n", t, chain_chi2r[t], rank, nchains_eff, (t == best) ? "  <-- best" : "");
+      }
+      printf("Output -- Writing chain %d (chi2r %.4f) as the final image: %s.fits\n", best, chain_chi2r[best], file_basename);
+      if (chain_chi2r[best] > 3.0)
+        printf("Output -- WARNING: even the best chain has chi2r = %.2f; none of the chains converged. Consider more iterations (-n) or more chains.\n",
+               chain_chi2r[best]);
+
+      sprintf(data_filename, "%s", file_basename);
+      mcmc_writeoutput(data_filename, &images_mean[best * nwavr * axis_len * axis_len], nchains, niter - burn_in_times[best], &burn_in_times[best], depth,
+                       nelements, axis_len, xtransform, ytransform, saved_x, saved_y, saved_params, niter, nwavr, final_params, final_params_std, reg_param,
                        final_reg_value, prior_image, initial_x, initial_y, centroid_image_x, centroid_image_y, fov, cent_mult, ndf, tmin, chi2_temp,
                        chi2_target, mas_pixel, init_filename, prior_filename, logZ, logZe);
     }
+    free(chain_chi2r);
   }
 
   // MEDIAN over iterations
@@ -2846,6 +3096,20 @@ bool read_commandline(int *argc, char **argv, bool *benchmark, bool *use_v2, boo
         sscanf(argv[i + 1], "%lf", fluxs);
       } else if (strcmp(argv[i], "-cv") == 0) {
         sscanf(argv[i + 1], "%lf", cvfwhm);
+      } else if (strcmp(argv[i], "-modeltype") == 0) {
+        int m;
+        for (m = 0; m < n_squeeze_models; ++m)
+          if (strcmp(argv[i + 1], squeeze_models[m].name) == 0) {
+            modeltype = m;
+            break;
+          }
+        if (m == n_squeeze_models) {
+          printf("Command line -- unknown -modeltype '%s'. Available models:", argv[i + 1]);
+          for (m = 0; m < n_squeeze_models; ++m)
+            printf(" %s", squeeze_models[m].name);
+          printf("\n");
+          return FALSE;
+        }
       } else if (strcmp(argv[i], "-P") == 0) {
         reg_param[REG_MODELPARAM] = 1.0;
         for (j = i + 1; j < *argc; ++j) {
@@ -2861,7 +3125,25 @@ bool read_commandline(int *argc, char **argv, bool *benchmark, bool *use_v2, boo
         i += nparams - 1;
       } else if (strcmp(argv[i], "-S") == 0) {
         // the way this is set up, the -P option must come before a -S option
-        if(nparams < 1) printf("Error, must call -P option before -S\n");
+        if (nparams < 1) {
+          printf("Command line -- -S must come after -P: the step sizes match the -P parameters one for one.\n");
+          return FALSE;
+        }
+        // Count the step sizes actually supplied, with the same end-of-list rule as -P
+        // ('-' followed by a letter starts the next option, but -0.1 is a number). Without
+        // this we would sscanf our way past argv's end whenever -S is short, a segfault.
+        long nsteps = 0;
+        for (j = i + 1; j < *argc; ++j) {
+          if (argv[j][0] == 45)
+            if (argv[j][1] > 64)
+              break;
+          nsteps++;
+        }
+        if (nsteps != nparams) {
+          printf("Command line -- -P supplied %ld parameters but -S supplied %ld step sizes; they must match. Use 0 to hold a parameter fixed.\n", nparams,
+                 nsteps);
+          return FALSE;
+        }
         nparams_free = nparams;
         for (j = 0; j < nparams; ++j)
           {
@@ -3032,7 +3314,7 @@ void print_diagnostics(int iChain, long current_iter, long nvis, long nv2, long 
   if (nparams > 0) {
     printf("Chain: %d Model Parameters: \n", iChain);
     for (j = 0; j < nparams; ++j)
-      printf("%ld - %s %7.5g +/- %7.5g\n", j, model_param_names[j], params[j], stepsize[j]);
+      printf("%ld - %s %7.5g +/- %7.5g\n", j, squeeze_models[modeltype].param_names[j], params[j], stepsize[j]);
     printf("\n");
   }
 }

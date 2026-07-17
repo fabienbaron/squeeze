@@ -99,7 +99,7 @@ double tvsqspec(const int nchan, const long imwidth, const double *image, const 
   long i, w;
   double temp1, temp2;
   temp1 = 0;
-  for (w = 1; w < nchan-1; w++)
+  for (w = 1; w < nchan; w++)
   {
     for (i = 0; i < imwidth * imwidth; ++i)
     temp1 += (image[w * imwidth * imwidth + i] - image[(w-1) * imwidth * imwidth + i])*(image[w * imwidth * imwidth + i] - image[(w-1) * imwidth * imwidth + i]);
@@ -110,7 +110,14 @@ double tvsqspec(const int nchan, const long imwidth, const double *image, const 
 double tvsqspec_diffpoint(long pos, long chan, double diff, const int nchan, const long imsize, const double *image)
 {
   double temp = 0.0;
-  if (chan == nchan)
+
+  // A single channel has no spectral neighbour: tvsqspec() is identically 0.
+  // Without this, chan==0==nchan-1 would fall into the branch below and read
+  // image[-imsize + pos]. Reachable: -tvs does not require nwavr > 1.
+  if (nchan < 2)
+    return 0.0;
+
+  if (chan == nchan - 1)
   {
     temp = (image[chan * imsize + pos] + diff - image[(chan-1) * imsize + pos])*(image[chan * imsize + pos] + diff - image[(chan-1) * imsize + pos]);
     return temp;

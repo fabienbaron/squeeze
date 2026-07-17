@@ -1,5 +1,3 @@
-lib/rngstreams/*
-
 # CMake build trees and in-source configure artifacts
 # (anchored to the repo root so vendored library files are never hidden)
 /build*/
