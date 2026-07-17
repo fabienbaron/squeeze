@@ -166,8 +166,8 @@ the expected list if it does not. To add a model, follow the instructions at the
 
 ### 3.2.1 Simulated annealing (default)
 
-The annealing engine has **no fixed cooling schedule**. The temperature is slaved to the
-current misfit: it relaxes towards
+The annealing engine has **no fixed cooling schedule**. The temperature follows the current
+misfit instead, relaxing towards
 
 ```
 T  ->  chi2r / chi2_t          (chi2_t is set by -ct, default 4)
@@ -255,30 +255,13 @@ temperatures, and which pairs get tried depends on thread arrival order.)
 
 ### 3.2.4 Choosing the image grid
 
-Chains sometimes stall: instead of converging they settle at a high chi2r (hundreds) and stay
-there, because the temperature is slaved to chi2 (3.2.1) and a chain that stops improving
-therefore stops cooling. When this happens it is almost always a sign that the **grid is badly
-chosen**, not that the run needs more iterations. A stalled chain does not improve even with
-10x the iterations.
+`-w` times `-s` is the field of view, which must exceed the largest scale the data constrain,
+while `-s` itself must sample the resolution several times over. SQUEEZE prints the baseline
+range in wavelengths at startup, and the two scales follow as `1/(2*Bmin)` and `1/(2*Bmax)`:
+9.0 mas and 0.86 mas for the bundled 2004 data, hence the 64 pixels at 0.2 mas used in 3.1.
 
-Measured on the bundled 2004 sample data, four chains from random starts (`-i randomthr`), 150
-iterations:
-
-| grid | field of view | chains reaching chi2r ~ 1 |
-| --- | --- | --- |
-| 32 px @ 0.3 mas | 9.6 mas | 2 of 4 |
-| 32 px @ 0.2 mas | 6.4 mas | 0 of 4, the field of view no longer contains the source |
-| **64 px @ 0.2 mas** | 12.8 mas | **4 of 4** (12 of 12 over three runs) |
-| 128 px @ 0.1 mas | 12.8 mas | 3 of 4 |
-
-At an appropriate grid the engine is robust, and the starting image then makes little
-difference: both the default (all flux in one pixel) and `-i randomthr` converge every chain.
-Too small a grid is what makes chains fragile. For this dataset 64x64 is the right choice,
-which is what the examples in 3.1 use.
-
-If chains do stall, the ranking output (3.2.3) makes it obvious, and the fix is a better grid
-rather than more iterations. Note that cooling harder (`-ct`) does *not* rescue a stalled
-chain. It freezes it in place faster.
+Too small a grid shows up as chains stalling at a high chi2r instead of converging, and they
+do not recover with more iterations. The ranking output (3.2.3) makes this easy to spot.
 
 ### 3.3 Display utilities - Visualization
 
