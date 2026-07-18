@@ -155,6 +155,12 @@ int main(int argc, char **argv) {
   double v2s = 1., t3amps = 1., t3phis = 1., visamps = 1., visphis = 1.;
   double cvfwhm = 0., uvtol = 1e3, fluxs = 1.;
   double tempschedc = 3.0;
+  // Hottest rung of the tempering ladder. A true beta = 0 (pure-prior) reference is unusable
+  // here: squeeze's prior exp(-sum alpha*R) is unnormalized and has no overlap with the
+  // posterior, so that rung never communicates and the evidence estimate is worthless. A small
+  // positive floor keeps the ladder bridgeable; logZ is then log(Z(1)/Z(beta_min)), comparable
+  // across models sharing beta_min (logZ was only ever defined up to the prior normalization).
+  double beta_min = 0.01;
   bool wavauto = FALSE;
   bool verbose_import = FALSE;
   double *timemin = NULL;
@@ -651,6 +657,8 @@ int main(int argc, char **argv) {
   long *swap_attempt_count = calloc(nchains, sizeof(long));
   unsigned char *rt_touched_target = calloc(nchains, sizeof(unsigned char));
   long round_trips = 0;
+  long logz_burn = (long)ceil(0.3 * niter); // first sweep stepping_stone uses; set to the last ladder-adaptation sweep for tempering
+  double Lambda_final = 0.0;                 // communication barrier of the final (tuned) ladder
 
   for (i = 0; i < nchains; ++i)
     burn_in_times[i] = niter; // for ENGINE_SIMULATED_ANNEALING, unless T gets to tmin, burn-in is never achieved
@@ -668,7 +676,7 @@ int main(int argc, char **argv) {
 // setting, is the reading where the control loop closes on itself. Outside this region
 // (mcmc_results) tmin remains the user-supplied setting.
 #pragma omp parallel private(i, j, k, w) firstprivate(tmin)                                                                                                    \
-    shared(temperature, beta, iChaintoStorage, iStoragetoChain, swap_accept_sum, swap_attempt_count, rt_touched_target, round_trips, burn_in_times, saved_x, saved_y, \
+    shared(temperature, beta, beta_min, iChaintoStorage, iStoragetoChain, swap_accept_sum, swap_attempt_count, rt_touched_target, round_trips, logz_burn, Lambda_final, burn_in_times, saved_x, saved_y, \
                                                 saved_lLikelihood, saved_lPosterior, saved_lPrior, saved_params, saved_reg_value, minimization_engine,         \
                                                 use_tempfitswriting, init_filename, ctrlcpressed, f_anywhere, f_copycat, prob_auto, chi2_target,               \
                                                 mas_pixel, niter, chi2_temp, flat_chi2, axis_len, nwavr,                                                       \
@@ -691,13 +699,14 @@ int main(int argc, char **argv) {
     if (minimization_engine == ENGINE_SIMULATED_ANNEALING)
       temperature[iChain] = 1.0;
     else {
-      // beta ladder with fixed endpoints: rank 0 = target (beta = 1), rank nchains-1 =
-      // reference (beta = 0, a pure-prior chain). Interior spacing is geometric via tempschedc,
-      // concentrated near beta = 0 where the evidence integrand varies fastest. The adaptive
-      // ladder (a later phase) will re-place the interior; tempschedc then sets only the start.
+      // beta ladder with fixed endpoints: rank 0 = target (beta = 1), rank nchains-1 = the
+      // hottest reference (beta = beta_min > 0; see the beta_min declaration for why not 0).
+      // Interior spacing is geometric via tempschedc, concentrated near beta_min where the
+      // evidence integrand varies fastest. The adaptive ladder re-places the interior each
+      // round, so tempschedc only sets the initial shape.
       double frac = (nchains > 1) ? (double)(nchains - 1 - iChain) / (double)(nchains - 1) : 1.0;
-      beta[iChain] = pow(frac, tempschedc);
-      temperature[iChain] = (beta[iChain] > 0.0) ? 1.0 / beta[iChain] : 1.0e30; // display only; 1e30 marks the reference
+      beta[iChain] = beta_min + (1.0 - beta_min) * pow(frac, tempschedc);
+      temperature[iChain] = 1.0 / beta[iChain];
       printf("Reconst setup -- Chain %d has beta %f (temperature %g)\n", iChain, beta[iChain], temperature[iChain]);
     }
 #pragma omp barrier
@@ -834,6 +843,7 @@ int main(int argc, char **argv) {
       // adaptation is useful, so it keeps tuning throughout.
       // ceil(0.3*niter) is the same burn-in cutoff the logZ expectations use above.
       const bool tempering = (minimization_engine == ENGINE_PARALLEL_TEMPERING);
+      const bool adapt_tempering = tempering && (nchains >= 3); // adaptive ladder needs interior rungs to move
       const bool adapting = !tempering || ((i / (nwavr * nelements)) < (long)ceil(0.3 * niter));
 
       //  new regularizer values
@@ -927,6 +937,30 @@ int main(int argc, char **argv) {
                 rt_touched_target[c] = 0;
               }
             }
+          }
+
+          // Adaptive ladder: at a few growing round boundaries, re-place the interior beta rungs
+          // from the swap acceptance measured so far this round, then reset the accumulators. The
+          // final round (after the last boundary) runs on a fixed, tuned ladder and is the only
+          // one stepping_stone uses (logz_burn). tempschedc now sets only the initial shape.
+          if (adapt_tempering && ((sweep == niter / 8) || (sweep == niter / 4) || (sweep == niter / 2))) {
+#pragma omp single
+            {
+              double Lam = adapt_ladder(beta, temperature, iStoragetoChain, swap_accept_sum, swap_attempt_count, nchains);
+              printf("Reconst setup -- adaptive ladder at sweep %ld: communication barrier Lambda = %.2f\n", sweep, Lam);
+              for (int r = 0; r < nchains; ++r) {
+                swap_accept_sum[r] = 0.0;
+                swap_attempt_count[r] = 0;
+              }
+              if (sweep == niter / 2) { // last adaptation: reset the round-trip counter so the reported rate is the tuned ladder's
+                Lambda_final = Lam;
+                logz_burn = sweep;
+                round_trips = 0;
+                for (int c = 0; c < nchains; ++c)
+                  rt_touched_target[c] = 0;
+              }
+            }
+#pragma omp barrier // publish the new beta/temperature to all chains before continuing
           }
         }
       }
@@ -1452,20 +1486,22 @@ int main(int argc, char **argv) {
     } else // (minimization_engine == ENGINE_PARALLEL_TEMPERING)
     {
       double logZ = 0, logZe = 0.;
-      stepping_stone(beta, iStoragetoChain, saved_lLikelihood, niter, nchains, &logZ, &logZe);
+      // Use only the final round (post last ladder adaptation) so every slot's beta was fixed
+      // across the samples the estimator sees.
+      stepping_stone(beta, iStoragetoChain, saved_lLikelihood, niter, logz_burn, nchains, &logZ, &logZe);
       printf("Output -- Final logZ: %f +/- %f (stepping-stone; +/- is the forward/reverse sandwich gap)\n", logZ, logZe);
       if (logZe > 5.0)
-        printf("Output --   NB: a large sandwich gap means poor ladder overlap (usually the hot rungs). More chains or\n"
-               "Output --   the adaptive ladder would tighten it. Note logZ is defined only up to the prior's normalization.\n");
+        printf("Output --   NB: a large sandwich gap means poor ladder overlap. See the per-rung acceptance below.\n");
 
-      // Mixing diagnostics from the DEO swap: round-trip rate (a replica going reference ->
-      // target -> reference is the honest measure of whether tempering is communicating), and the
-      // per-pair swap acceptance (uneven values reveal where the fixed ladder mixes poorly).
-      printf("Output -- Tempering mixing: %ld round trips (rate %.4f per sweep)\n", round_trips, (double)round_trips / (double)niter);
-      if (round_trips == 0)
-        printf("Output --   zero round trips: some rung has near-zero swap acceptance, so no replica crosses the whole\n"
-               "Output --   ladder. The adaptive ladder (or more chains) would bridge it. Check the per-rung table below.\n");
-      printf("Output -- Swap acceptance per adjacent rung (rank r <-> r+1):\n");
+      // Mixing diagnostics, on the final tuned ladder: the communication barrier Lambda, the
+      // round-trip rate (a replica going reference -> target -> reference is the honest measure of
+      // whether tempering is communicating), and the per-pair swap acceptance (now near-uniform if
+      // the adaptive ladder worked).
+      printf("Output -- Tempering mixing: communication barrier Lambda = %.2f (useful chains ~ %d), %ld round trips (rate %.4f per sweep)\n",
+             Lambda_final, (int)ceil(Lambda_final) + 1, round_trips, (double)round_trips / (double)(niter - logz_burn));
+      if ((Lambda_final > 0.0) && (nchains < (int)ceil(Lambda_final) + 1))
+        printf("Output --   Lambda suggests more chains would help (have %d, want ~ %d).\n", nchains, (int)ceil(Lambda_final) + 1);
+      printf("Output -- Swap acceptance per adjacent rung (final ladder, rank r <-> r+1):\n");
       for (int r = 0; r < nchains - 1; ++r)
         printf("Output --   rung %2d: %.3f\n", r, swap_attempt_count[r] > 0 ? swap_accept_sum[r] / (double)swap_attempt_count[r] : 0.0);
 
@@ -2206,9 +2242,62 @@ static double logmeanexp(const double *x, long n) {
 // from the colder chain's samples; the two bracket the truth (a "sandwich"), so their average is
 // the estimate and their gap is an honest Monte Carlo error bar. No O(niter^2) recompute, no fake
 // error bar. logZ stays defined up to the (unknown) normalization of the prior exp(-lPrior).
-void stepping_stone(const double *beta, const unsigned short *iStoragetoChain, const double *saved_lLikelihood, long niter, int nchains, double *logZ,
+// Re-place the interior beta rungs at uniform communication-barrier spacing, i.e. equal swap
+// rejection between every adjacent pair. This is the optimal parallel-tempering schedule of
+// Syed et al. 2021: it puts more rungs where chains mix poorly (the hot region, and near the
+// beta=0 reference) and fewer where they mix easily. Endpoints beta=1 (target) and beta=0
+// (reference) stay fixed. Returns the global communication barrier Lambda = sum of the rejection
+// rates; the round-trip rate is ~ 1/(1+Lambda) and the useful number of chains is ~ Lambda+1.
+//
+// beta is sorted by rank (rank 0 = beta 1, rank nchains-1 = beta 0) and stays sorted under swaps
+// (a swap exchanges states between two ranks but leaves the beta-per-rank ladder unchanged), so
+// we can interpolate the monotone map cumulative-barrier -> beta directly.
+double adapt_ladder(double *beta, double *temperature, const unsigned short *iStoragetoChain, const double *swap_accept_sum, const long *swap_attempt_count,
+                    int nchains) {
+  if (nchains < 3)
+    return 0.0;
+  double *cum = malloc(nchains * sizeof(double));      // cumulative barrier at each rank
+  double *old_beta = malloc(nchains * sizeof(double)); // current beta at each rank (decreasing)
+  for (int r = 0; r < nchains; ++r)
+    old_beta[r] = beta[iStoragetoChain[r]];
+
+  cum[0] = 0.0;
+  for (int r = 1; r < nchains; ++r) {
+    double acc = (swap_attempt_count[r - 1] > 0) ? swap_accept_sum[r - 1] / (double)swap_attempt_count[r - 1] : 0.5;
+    double rej = 1.0 - acc;
+    if (rej < 1e-6)
+      rej = 1e-6; // keep cum strictly increasing so the inverse is well defined (Pigeons nudges likewise)
+    cum[r] = cum[r - 1] + rej;
+  }
+  double Lambda = cum[nchains - 1];
+
+  // interior rank k -> target cumulative barrier k*Lambda/(nchains-1), inverted through (cum, old_beta)
+  for (int k = 1; k < nchains - 1; ++k) {
+    double tc = (double)k / (double)(nchains - 1) * Lambda;
+    int r = 0;
+    while (r < nchains - 2 && cum[r + 1] < tc)
+      r++;
+    double f = (cum[r + 1] > cum[r]) ? (tc - cum[r]) / (cum[r + 1] - cum[r]) : 0.0;
+    double nb = old_beta[r] + f * (old_beta[r + 1] - old_beta[r]);
+    beta[iStoragetoChain[k]] = nb;
+    temperature[iStoragetoChain[k]] = (nb > 0.0) ? 1.0 / nb : 1.0e30;
+  }
+  // pin the endpoints to their current (fixed) values: rank 0 = 1, rank nchains-1 = beta_min
+  beta[iStoragetoChain[0]] = old_beta[0];
+  temperature[iStoragetoChain[0]] = 1.0 / old_beta[0];
+  beta[iStoragetoChain[nchains - 1]] = old_beta[nchains - 1];
+  temperature[iStoragetoChain[nchains - 1]] = 1.0 / old_beta[nchains - 1];
+
+  free(cum);
+  free(old_beta);
+  return Lambda;
+}
+
+void stepping_stone(const double *beta, const unsigned short *iStoragetoChain, const double *saved_lLikelihood, long niter, long burn, int nchains, double *logZ,
                     double *logZ_err) {
-  long burn = (long)ceil(0.3 * niter);
+  // burn = first sweep to use. With an adaptive ladder this must be the sweep after the last
+  // adaptation, since a storage slot's beta only stops changing then; earlier samples belong to
+  // a different ladder and would corrupt the estimate.
   long n = niter - burn;
   double logZ_fwd = 0.0, logZ_rev = 0.0;
   double *buf = malloc((n > 0 ? n : 1) * sizeof(double));

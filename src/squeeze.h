@@ -173,7 +173,8 @@ void mcmc_results(int minimization_engine, char *file_basename, const int nchain
 		            double chi2_target, double mas_pixel, char *init_filename, char *prior_filename, double logZ, double logZe);
 
 
-void stepping_stone(const double *beta, const unsigned short *iStoragetoChain, const double *saved_lLikelihood, long niter, int nchains, double *logZ, double *logZ_err);
+void stepping_stone(const double *beta, const unsigned short *iStoragetoChain, const double *saved_lLikelihood, long niter, long burn, int nchains, double *logZ, double *logZ_err);
+double adapt_ladder(double *beta, double *temperature, const unsigned short *iStoragetoChain, const double *swap_accept_sum, const long *swap_attempt_count, int nchains);
 
 void mcmc_fullchain(char *file, long nchains, long niter, int nchanr, long nelements, unsigned short axis_len, unsigned short *saved_x, unsigned short *saved_y, double *saved_params, double *saved_lLikelihood, double *saved_lPrior, double *saved_lPosterior, double *temperature, unsigned short *iChaintoStorage);
 
