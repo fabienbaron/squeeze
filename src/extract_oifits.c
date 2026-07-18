@@ -50,6 +50,8 @@ void find_vec_minmax(double* output_min, double *output_max, double* vec, long N
 
 
 void add_new_uv(long *obs_index, long *uvindex, double new_u, double new_v, double new_uv_lambda, double new_uv_dlambda, double new_uv_time, double *table_u, double *table_v, double *table_uv_lambda, double *table_uv_dlambda, double *table_uv_time, double uvtol);
+static void uvhash_init(long maxpts, double uvtol); // build the uv de-duplication hash (freed by uvhash_free)
+static void uvhash_free(void);
 
 int import_single_epoch_oifits(char *filename, bool use_v2, bool use_t3amp, bool use_t3phi, bool use_visamp, bool use_visphi,
                                double v2a, double v2s, double t3ampa, double t3amps, double t3phia, double t3phis,
@@ -249,6 +251,8 @@ int import_single_epoch_oifits(char *filename, bool use_v2, bool use_t3amp, bool
         uv_lambda = malloc(nuv * sizeof(double));
         uv_dlambda = malloc(nuv * sizeof(double));
         uv_time = malloc(nuv * sizeof(double));
+
+        uvhash_init(nuv, uvtol); // nuv is the maximum uv count here, before de-duplication
 
         // Lookup tables for observable to corresponding UV numbers
 
@@ -689,6 +693,7 @@ int import_single_epoch_oifits(char *filename, bool use_v2, bool use_t3amp, bool
         printf("OIFITS import -- Unique uv points:\t%ld (out of %ld)\n", uvindex, nuv);
         printf("OIFITS import --                  \t(using uvtol=%lf)\n", uvtol);
         nuv = uvindex;
+        uvhash_free(); // de-duplication done; the hash is no longer needed
 
         //
         // Check for smallest/largest wavelength
@@ -901,43 +906,77 @@ int import_single_epoch_oifits(char *filename, bool use_v2, bool use_t3amp, bool
 
 
 
+// ---- Spatial hash for uv de-duplication -------------------------------------------------------
+// Two uv points are merged when their (u,v) separation is below uvtol and their wavelengths agree
+// to 1e-6 relative. Comparing each candidate against every stored point is O(N^2) and used to
+// dominate the import of larger datasets. Instead the stored points are bucketed on a (u,v) grid
+// of cell size uvtol: any point within uvtol of a candidate must lie in the candidate's own cell
+// or one of the eight neighbours, so only those nine buckets are searched. This makes the
+// de-duplication about O(N). Returning the smallest matching stored index reproduces exactly what
+// the old first-match linear scan returned, so the resulting uv table is unchanged.
+static long *uvhash_head = NULL; // uvhash_head[bucket] = first stored uv index in that bucket, or -1
+static long *uvhash_next = NULL; // uvhash_next[uvidx]   = next uv index in the same bucket, or -1
+static long uvhash_nbuckets = 0; // always a power of two, so the bucket modulo is a bit-mask
+static double uvhash_cell = 1.0; // grid cell size (= uvtol, guarded to stay positive)
+
+static long uvhash_bucket(long cu, long cv)
+{
+        // Classic two-prime spatial hash (Teschner et al. 2003), masked to the table size.
+        unsigned long h = (unsigned long)cu * 73856093UL ^ (unsigned long)cv * 19349663UL;
+        return (long)(h & (unsigned long)(uvhash_nbuckets - 1));
+}
+
+static void uvhash_init(long maxpts, double uvtol)
+{
+        uvhash_nbuckets = 1024;
+        while (uvhash_nbuckets < 2 * maxpts)
+                uvhash_nbuckets <<= 1; // keep the load factor below ~0.5
+        uvhash_head = malloc(uvhash_nbuckets * sizeof(long));
+        uvhash_next = malloc((maxpts > 0 ? maxpts : 1) * sizeof(long));
+        for (long b = 0; b < uvhash_nbuckets; b++)
+                uvhash_head[b] = -1;
+        uvhash_cell = (uvtol > 0.0) ? uvtol : 1.0; // uvtol<=0 merges nothing; any positive cell is fine
+}
+
+static void uvhash_free(void)
+{
+        free(uvhash_head);
+        uvhash_head = NULL;
+        free(uvhash_next);
+        uvhash_next = NULL;
+        uvhash_nbuckets = 0;
+}
+
 void add_new_uv(long *obs_index, long *uvindex, double new_u, double new_v, double new_uv_lambda, double new_uv_dlambda, double new_uv_time, double *table_u, double *table_v, double *table_uv_lambda, double *table_uv_dlambda, double *table_uv_time, double uvtol)
 {
-        // Check previous uv points for redundancy, and only create a new uv point if needed
-
-        // First check for redundancy
-        long i;
-        long redundant_index = -1;
+        // Check previous uv points for redundancy, and only create a new uv point if needed.
         const double tol = uvtol * uvtol;
+        const long cu = lround(new_u / uvhash_cell);
+        const long cv = lround(new_v / uvhash_cell);
+        long redundant_index = -1;
 
-        #ifdef _OPENMP
-        #pragma omp parallel
-        #pragma omp for
-        #endif
-        for (i = 0; i < *uvindex; i++)
-        {
-                // Need to be clever here, as this is a major source of slowdown for very large datasets
-
-                if ((table_u[i] - new_u) * (table_u[i] - new_u) + (table_v[i] - new_v) * (table_v[i] - new_v)  < tol)
-                  if  (fabs((table_uv_lambda[i] - new_uv_lambda) / table_uv_lambda[i]) < 1e-6)
-                {
-                        redundant_index = i;
-                        #ifdef _OPENMP
-                        #pragma omp cancel for
-                        #else
-                        break;
-                        #endif
-                }
-        }
+        for (long dcu = -1; dcu <= 1; dcu++)
+                for (long dcv = -1; dcv <= 1; dcv++)
+                        for (long j = uvhash_head[uvhash_bucket(cu + dcu, cv + dcv)]; j != -1; j = uvhash_next[j])
+                        {
+                                if ((table_u[j] - new_u) * (table_u[j] - new_u) + (table_v[j] - new_v) * (table_v[j] - new_v) < tol)
+                                  if (fabs((table_uv_lambda[j] - new_uv_lambda) / table_uv_lambda[j]) < 1e-6)
+                                    if (redundant_index == -1 || j < redundant_index) // keep the first-inserted match
+                                        redundant_index = j;
+                        }
 
         if (redundant_index == -1)        // the current point is not redundant with a previous one
         {
-                table_u[*uvindex] = new_u;
-                table_v[*uvindex] = new_v;
-                table_uv_time[*uvindex] = new_uv_time;
-                table_uv_lambda[*uvindex] = new_uv_lambda;
-                table_uv_dlambda[*uvindex] = new_uv_dlambda;
-                *obs_index = *uvindex;
+                const long idx = *uvindex;
+                table_u[idx] = new_u;
+                table_v[idx] = new_v;
+                table_uv_time[idx] = new_uv_time;
+                table_uv_lambda[idx] = new_uv_lambda;
+                table_uv_dlambda[idx] = new_uv_dlambda;
+                const long b = uvhash_bucket(cu, cv);
+                uvhash_next[idx] = uvhash_head[b];
+                uvhash_head[b] = idx;
+                *obs_index = idx;
                 (*uvindex)++;
         }
         else
