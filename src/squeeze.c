@@ -2712,7 +2712,7 @@ void mcmc_results(int minimization_engine, char *file_basename, const int nchain
       else
         final_params_std[i] = -1;
 
-      printf("Output -- Estimated parameter %d =\t%7.3e\t+/-\t%7.3e\n", i, final_params[i], final_params_std[i]);
+      printf("Output -- Estimated %-12s = %10.3e +/- %10.3e\n", squeeze_models[modeltype].param_names[i], final_params[i], final_params_std[i]);
     }
   }
 
@@ -3494,7 +3494,11 @@ void print_diagnostics(int iChain, long current_iter, long nvis, long nv2, long 
   if (nparams > 0) {
     printf("Chain: %d Model Parameters: \n", iChain);
     for (j = 0; j < nparams; ++j)
-      printf("%ld - %s %7.5g +/- %7.5g\n", j, squeeze_models[modeltype].param_names[j], params[j], stepsize[j]);
+      // The second column is the proposal step size, not an error bar, so it is marked with a
+      // Delta (step) rather than +/-. The posterior standard deviation is reported separately at
+      // the end of the run ("Estimated <name> = ... +/- ..."). Fixed field widths keep the "Delta:"
+      // column aligned across parameters whatever their name length or value magnitude.
+      printf("%ld - %-12s %12.5g  Δ: %-.5g\n", j, squeeze_models[modeltype].param_names[j], params[j], stepsize[j]);
     printf("\n");
   }
 }
