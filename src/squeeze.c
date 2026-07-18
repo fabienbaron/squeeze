@@ -641,8 +641,8 @@ int main(int argc, char **argv) {
   unsigned short *saved_y = calloc(nchains * niter * nwavr * nelements, sizeof(unsigned short));
   double *temperature = calloc(nchains, sizeof(double));
   // In tempering mode beta = 1/T is the authoritative ladder: the kernel and swap use it, and
-  // it lets the hottest rung sit at beta = 0 (a pure-prior reference chain), which temperature
-  // cannot represent. temperature[] is then display-only. In annealing mode beta is unused.
+  // it can go below what temperature comfortably represents (the hottest rung is beta_min).
+  // temperature[] is then display-only. In annealing mode beta is unused.
   double *beta = calloc(nchains, sizeof(double));
   unsigned short *iChaintoStorage = calloc(nchains, sizeof(unsigned short)); // determines where each parallel MCMC data will be stored
   // iChaintoStorage[i] also gives the index in the sorted list of temperatures
@@ -1209,8 +1209,8 @@ int main(int argc, char **argv) {
 
       // BUG: think how to rescale priors with fluxratio_image ?
       // Tempering multiplies the likelihood term by beta (the prior is untempered), so the
-      // reference chain at beta = 0 samples the prior alone. Annealing keeps dividing by its
-      // own dynamically-updated temperature.
+      // hotter the chain the less the data constrain it. Annealing keeps dividing by its own
+      // dynamically-updated temperature.
       if (tempering)
         transition_test = beta[iChain] * (new_lLikelihood - lLikelihood) + new_lPrior - lPrior;
       else
@@ -1489,14 +1489,12 @@ int main(int argc, char **argv) {
       // Use only the final round (post last ladder adaptation) so every slot's beta was fixed
       // across the samples the estimator sees.
       stepping_stone(beta, iStoragetoChain, saved_lLikelihood, niter, logz_burn, nchains, &logZ, &logZe);
-      printf("Output -- Final logZ: %f +/- %f (stepping-stone; +/- is the forward/reverse sandwich gap)\n", logZ, logZe);
-      if (logZe > 5.0)
-        printf("Output --   NB: a large sandwich gap means poor ladder overlap. See the per-rung acceptance below.\n");
+      printf("Output -- Final logZ: %f +/- %f (stepping-stone; see Readme 3.2.5)\n", logZ, logZe);
 
-      // Mixing diagnostics, on the final tuned ladder: the communication barrier Lambda, the
-      // round-trip rate (a replica going reference -> target -> reference is the honest measure of
-      // whether tempering is communicating), and the per-pair swap acceptance (now near-uniform if
-      // the adaptive ladder worked).
+      // Mixing diagnostics on the final tuned ladder: the communication barrier Lambda, the
+      // round-trip rate (a replica going reference -> target -> reference measures whether the
+      // ladder communicates end to end), and the per-pair swap acceptance, which is roughly flat
+      // once the ladder is tuned.
       printf("Output -- Tempering mixing: communication barrier Lambda = %.2f (useful chains ~ %d), %ld round trips (rate %.4f per sweep)\n",
              Lambda_final, (int)ceil(Lambda_final) + 1, round_trips, (double)round_trips / (double)(niter - logz_burn));
       if ((Lambda_final > 0.0) && (nchains < (int)ceil(Lambda_final) + 1))
@@ -1601,7 +1599,10 @@ void printhelp(void) {
   printf("  -d depth       : Number of realizations to average to together for final mean image (default %i).\n", DEFAULT_DEPTH);
   printf("  -chains  N     : Number of simultaneous Markov Chains SQUEEZE will run.\n");
   printf("  -threads N     : Number of simultaneous threads SQUEEZE is allowed to use, has to be at least equal to nchains\n");
-  printf("  -tempschedc c  : Temperature schedule power c for parallel tempering (default = 3).\n");
+  printf("  -tempering     : Sample the posterior with parallel tempering instead of annealing. Gives error bars and\n");
+  printf("                   the log evidence logZ; the cold chain is the reconstruction. See Readme 3.2.5.\n");
+  printf("  -tempschedc c  : Initial tempering ladder shape (default 3). The ladder is then retuned during the run to\n");
+  printf("                   equalise swap acceptance, so this only sets the starting point.\n");
   printf("  -nobws         : Do not compute bandwidth smearing factors when computing visibilities.\n");
 
   printf("\n***** OUTPUT SETTINGS ***** \n");
@@ -2238,15 +2239,16 @@ static double logmeanexp(const double *x, long n) {
 //
 // For adjacent rungs beta_lo < beta_hi with delta = beta_hi - beta_lo:
 //   log( Z(beta_hi)/Z(beta_lo) ) = log E_{beta_lo}[ exp(-delta * lLikelihood) ]   (hotter chain's samples)
-// Summed over the ladder this gives log( Z(beta=1)/Z(beta=0) ). We also compute the reverse leg
-// from the colder chain's samples; the two bracket the truth (a "sandwich"), so their average is
-// the estimate and their gap is an honest Monte Carlo error bar. No O(niter^2) recompute, no fake
-// error bar. logZ stays defined up to the (unknown) normalization of the prior exp(-lPrior).
+// Summed over the ladder this gives log( Z(beta=1)/Z(beta_min) ). We also compute the reverse
+// leg from the colder chain's samples; the two bracket the truth (a "sandwich"), so their
+// average is the estimate and their gap is the Monte Carlo error bar. This is O(K*niter), not
+// the O(niter^2) of the old running-mean approach. logZ is defined up to the (unknown)
+// normalization of the prior exp(-lPrior).
 // Re-place the interior beta rungs at uniform communication-barrier spacing, i.e. equal swap
 // rejection between every adjacent pair. This is the optimal parallel-tempering schedule of
-// Syed et al. 2021: it puts more rungs where chains mix poorly (the hot region, and near the
-// beta=0 reference) and fewer where they mix easily. Endpoints beta=1 (target) and beta=0
-// (reference) stay fixed. Returns the global communication barrier Lambda = sum of the rejection
+// Syed et al. 2021: it puts more rungs where chains mix poorly (the hot region) and fewer where
+// they mix easily. The endpoints beta=1 (target) and beta=beta_min (hottest) stay fixed.
+// Returns the global communication barrier Lambda = sum of the rejection
 // rates; the round-trip rate is ~ 1/(1+Lambda) and the useful number of chains is ~ Lambda+1.
 //
 // beta is sorted by rank (rank 0 = beta 1, rank nchains-1 = beta 0) and stays sorted under swaps
@@ -2302,8 +2304,8 @@ void stepping_stone(const double *beta, const unsigned short *iStoragetoChain, c
   double logZ_fwd = 0.0, logZ_rev = 0.0;
   double *buf = malloc((n > 0 ? n : 1) * sizeof(double));
 
-  // ranks 0..nchains-1 are temperature-sorted: rank 0 = target (beta=1), rank nchains-1 = reference
-  // (beta=0). Storage slot == rank (iChaintoStorage and iStoragetoChain are mutual inverses), and
+  // ranks 0..nchains-1 are temperature-sorted: rank 0 = target (beta=1), rank nchains-1 = hottest
+  // (beta_min). Storage slot == rank (iChaintoStorage and iStoragetoChain are mutual inverses), and
   // slot r is pinned to beta_r, so saved_lLikelihood[r*niter + ...] is the beta_r sample stream.
   for (int r = 0; r < nchains - 1; ++r) {
     int slot_cold = r;     // beta_hi stream

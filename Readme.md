@@ -249,9 +249,8 @@ before trusting it. If even the best chain has a poor chi2r, SQUEEZE says so exp
 
 Runs are reproducible: each chain's random number stream is a pure function of its chain
 index, so chain N always follows the same trajectory regardless of how the threads are
-scheduled, and re-running the same command reproduces every output file byte for byte.
-(Parallel tempering is not yet reproducible in this sense: there the chains also exchange
-temperatures, and which pairs get tried depends on thread arrival order.)
+scheduled, and re-running the same command reproduces every output file byte for byte. This
+holds for parallel tempering too, since its swaps are deterministic (see 3.2.5).
 
 ### 3.2.4 Choosing the image grid
 
@@ -262,6 +261,41 @@ range in wavelengths at startup, and the two scales follow as `1/(2*Bmin)` and `
 
 Too small a grid shows up as chains stalling at a high chi2r instead of converging, and they
 do not recover with more iterations. The ranking output (3.2.3) makes this easy to spot.
+
+### 3.2.5 Parallel tempering (`-tempering`)
+
+Annealing looks for one good image. Tempering samples the posterior instead: it runs `-chains
+N` copies of the reconstruction at a fixed ladder of temperatures and swaps states between
+neighbouring temperatures, so the cold chain can cross modes that a single chain would get
+stuck in. Use it when you want error bars, or the log evidence `logZ` for comparing models. The
+cold chain (the one at the target temperature) is the reconstruction; the hotter chains only
+exist to help it mix.
+
+```
+./bin/squeeze ./sample_data/2004-data1.oifits -w 64 -s 0.2 -chains 40 -tempering
+```
+
+The ladder runs in inverse temperature `beta = 1/T`, from `beta = 1` (the posterior) down to a
+small `beta_min` for the hottest chain. `-tempschedc` sets the initial spacing, but SQUEEZE
+retunes the ladder a few times during the run so that the swap acceptance is about equal between
+every neighbouring pair, which is the spacing that mixes best. In practice this removes the need
+to tune `-tempschedc` by hand.
+
+The hottest chain is not `beta = 0`. A `beta = 0` chain would sample the prior on its own, but
+the prior here (the regularizers) is unnormalised and sits nowhere near the posterior, so such a
+chain never swaps with the rest of the ladder and wastes a slot. `beta_min` is 0.01.
+
+Evidence: at the end SQUEEZE prints `logZ` from a stepping-stone estimator. The `+/-` is the gap
+between its two one-sided estimates (forward and reverse) and is a real error bar: a large gap
+means the ladder mixed poorly and the value should not be trusted. `logZ` is defined only up to
+the unknown normalisation of the prior, so use it to compare reconstructions that share the same
+regularizers and ladder, not as an absolute number.
+
+Diagnostics: SQUEEZE reports the communication barrier `Lambda` (the sum of the swap rejection
+rates along the ladder) and the round-trip rate (how often a chain travels from the hottest
+temperature to the target and back). `Lambda` sets the useful number of chains: with fewer than
+about `Lambda + 1` the ladder cannot communicate from end to end, and adding chains helps. A
+per-rung acceptance table is printed as well, and after retuning it should be roughly flat.
 
 ### 3.3 Display utilities - Visualization
 
