@@ -167,7 +167,7 @@ the expected list if it does not. To add a model, follow the instructions at the
 ### 3.2.1 Simulated annealing (default)
 
 The annealing engine has **no fixed cooling schedule**. The temperature follows the current
-misfit instead, relaxing towards
+chi2 instead, relaxing towards
 
 ```
 T  ->  chi2r / chi2_t          (chi2_t is set by -ct, default 4)

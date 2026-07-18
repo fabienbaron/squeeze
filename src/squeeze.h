@@ -173,7 +173,7 @@ void mcmc_results(int minimization_engine, char *file_basename, const int nchain
 		            double chi2_target, double mas_pixel, char *init_filename, char *prior_filename, double logZ, double logZe);
 
 
-void compute_logZ(const double *temperature , const unsigned short *iStoragetoThread, const double *lLikelihood_expectation, const double *lLikelihood_deviation, int nchains, double *logZ, double *logZ_err);
+void stepping_stone(const double *beta, const unsigned short *iStoragetoChain, const double *saved_lLikelihood, long niter, int nchains, double *logZ, double *logZ_err);
 
 void mcmc_fullchain(char *file, long nchains, long niter, int nchanr, long nelements, unsigned short axis_len, unsigned short *saved_x, unsigned short *saved_y, double *saved_params, double *saved_lLikelihood, double *saved_lPrior, double *saved_lPosterior, double *temperature, unsigned short *iChaintoStorage);
 

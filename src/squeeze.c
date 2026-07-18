@@ -626,8 +626,6 @@ int main(int argc, char **argv) {
   // Shared OpenMP memory
 
   unsigned int *burn_in_times = calloc(nchains, sizeof(unsigned int));
-  double *lLikelihood_expectation = calloc(nchains, sizeof(double));
-  double *lLikelihood_deviation = calloc(nchains, sizeof(double));
   double *saved_lLikelihood = calloc(nchains * niter, sizeof(double));
   double *saved_lPosterior = calloc(nchains * niter, sizeof(double));
   double *saved_lPrior = calloc(nchains * niter, sizeof(double));
@@ -636,12 +634,23 @@ int main(int argc, char **argv) {
   unsigned short *saved_x = calloc(nchains * niter * nwavr * nelements, sizeof(unsigned short));
   unsigned short *saved_y = calloc(nchains * niter * nwavr * nelements, sizeof(unsigned short));
   double *temperature = calloc(nchains, sizeof(double));
+  // In tempering mode beta = 1/T is the authoritative ladder: the kernel and swap use it, and
+  // it lets the hottest rung sit at beta = 0 (a pure-prior reference chain), which temperature
+  // cannot represent. temperature[] is then display-only. In annealing mode beta is unused.
+  double *beta = calloc(nchains, sizeof(double));
   unsigned short *iChaintoStorage = calloc(nchains, sizeof(unsigned short)); // determines where each parallel MCMC data will be stored
   // iChaintoStorage[i] also gives the index in the sorted list of temperatures
   // of the i-st lowest temperature
   unsigned short *iStoragetoChain = calloc(nchains, sizeof(unsigned short)); // determines where each storage/temperature is ; converse of iChaintoStorage
 
-  unsigned short *iMovedChain = calloc(nchains, sizeof(unsigned short));
+  // DEO swap bookkeeping. swap_accept_sum[r]/swap_attempt_count[r] accumulate the mean swap
+  // acceptance for the rank pair (r, r+1) -- the ladder-quality signal the adaptive ladder
+  // (a later phase) will consume. rt_touched_target[c] and round_trips implement the round-trip
+  // diagnostic: how many times a replica travels reference -> target -> reference.
+  double *swap_accept_sum = calloc(nchains, sizeof(double));
+  long *swap_attempt_count = calloc(nchains, sizeof(long));
+  unsigned char *rt_touched_target = calloc(nchains, sizeof(unsigned char));
+  long round_trips = 0;
 
   for (i = 0; i < nchains; ++i)
     burn_in_times[i] = niter; // for ENGINE_SIMULATED_ANNEALING, unless T gets to tmin, burn-in is never achieved
@@ -659,10 +668,10 @@ int main(int argc, char **argv) {
 // setting, is the reading where the control loop closes on itself. Outside this region
 // (mcmc_results) tmin remains the user-supplied setting.
 #pragma omp parallel private(i, j, k, w) firstprivate(tmin)                                                                                                    \
-    shared(temperature, iChaintoStorage, iStoragetoChain, iMovedChain, burn_in_times, saved_x, saved_y,                                                        \
+    shared(temperature, beta, iChaintoStorage, iStoragetoChain, swap_accept_sum, swap_attempt_count, rt_touched_target, round_trips, burn_in_times, saved_x, saved_y, \
                                                 saved_lLikelihood, saved_lPosterior, saved_lPrior, saved_params, saved_reg_value, minimization_engine,         \
                                                 use_tempfitswriting, init_filename, ctrlcpressed, f_anywhere, f_copycat, prob_auto, chi2_target,               \
-                                                mas_pixel, niter, chi2_temp, flat_chi2, axis_len, lLikelihood_expectation, lLikelihood_deviation, nwavr,       \
+                                                mas_pixel, niter, chi2_temp, flat_chi2, axis_len, nwavr,                                                       \
                                                 nelements, nchains, tempschedc, uvwav2chan, uvtime2chan, nuv, nv2, nt3amp, nt3phi, nvisamp, nvisphi,           \
                                                 init_params, init_stepsize, initial_x, initial_y, reg_param, prior_image, cent_mult, fov, nparams,             \
                                                 xtransform, ytransform, ndf)
@@ -682,14 +691,19 @@ int main(int argc, char **argv) {
     if (minimization_engine == ENGINE_SIMULATED_ANNEALING)
       temperature[iChain] = 1.0;
     else {
-      temperature[iChain] = pow(((double)nchains) / (1.0 * (nchains - iChain)), tempschedc); // T[0] = 1, T[nchains-1] = nchains^tempschedc
-      printf("Reconst setup -- Chain %d has temperature %f\n", iChain, temperature[iChain]);
+      // beta ladder with fixed endpoints: rank 0 = target (beta = 1), rank nchains-1 =
+      // reference (beta = 0, a pure-prior chain). Interior spacing is geometric via tempschedc,
+      // concentrated near beta = 0 where the evidence integrand varies fastest. The adaptive
+      // ladder (a later phase) will re-place the interior; tempschedc then sets only the start.
+      double frac = (nchains > 1) ? (double)(nchains - 1 - iChain) / (double)(nchains - 1) : 1.0;
+      beta[iChain] = pow(frac, tempschedc);
+      temperature[iChain] = (beta[iChain] > 0.0) ? 1.0 / beta[iChain] : 1.0e30; // display only; 1e30 marks the reference
+      printf("Reconst setup -- Chain %d has beta %f (temperature %g)\n", iChain, beta[iChain], temperature[iChain]);
     }
 #pragma omp barrier
 
     iChaintoStorage[iChain] = iChain; // initally, the storage unit for chain N is saved_xxx[N * ...],
     iStoragetoChain[iChain] = iChain; // initally,  storage[N] has temperature[N]
-    iMovedChain[iChain] = 0;          // no threads have been moved
 
     long chan = 0, xstep = 0, ystep = 0, steptype = STEP_MEDIUM;
     long steptype_frozen = STEP_MEDIUM; // base step type kept once tuning stops (tempering, post burn-in)
@@ -859,109 +873,61 @@ int main(int argc, char **argv) {
 
         if ((minimization_engine == ENGINE_PARALLEL_TEMPERING) && (i / (nwavr * nelements) > 0)) // note: prevent swapping states before the second iteration
         {
-
-          // Marginal likelihood estimation -- Step 1 = compute likelihood expectation as MCMC averages
-          lLikelihood_expectation[iChain] = 0;
-          lLikelihood_deviation[iChain] = 0;
-#pragma omp barrier                                        // synchronize chains needed here to prevent swapping while computing the averages
-          if (i / (nwavr * nelements) > ceil(0.3 * niter)) // note: we need to check for burn-in info here instead
-          {
-            for (j = ceil(0.3 * niter); j < i / (nwavr * nelements); ++j) {
-              // we will average the likelihood for the current chain temperature
-              lLikelihood_expectation[iChain] += saved_lLikelihood[iChaintoStorage[iChain] * niter + j];
-            }
-            lLikelihood_expectation[iChain] /= (i / (nwavr * nelements) - ceil(0.3 * niter));
-
-            for (j = ceil(0.3 * niter); j < i / (nwavr * nelements); ++j) {
-              // we will average the likelihood for the current chain temperature
-              lLikelihood_deviation[iChain] += (saved_lLikelihood[iChaintoStorage[iChain] * niter + j] - lLikelihood_expectation[iChain]) *
-                                               (saved_lLikelihood[iChaintoStorage[iChain] * niter + j] - lLikelihood_expectation[iChain]);
-            }
-            if (i / (nwavr * nelements) > ceil(0.3 * niter) + 1)
-              lLikelihood_deviation[iChain] /= (i / (nwavr * nelements) - ceil(0.3 * niter) - 1);
-          }
-
-#pragma omp barrier // synchronize chains
-//    printf("Chain: %d temperature: %lf iter: %ld lLikelihood_avg: %f \n",
-//    iChain, temperature[iChain], i / (nwavr * nelements), lLikelihood_expectation[iChain]);
+          // The marginal likelihood is now computed once at the end by stepping_stone(), post-hoc
+          // over saved_lLikelihood, so the old O(niter^2) per-sweep running-mean/variance
+          // accumulation is gone. This single block remains only to latch Ctrl-C collectively:
+          // its implicit barrier publishes stop_requested so every chain leaves the loop together.
+#pragma omp barrier
 #pragma omp single
           {
-            // Marginal likelihood estimation -- Step 2 = compute log Z
-            compute_logZ(temperature, iStoragetoChain, lLikelihood_expectation, lLikelihood_deviation, nchains, &logZ, &logZ_err);
-            printf("log Z computed by chain: %d logZ: %f +/- %f \n", iChain, logZ, logZ_err);
-            // Latch Ctrl-C here: this single's implicit barrier publishes the value,
-            // so every chain sees the same one and they leave the loop together.
             stop_requested = ctrlcpressed;
           }
 
           //
-          // Inter-chain exchanges
+          // Inter-chain exchanges: deterministic even-odd (DEO) swap
           //
-
-          //  printf("Chain %d is ready to switch -- now idle at iteration i= %ld\n", iChain, i);
-          fflush(stdout);
-          iMovedChain[chain1] = 0; // set all chains as ready to switch
+          // On even sweeps pair ranks (0,1),(2,3),...; on odd sweeps (1,2),(3,4),.... The thread
+          // that owns the lower rank of a pair performs it. Because the active pairs are disjoint,
+          // this needs no critical section, only barriers -- which also removes the old thread
+          // arrival-order dependence and the iMovedChain double-swap guard. Every eligible pair is
+          // attempted (no 0.3 gate). This is the non-reversible DEO scheme of Syed et al. 2021:
+          // alternating the pairing by sweep parity gives O(Lambda) round trips versus O(Lambda^2)
+          // for a reversible/random swap.
+          long sweep = i / (nwavr * nelements);
+          int r = iChain; // this thread owns the pair whose lower rank is r
+          bool r_is_lower = (((r % 2) == (int)(sweep % 2)) && (r < nchains - 1));
 #pragma omp barrier
-#pragma omp critical(chainswap)
+          if (r_is_lower) {
+            chain1 = iStoragetoChain[r];
+            chain2 = iStoragetoChain[r + 1];
+            // Target family pi_beta ~ L^beta * pi (prior untempered), so the swap log-ratio is
+            // (beta1 - beta2)(lLikelihood1 - lLikelihood2); the priors cancel exactly.
+            transition_test = (beta[chain1] - beta[chain2]) * (saved_lLikelihood[iChaintoStorage[chain1] * niter + sweep] -
+                                                               saved_lLikelihood[iChaintoStorage[chain2] * niter + sweep]);
+            swap_accept_sum[r] += (transition_test >= 0.0) ? 1.0 : exp(transition_test); // mean acceptance for this pair
+            swap_attempt_count[r] += 1;
+            if (log(philox_u01(rng)) < transition_test) {
+              swapd(&temperature[chain1], &temperature[chain2]);
+              swapd(&beta[chain1], &beta[chain2]);
+              swapi(&iStoragetoChain[iChaintoStorage[chain1]], &iStoragetoChain[iChaintoStorage[chain2]]);
+              swapi(&iChaintoStorage[chain1], &iChaintoStorage[chain2]);
+            }
+          }
+#pragma omp barrier // re-synchronise before reading the updated ladder
+          // Round-trip diagnostic: a replica (chain) that reaches the target (rank 0) then returns
+          // to the reference (rank nchains-1) has completed one round trip.
+#pragma omp single
           {
-            // Inter-chain  Metropolis-Hastings temperature swap
-            // 1) only one chain should try to swap temperature at the same time, hence the omp critical statement above
-            // 2) we only swap adjacent temperatures. There is no warranty that iChain and iChain+1 have adjacent temperatures,
-            //    so we actually do not try to switch these. Instead we keep track of the temperatures.
-            //    iStoragetoChain[N] give us the index of the chain that currently has the Nth temperature (in the sorted list of increasing temperatures)
-            //    so iStoragetoChain[0] gives use the lowest temperature, i.e. T=1 for typical parallel tempering
-            //    and iStoragetoChain[1] would give us the next lowest temperature
-            //    the following code is set so we only try to swap iStoragetoChain[iChain] with iStoragetoChain[iChain+1]
-            // 3) we also track which chains have been swapped through iMovedChain, to prevent sequential swapping (0->1 then 1->2)
-
-            if (iChain < (nchains - 1)) {
-              chain1 = iStoragetoChain[iChain];
-              chain2 = iStoragetoChain[iChain + 1];
-
-              if ((iMovedChain[chain1] == 0) && (iMovedChain[chain2] == 0)) {
-                if (philox_u01(rng) < 0.3) // base probability of swapping is 30%
-                {
-
-                  // The within-chain kernel tempers only the likelihood, so the target family is
-                  // pi_beta(x) ~ L(x)^beta * pi(x). For that family the swap ratio is
-                  //   log alpha = (beta1 - beta2) * (lLikelihood1 - lLikelihood2)
-                  // and the (untempered) priors cancel exactly. Using lPosterior here left a
-                  // spurious (beta1-beta2)*(lPrior1-lPrior2) term, which biased the swaps and
-                  // disagreed with compute_logZ's thermodynamic integration of E_beta[log L].
-                  transition_test =
-                      (1. / temperature[chain1] - 1. / temperature[chain2]) * (saved_lLikelihood[iChaintoStorage[chain1] * niter + i / (nwavr * nelements)] -
-                                                                               saved_lLikelihood[iChaintoStorage[chain2] * niter + i / (nwavr * nelements)]);
-
-                  if (log(philox_u01(rng)) < transition_test) {
-                    printf("Swap called from chain %d -- will be swapping chains %d : %f and %d : %f at iteration %ld\n", iChain, chain1, temperature[chain1],
-                           chain2, temperature[chain2], i / (nwavr * nelements));
-
-                    //                   for(j=0;j<nchains;j++)
-                    // printf("BEFORE Chain %ld \t iChaintoStorage %d \t iStoragetoChain %d \t temp[j] %lf \t temp[iStorage[j]] %lf \t temp[iChain[j] %lf\n", j,
-                    // iChaintoStorage[j], iStoragetoChain[j], temperature[j], temperature[iStoragetoChain[j]],temperature[iChaintoStorage[j]] );
-
-                    // Swap temperatures and other relevant arrays
-                    swapd(&temperature[chain1], &temperature[chain2]);
-                    swapi(&iStoragetoChain[iChaintoStorage[chain1]], &iStoragetoChain[iChaintoStorage[chain2]]);
-                    swapi(&iChaintoStorage[chain1], &iChaintoStorage[chain2]);
-
-                    // printf("Swap done at chain %d -- has swapped chains %d : %f and %d : %f at iteration %ld\n",
-                    //         iChain, chain2, temperature[chain2], chain1,  temperature[chain1], i / (nwavr * nelements));
-
-                    // for(j=0;j<nchains;j++)
-                    //  printf("AFTER Chain %ld \t iChaintoStorage %d \t iStoragetoChain %d \t temp[j] %lf \t temp[iStorage[j]] %lf \t temp[iChain[j] %lf\n", j,
-                    //  iChaintoStorage[j], iStoragetoChain[j], temperature[j], temperature[iStoragetoChain[j]],temperature[iChaintoStorage[j]] );
-
-                    iMovedChain[chain1] = 1;
-                    iMovedChain[chain2] = 1;
-                  }
-                }
+            for (int c = 0; c < nchains; ++c) {
+              int rank = iChaintoStorage[c];
+              if (rank == 0)
+                rt_touched_target[c] = 1;
+              else if ((rank == nchains - 1) && rt_touched_target[c]) {
+                round_trips++;
+                rt_touched_target[c] = 0;
               }
             }
           }
-#pragma omp barrier // re-synchronise Chains before continuing
-          // fflush(stdout);
-          // printf("%d Chain %d movement reset to 0 iter %ld\n", iChain, chain1, i / (nwavr * nelements) );
         }
       }
 
@@ -1208,7 +1174,13 @@ int main(int argc, char **argv) {
       new_lPosterior = new_lLikelihood + new_lPrior;
 
       // BUG: think how to rescale priors with fluxratio_image ?
-      transition_test = (new_lLikelihood - lLikelihood) / temperature[iChain] + new_lPrior - lPrior;
+      // Tempering multiplies the likelihood term by beta (the prior is untempered), so the
+      // reference chain at beta = 0 samples the prior alone. Annealing keeps dividing by its
+      // own dynamically-updated temperature.
+      if (tempering)
+        transition_test = beta[iChain] * (new_lLikelihood - lLikelihood) + new_lPrior - lPrior;
+      else
+        transition_test = (new_lLikelihood - lLikelihood) / temperature[iChain] + new_lPrior - lPrior;
 
       // Metropolis test in log space with its own fresh variate. The old form reused a digit
       // of the proposal's random number and compared it against 1024*exp(-transition_test),
@@ -1480,8 +1452,23 @@ int main(int argc, char **argv) {
     } else // (minimization_engine == ENGINE_PARALLEL_TEMPERING)
     {
       double logZ = 0, logZe = 0.;
-      compute_logZ(temperature, iStoragetoChain, lLikelihood_expectation, lLikelihood_deviation, nchains, &logZ, &logZe);
-      printf("Output -- Final logZ: %f +/- %f\n", logZ, logZe);
+      stepping_stone(beta, iStoragetoChain, saved_lLikelihood, niter, nchains, &logZ, &logZe);
+      printf("Output -- Final logZ: %f +/- %f (stepping-stone; +/- is the forward/reverse sandwich gap)\n", logZ, logZe);
+      if (logZe > 5.0)
+        printf("Output --   NB: a large sandwich gap means poor ladder overlap (usually the hot rungs). More chains or\n"
+               "Output --   the adaptive ladder would tighten it. Note logZ is defined only up to the prior's normalization.\n");
+
+      // Mixing diagnostics from the DEO swap: round-trip rate (a replica going reference ->
+      // target -> reference is the honest measure of whether tempering is communicating), and the
+      // per-pair swap acceptance (uneven values reveal where the fixed ladder mixes poorly).
+      printf("Output -- Tempering mixing: %ld round trips (rate %.4f per sweep)\n", round_trips, (double)round_trips / (double)niter);
+      if (round_trips == 0)
+        printf("Output --   zero round trips: some rung has near-zero swap acceptance, so no replica crosses the whole\n"
+               "Output --   ladder. The adaptive ladder (or more chains) would bridge it. Check the per-rung table below.\n");
+      printf("Output -- Swap acceptance per adjacent rung (rank r <-> r+1):\n");
+      for (int r = 0; r < nchains - 1; ++r)
+        printf("Output --   rung %2d: %.3f\n", r, swap_attempt_count[r] > 0 ? swap_accept_sum[r] / (double)swap_attempt_count[r] : 0.0);
+
       burn_in_times[0] = ceil(0.3 * niter);
       mcmc_results(minimization_engine, output_filename, nchains, burn_in_times, depth, nelements, axis_len, xtransform, ytransform, saved_x, saved_y,
                    saved_params, niter, nwavr, final_params, final_params_std, reg_param, final_reg_value, prior_image, initial_x, initial_y, centroid_image_x,
@@ -1511,17 +1498,18 @@ int main(int argc, char **argv) {
   free(saved_x);
   free(saved_y);
   free(saved_params);
-  free(lLikelihood_expectation);
-  free(lLikelihood_deviation);
   free(saved_lLikelihood);
   free(saved_lPrior);
   free(saved_lPosterior);
   free(saved_reg_value);
   free(burn_in_times);
   free(temperature);
+  free(beta);
   free(iChaintoStorage);
   free(iStoragetoChain);
-  free(iMovedChain);
+  free(swap_accept_sum);
+  free(swap_attempt_count);
+  free(rt_touched_target);
   free(xtransform);
   free(ytransform);
   free(visin);
@@ -1663,7 +1651,7 @@ void printhelp(void) {
   printf("                  image is too small, not that the start was bad.)\n");
 
   printf("\n***** CONVERGENCE SETTINGS ***** \n");
-  printf("  Annealing has no fixed cooling schedule: the temperature follows the current misfit,\n");
+  printf("  Annealing has no fixed cooling schedule: the temperature follows the current chi2,\n");
   printf("  relaxing towards T = chi2r / chi2_t, and is then floored at tmin. The chain therefore\n");
   printf("  cools only as fast as the fit improves, and with the defaults it stops at T=1, which\n");
   printf("  is the true posterior, so the mean image is a posterior mean.\n");
@@ -1675,7 +1663,7 @@ void printhelp(void) {
   printf("                  to find WORSE optima, as the chain freezes and stops exploring.\n");
   printf("  -pa prob      : Adjust temperature to achieve given prob for simulated annealing (default = -1, unused).\n");
   printf("  -ct chi2_t    : Target ratio chi2r/T for the annealing schedule (default 4.0). The\n");
-  printf("                  temperature settles at chi2r/chi2_t, i.e. proportional to the misfit.\n");
+  printf("                  temperature settles at chi2r/chi2_t, i.e. proportional to chi2r.\n");
   printf("  -fc target    : Attempt to fix chi-squared to this target (default 0.0 = just minimise).\n");
   printf("                  Non-zero makes the schedule regulate chi2r towards the target rather\n");
   printf("                  than drive it down, and also counts as a convergence criterion.\n");
@@ -2190,37 +2178,65 @@ double median(double *x, const int n) {
     return mingtguess;
 }
 
-void compute_logZ(const double *temperature, const unsigned short *iStoragetoChain, const double *lLikelihood_expectation, const double *lLikelihood_deviation,
-                  int nchains, double *logZ, double *logZ_err) {
-  long j;
-  *logZ = 0;
-  *logZ_err = (1. / temperature[iStoragetoChain[1]] - 1. / temperature[iStoragetoChain[0]]) *
-                  (1. / temperature[iStoragetoChain[1]] - 1. / temperature[iStoragetoChain[0]]) * lLikelihood_deviation[iStoragetoChain[0]] +
-              (1. / temperature[iStoragetoChain[nchains - 1]] - 1. / temperature[iStoragetoChain[nchains - 2]]) *
-                  (1. / temperature[iStoragetoChain[nchains - 1]] - 1. / temperature[iStoragetoChain[nchains - 2]]) *
-                  lLikelihood_deviation[iStoragetoChain[nchains - 1]];
 
-  //  for(j = 0; j < nchains; ++j)
-  // printf("temperature %lf lLike_avg[%ld] = %lf \n", temperature[iStoragetoChain[j]], j, lLikelihood_expectation[iStoragetoChain[j]]);
+// log( (1/n) sum_i exp(x_i) ), stable via max-subtraction. The reverse stepping-stone leg has
+// a positive exponent on lLikelihood and overflows without this.
+static double logmeanexp(const double *x, long n) {
+  if (n <= 0)
+    return -INFINITY;
+  double m = x[0];
+  for (long i = 1; i < n; ++i)
+    if (x[i] > m)
+      m = x[i];
+  double s = 0.0;
+  for (long i = 0; i < n; ++i)
+    s += exp(x[i] - m);
+  return m + log(s / (double)n);
+}
 
-  for (j = 0; j < (nchains - 1); ++j) {
-    //      printf("logZ debug %ld %lf %lf %lf\n", j, (1. / temperature[iStoragetoChain[j]] - 1. / temperature[iStoragetoChain[j + 1]]),
-    //                   (lLikelihood_expectation[iStoragetoChain[j]] + lLikelihood_expectation[iStoragetoChain[j + 1]]),
-    //       0.5 * (1. / temperature[iStoragetoChain[j]] - 1. / temperature[iStoragetoChain[j + 1]])
-    //                   * (lLikelihood_expectation[iStoragetoChain[j]] + lLikelihood_expectation[iStoragetoChain[j + 1]]));
+// Stepping-stone marginal-likelihood estimator (Xie et al. 2011; the estimator Pigeons.jl uses).
+// Replaces thermodynamic integration. Works post-hoc from the per-temperature likelihood streams
+// already stored in saved_lLikelihood[storage_slot * niter + sweep]; storage slot s is pinned to
+// a fixed beta throughout (the swap moves beta and storage slot together), so slot s holds the
+// samples of whatever state sat at beta_s.
+//
+// For adjacent rungs beta_lo < beta_hi with delta = beta_hi - beta_lo:
+//   log( Z(beta_hi)/Z(beta_lo) ) = log E_{beta_lo}[ exp(-delta * lLikelihood) ]   (hotter chain's samples)
+// Summed over the ladder this gives log( Z(beta=1)/Z(beta=0) ). We also compute the reverse leg
+// from the colder chain's samples; the two bracket the truth (a "sandwich"), so their average is
+// the estimate and their gap is an honest Monte Carlo error bar. No O(niter^2) recompute, no fake
+// error bar. logZ stays defined up to the (unknown) normalization of the prior exp(-lPrior).
+void stepping_stone(const double *beta, const unsigned short *iStoragetoChain, const double *saved_lLikelihood, long niter, int nchains, double *logZ,
+                    double *logZ_err) {
+  long burn = (long)ceil(0.3 * niter);
+  long n = niter - burn;
+  double logZ_fwd = 0.0, logZ_rev = 0.0;
+  double *buf = malloc((n > 0 ? n : 1) * sizeof(double));
 
-    *logZ += (1. / temperature[iStoragetoChain[j + 1]] - 1. / temperature[iStoragetoChain[j]]) *
-             (lLikelihood_expectation[iStoragetoChain[j]] + lLikelihood_expectation[iStoragetoChain[j + 1]]);
+  // ranks 0..nchains-1 are temperature-sorted: rank 0 = target (beta=1), rank nchains-1 = reference
+  // (beta=0). Storage slot == rank (iChaintoStorage and iStoragetoChain are mutual inverses), and
+  // slot r is pinned to beta_r, so saved_lLikelihood[r*niter + ...] is the beta_r sample stream.
+  for (int r = 0; r < nchains - 1; ++r) {
+    int slot_cold = r;     // beta_hi stream
+    int slot_hot = r + 1;  // beta_lo stream
+    double beta_hi = beta[iStoragetoChain[r]];
+    double beta_lo = beta[iStoragetoChain[r + 1]];
+    double delta = beta_hi - beta_lo;
+
+    // forward: hotter chain's samples, exponent -delta * L (<= 0)
+    for (long s = 0; s < n; ++s)
+      buf[s] = -delta * saved_lLikelihood[slot_hot * niter + burn + s];
+    logZ_fwd += logmeanexp(buf, n);
+
+    // reverse: colder chain's samples, exponent +delta * L (>= 0, needs the max-subtraction)
+    for (long s = 0; s < n; ++s)
+      buf[s] = +delta * saved_lLikelihood[slot_cold * niter + burn + s];
+    logZ_rev += -logmeanexp(buf, n);
   }
 
-  *logZ *= 0.5;
-
-  for (j = 1; j < (nchains - 2); ++j) {
-    *logZ_err += (1. / temperature[iStoragetoChain[j + 1]] - 1. / temperature[iStoragetoChain[j - 1]]) *
-                 (1. / temperature[iStoragetoChain[j + 1]] - 1. / temperature[iStoragetoChain[j - 1]]) * lLikelihood_deviation[iStoragetoChain[j]];
-  }
-
-  *logZ_err = sqrt(*logZ_err * 0.5);
+  free(buf);
+  *logZ = 0.5 * (logZ_fwd + logZ_rev);
+  *logZ_err = fabs(logZ_fwd - logZ_rev);
 }
 
 //
