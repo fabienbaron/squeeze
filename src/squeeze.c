@@ -77,6 +77,14 @@ bool diffvis = FALSE; // FALSE -> VIS tables = complex vis; TRUE -> VIS tables =
 long *dvisnwav;
 long **dvisindx;
 bool squeeze_quiet = FALSE;
+// Opt-in adaptive-cooling annealing (ACSA / constant thermodynamic speed). Off by default, so
+// the MACIM servo stays the default and the comparison baseline. acsa_speed is the constant
+// thermodynamic speed v in the cooling step k = v*T/std(lLikelihood). The default 1.0 cools by
+// about one thermodynamic length per sweep (capped at ACSA_KMAX): on the 2004 sample data that
+// is the slowest setting that still escapes the -e 14000 stall the servo gets stuck in, while
+// converging the ordinary 64x64 run to a comparable chi2r. Raise it (-acsaspeed) to cool faster.
+bool use_acsa = FALSE;
+double acsa_speed = 1.0;
 double *__restrict uv_time;
 double *__restrict uv_lambda;
 double *__restrict uv_dlambda;
@@ -725,6 +733,10 @@ int main(int argc, char **argv) {
     // double change_UDreg, change_TV;
 
     double prob_movement = MPROB_LOW;
+    // ACSA: running sum/sumsq of lLikelihood over the current sweep, used to estimate the heat
+    // capacity (energy variance) that sets the cooling rate. Thread-local, reset each sweep.
+    double acsa_sum = 0.0, acsa_sumsq = 0.0;
+    long acsa_n = 0;
     double chi2v2 = 0, chi2t3amp = 0, chi2t3phi = 0, chi2visamp = 0, chi2visphi = 0;
     double complex *dummy_cpointer = NULL;
     double pipo = 0;
@@ -962,6 +974,38 @@ int main(int argc, char **argv) {
             }
 #pragma omp barrier // publish the new beta/temperature to all chains before continuing
           }
+        }
+
+        // ACSA: adaptive-cooling annealing (opt-in via -acsa), replacing the MACIM servo above.
+        // Once per sweep, set the relative temperature drop from the energy fluctuations of the
+        // sweep just finished. At constant thermodynamic speed the heat capacity is
+        // C_V = Var(lLikelihood)/T^2, and holding the speed acsa_speed fixed gives
+        // k = dT/T = acsa_speed/sqrt(C_V) = acsa_speed*T/std(lLikelihood). The temperature is then
+        // always lowered (T <- T*(1-k)), so a chain that stops improving keeps cooling instead of
+        // stalling the way the servo can. Cooling slows where the heat capacity peaks (large
+        // fluctuations, small k) and speeds up once the chain settles (k capped at ACSA_KMAX).
+        // Each chain uses only its own thread-local accumulators and temperature, so no barrier.
+        if (use_acsa && (minimization_engine == ENGINE_SIMULATED_ANNEALING) && (acsa_n >= 2)) {
+          double acsa_mean = acsa_sum / acsa_n;
+          double acsa_var = acsa_sumsq / acsa_n - acsa_mean * acsa_mean;
+          double acsa_std = (acsa_var > 0.0) ? sqrt(acsa_var) : 0.0;
+          double k = (acsa_std > 0.0) ? acsa_speed * temperature[iChain] / acsa_std : ACSA_KMAX;
+          if (k > ACSA_KMAX)
+            k = ACSA_KMAX;
+          if (k < 0.0)
+            k = 0.0;
+          temperature[iChain] *= (1.0 - k);
+          // Convergence/burn-in bookkeeping, same test the servo uses.
+          if ((temperature[iChain] < tmin) || (2.0 * lLikelihood / ndf < chi2_target))
+            if ((i / (nwavr * nelements) + niter / BURN_IN_FRAC) < burn_in_times[iChain])
+              burn_in_times[iChain] = i / (nwavr * nelements) + niter / BURN_IN_FRAC;
+          if (temperature[iChain] < tmin)
+            temperature[iChain] = tmin;
+          if (temperature[iChain] > FLAT_CHI2_MULT * flat_chi2 / ndf)
+            temperature[iChain] = FLAT_CHI2_MULT * flat_chi2 / ndf;
+          acsa_sum = 0.0; // start the next sweep's fluctuation estimate fresh
+          acsa_sumsq = 0.0;
+          acsa_n = 0;
         }
       }
 
@@ -1272,7 +1316,9 @@ int main(int argc, char **argv) {
         // TEMP_CHANGE_TIME/acceptance rather than TEMP_CHANGE_TIME. Do not "fix" that: updating
         // every proposal instead overcools (T 0.26 vs 0.72), and the -tm 0 -fc 1 mode then never
         // reaches chi2r < 1, so it never declares burn-in.
-        if (minimization_engine == ENGINE_SIMULATED_ANNEALING)
+        // With -acsa the temperature is instead cooled once per sweep (see the sweep-boundary
+        // block), so the per-accept servo update is skipped here.
+        if ((minimization_engine == ENGINE_SIMULATED_ANNEALING) && !use_acsa)
         {
           /* If chi^2 has changed, change the temperature... */
           temperature[iChain] *= 1.0 +
@@ -1310,6 +1356,14 @@ int main(int argc, char **argv) {
             printf("Failed parameter movement of 0 stepsize: %d %6.3lf Iter: %ld P: %6.4lf %6.3lf \n", params_free[(current_elt - nelements) / PARAMS_PER_ELT],
                    2. * (new_lLikelihood - lLikelihood), i, params[0], new_params[0]);
         }
+      }
+
+      // ACSA: sample the current-state energy (lLikelihood) each move to build this sweep's
+      // heat-capacity estimate.
+      if (use_acsa && !tempering) {
+        acsa_sum += lLikelihood;
+        acsa_sumsq += lLikelihood * lLikelihood;
+        acsa_n++;
       }
 
       /* Now that prob_movement has changed, we may want to change the step type */
@@ -1603,6 +1657,9 @@ void printhelp(void) {
   printf("                   the log evidence logZ; the cold chain is the reconstruction. See Readme 3.2.5.\n");
   printf("  -tempschedc c  : Initial tempering ladder shape (default 3). The ladder is then retuned during the run to\n");
   printf("                   equalise swap acceptance, so this only sets the starting point.\n");
+  printf("  -acsa          : Anneal with an adaptive cooling rate (constant thermodynamic speed) instead of the default\n");
+  printf("                   MACIM servo. It always cools, so it escapes stalls the servo can get pinned in.\n");
+  printf("  -acsaspeed v   : Cooling speed for -acsa (default 1.0). Larger cools faster; too large can freeze early.\n");
   printf("  -nobws         : Do not compute bandwidth smearing factors when computing visibilities.\n");
 
   printf("\n***** OUTPUT SETTINGS ***** \n");
@@ -3088,6 +3145,8 @@ bool read_commandline(int *argc, char **argv, bool *benchmark, bool *use_v2, boo
       *use_tempfitswriting = TRUE; // enable writing chainxx.fits to disc
     } else if (strcmp(argv[i], "-showflagged") == 0) {
       *verbose_import = TRUE; // show discarded data points during import
+    } else if (strcmp(argv[i], "-acsa") == 0) {
+      use_acsa = TRUE; // adaptive-cooling annealing instead of the MACIM servo
     } else if (strcmp(argv[i], "-quiet") == 0) {
       squeeze_quiet = TRUE; // shuts up some diagnostics
     } else if (strcmp(argv[i], "-wavauto") == 0) {
@@ -3200,6 +3259,8 @@ bool read_commandline(int *argc, char **argv, bool *benchmark, bool *use_v2, boo
         sscanf(argv[i + 1], "%lf", fluxs);
       } else if (strcmp(argv[i], "-cv") == 0) {
         sscanf(argv[i + 1], "%lf", cvfwhm);
+      } else if (strcmp(argv[i], "-acsaspeed") == 0) {
+        sscanf(argv[i + 1], "%lf", &acsa_speed); // constant thermodynamic speed for -acsa cooling
       } else if (strcmp(argv[i], "-modeltype") == 0) {
         int m;
         for (m = 0; m < n_squeeze_models; ++m)
@@ -3338,6 +3399,20 @@ bool read_commandline(int *argc, char **argv, bool *benchmark, bool *use_v2, boo
   return TRUE;
 }
 
+// Colour for the reported flux-move acceptance rate MPr (an EWMA of the accept indicator, time
+// constant DAMPING_TIME). The step-type controller aims to hold MPr in [MPROB_LOW, MPROB_HIGH],
+// so that band is green; just outside is yellow; far outside is red. Both failure directions are
+// meaningful: MPr pinned low means the chain is frozen (every move rejected), MPr pinned high
+// means the temperature is stuck too hot and the chain accepts almost everything without
+// cooling, which is exactly how the servo stall shows up.
+static const char *mpr_color(double p) {
+  if (p >= MPROB_LOW && p <= MPROB_HIGH)
+    return TEXT_COLOR_GREEN;
+  if (p >= 0.5 * MPROB_LOW && p <= MPROB_HIGH + 0.20) // ~[0.10, 0.65] with the default band
+    return TEXT_COLOR_YELLOW;
+  return TEXT_COLOR_RED;
+}
+
 void print_diagnostics(int iChain, long current_iter, long nvis, long nv2, long nt3, long nt3phi, long nt3amp, long nvisamp, long nvisphi, double chi2v2,
                        double chi2t3amp, double chi2t3phi, double chi2visphi, double chi2visamp, double lPosterior, double lPrior, double lLikelihood,
                        const double *reg_param, const double *reg_value, const double *centroid_image_x, const double *centroid_image_y, long nelements,
@@ -3405,11 +3480,12 @@ void print_diagnostics(int iChain, long current_iter, long nvis, long nv2, long 
 
 
     if (current_iter > 0)
-      diagnostics_used += snprintf(diagnostics + diagnostics_used, maxlength - diagnostics_used, "E: %5ld MPr: %4.2f T: %5.2f B:%d Iter: %4ld of %4ld",
-                                   nelements, prob_movement, temperature[iChain], burn_in_times[iChain], current_iter, niter);
+      diagnostics_used +=
+          snprintf(diagnostics + diagnostics_used, maxlength - diagnostics_used, "E: %5ld MPr: %s%4.2f%s T: %5.2f B:%d Iter: %4ld of %4ld", nelements,
+                   mpr_color(prob_movement), prob_movement, TEXT_COLOR_BLACK, temperature[iChain], burn_in_times[iChain], current_iter, niter);
     else
-      diagnostics_used += snprintf(diagnostics + diagnostics_used, maxlength - diagnostics_used, "E: %5ld MPr: %4.2f T: %5.2f -- INITIAL", nelements,
-                                   prob_movement, temperature[iChain]);
+      diagnostics_used += snprintf(diagnostics + diagnostics_used, maxlength - diagnostics_used, "E: %5ld MPr: %s%4.2f%s T: %5.2f -- INITIAL", nelements,
+                                   mpr_color(prob_movement), prob_movement, TEXT_COLOR_BLACK, temperature[iChain]);
 
     puts(diagnostics);
   }

@@ -81,6 +81,10 @@ const char *reg_names[NREGULS] = {"PARAM", "C", "PRI", "ENT", "DEN", "TV", "UD",
 #define INITIAL_TMIN 1.0 /* Never start with a temperature less than 1 */
 #define TEMP_CHANGE_TIME    1000.0
 #define DEFAULT_TMIN 1.0
+/* Largest relative temperature drop per sweep allowed by the -acsa adaptive-cooling schedule.
+   Caps k = acsa_speed*T/std(lLikelihood) when the energy fluctuations get small, so a settled
+   chain still cools geometrically rather than in one jump. */
+#define ACSA_KMAX 0.1
 /* The damping time for parameter movement probability calculations */
 #define PARAM_DAMPING_TIME 10.0
 /* The e-folding time for adjusting the stepsize to give the desired
